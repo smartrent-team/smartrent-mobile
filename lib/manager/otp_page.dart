@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/dashboard_page.dart';
 
 class OtpPage extends StatelessWidget {
   const OtpPage({super.key});
@@ -188,7 +189,14 @@ class OtpPage extends StatelessWidget {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const DashboardPage(),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: lightGreenBg,
                             elevation: 0,
