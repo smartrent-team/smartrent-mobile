@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/room_list_page.dart';
-import 'package:smartrent_mobile/manager/tenant_page.dart';
+import 'package:smartrent_mobile/manager/invoice_confirm_page.dart';
+import 'package:smartrent_mobile/manager/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/manager_nav.dart';
+import 'package:smartrent_mobile/manager/utility_input_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -37,6 +39,10 @@ class DashboardPage extends StatelessWidget {
                           Icons.request_quote_outlined,
                           const Color(0xFFE8F5E9),
                           primaryGreen,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const InvoiceConfirmPage()),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -47,6 +53,10 @@ class DashboardPage extends StatelessWidget {
                           Icons.timeline_rounded,
                           const Color(0xFFFFF8E1),
                           Colors.orange,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const UtilityInputPage()),
+                          ),
                         ),
                       ),
                     ],
@@ -55,18 +65,21 @@ class DashboardPage extends StatelessWidget {
 
                   // 3. Utility Alerts
                   _buildSectionHeader('Cảnh báo điện - nước'),
-                  _buildUtilityAlert('Phòng 305', 'Tiêu thụ bất thường — 420 kWh', 'Cao', Colors.orange, Icons.bolt_outlined),
+                  _buildUtilityAlert(context, 'Phòng 305', 'Tiêu thụ bất thường — 420 kWh', 'Cao', Colors.orange, Icons.bolt_outlined),
                   const SizedBox(height: 12),
-                  _buildUtilityAlert('Phòng 112', 'Rò rỉ nghi ngờ — 85 m³', 'Cảnh báo', Colors.blue, Icons.water_drop_outlined),
+                  _buildUtilityAlert(context, 'Phòng 112', 'Rò rỉ nghi ngờ — 85 m³', 'Cảnh báo', Colors.blue, Icons.water_drop_outlined),
                   const SizedBox(height: 24),
 
                   // 4. Emergency Alert
-                  _buildEmergencyAlert(),
+                  _buildEmergencyAlert(context),
                   const SizedBox(height: 24),
 
                   // 5. Recent Tickets
-                  _buildSectionHeader('Ticket sự cố gần đây'),
-                  _buildTicketList(),
+                  _buildSectionHeader(
+                    'Ticket sự cố gần đây',
+                    onSeeAll: () => ManagerNav.openIssuePage(context),
+                  ),
+                  _buildTicketList(context),
                   const SizedBox(height: 24),
 
                   // 6. Utilization
@@ -158,25 +171,11 @@ class DashboardPage extends StatelessWidget {
       mainAxisSpacing: 16,
       childAspectRatio: 1.1,
       children: [
-        _buildStatCard('48', 'Tổng phòng', '42 đang thuê · 6 trống', Icons.home_work_outlined, '+2', Colors.green, onTap: () => _openRoomList(context)),
-        _buildStatCard('136', 'Cư dân', '12 mới tháng này', Icons.people_alt_outlined, '+12', Colors.blue, onTap: () => _openTenantTab(context, 1)),
-        _buildStatCard('23', 'Hóa đơn chờ', 'Tổng 18,4 triệu đ', Icons.receipt_long_outlined, '-5', Colors.orange, onTap: () => _openTenantTab(context, 2)),
-        _buildStatCard('7', 'Sự cố mở', '2 khẩn cấp', Icons.report_gmailerrorred_rounded, '+2', Colors.red, onTap: () => _openTenantTab(context, 3)),
+        _buildStatCard('48', 'Tổng phòng', '42 đang thuê · 6 trống', Icons.home_work_outlined, '+2', Colors.green, onTap: () => ManagerNav.openRoomList(context)),
+        _buildStatCard('136', 'Cư dân', '12 mới tháng này', Icons.people_alt_outlined, '+12', Colors.blue, onTap: () => ManagerNav.openTenantTab(context, 1)),
+        _buildStatCard('23', 'Hóa đơn chờ', 'Tổng 18,4 triệu đ', Icons.receipt_long_outlined, '-5', Colors.orange, onTap: () => ManagerNav.openTenantTab(context, 2)),
+        _buildStatCard('7', 'Sự cố mở', '2 khẩn cấp', Icons.report_gmailerrorred_rounded, '+2', Colors.red, onTap: () => ManagerNav.openIssuePage(context)),
       ],
-    );
-  }
-
-  static void _openRoomList(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RoomListPage()),
-    );
-  }
-
-  static void _openTenantTab(BuildContext context, int tabIndex) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => TenantPage(initialIndex: tabIndex)),
     );
   }
 
@@ -207,8 +206,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(String title, String subtitle, IconData icon, Color bgColor, Color iconColor) {
-    return Container(
+  Widget _buildActionCard(String title, String subtitle, IconData icon, Color bgColor, Color iconColor, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.1)), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Column(
@@ -221,11 +223,18 @@ class DashboardPage extends StatelessWidget {
           Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black38), maxLines: 2),
         ],
       ),
+    ),
     );
   }
 
-  Widget _buildUtilityAlert(String room, String desc, String tag, Color color, IconData icon) {
-    return Container(
+  Widget _buildUtilityAlert(BuildContext context, String room, String desc, String tag, Color color, IconData icon) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const UtilityInputPage()),
+      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Row(
@@ -250,11 +259,18 @@ class DashboardPage extends StatelessWidget {
           const Icon(Icons.chevron_right, color: Colors.black26),
         ],
       ),
+    ),
     );
   }
 
-  Widget _buildEmergencyAlert() {
-    return Container(
+  Widget _buildEmergencyAlert(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+      ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFFFFF1F1), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFFFCCCC))),
       child: Row(
@@ -279,33 +295,44 @@ class DashboardPage extends StatelessWidget {
           const Icon(Icons.chevron_right, color: Colors.black26),
         ],
       ),
+    ),
     );
   }
 
-  Widget _buildSectionHeader(String title, {bool showAction = true}) {
+  Widget _buildSectionHeader(String title, {bool showAction = true, VoidCallback? onSeeAll}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          if (showAction) Text('Xem tất cả >', style: TextStyle(color: primaryGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+          if (showAction)
+            GestureDetector(
+              onTap: onSeeAll,
+              child: Text('Xem tất cả >', style: TextStyle(color: primaryGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildTicketList() {
+  Widget _buildTicketList(BuildContext context) {
     return Column(children: [
-      _buildTicketCard('#T-091', 'Hỏng điều hòa phòng...', 'P.201', '2 giờ trước', 'Mở', Colors.red),
-      _buildTicketCard('#T-089', 'Rò rỉ vòi sen ph...', 'P.201', '5 giờ trước', 'Đang xử lý', Colors.orange),
-      _buildTicketCard('#T-085', 'Khóa cửa bị kẹt', 'P.408', 'Hôm qua', 'Xong', Colors.green),
-      _buildTicketCard('#T-087', 'Bóng đèn phòng kh...', 'P.102', 'Hôm qua', 'Xong', Colors.green),
+      _buildTicketCard(context, '#T-091', 'Hỏng điều hòa phòng...', 'P.201', '2 giờ trước', 'Mở', Colors.red),
+      _buildTicketCard(context, '#T-089', 'Rò rỉ vòi sen ph...', 'P.201', '5 giờ trước', 'Đang xử lý', Colors.orange),
+      _buildTicketCard(context, '#T-085', 'Khóa cửa bị kẹt', 'P.408', 'Hôm qua', 'Xong', Colors.green),
+      _buildTicketCard(context, '#T-087', 'Bóng đèn phòng kh...', 'P.102', 'Hôm qua', 'Xong', Colors.green),
     ]);
   }
 
-  Widget _buildTicketCard(String id, String title, String room, String time, String status, Color statusColor) {
-    return Container(
+  Widget _buildTicketCard(BuildContext context, String id, String title, String room, String time, String status, Color statusColor) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+      ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
@@ -326,6 +353,7 @@ class DashboardPage extends StatelessWidget {
           Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold))),
         ],
       ),
+    ),
     );
   }
 
@@ -367,14 +395,7 @@ class DashboardPage extends StatelessWidget {
       unselectedItemColor: Colors.grey,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
       unselectedLabelStyle: const TextStyle(fontSize: 11),
-      onTap: (index) {
-        if (index == 4) return;
-        if (index == 0) {
-          _openRoomList(context);
-        } else {
-          _openTenantTab(context, index);
-        }
-      },
+      onTap: (index) => ManagerNav.bottomNav(context, index, currentIndex: 4),
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_work_outlined), label: 'Phòng'),
         BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Cư dân'),

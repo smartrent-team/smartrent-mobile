@@ -5,7 +5,9 @@ import 'package:smartrent_mobile/manager/tenant_detail_page.dart';
 import 'package:smartrent_mobile/manager/add_tenant_page.dart';
 import 'package:smartrent_mobile/manager/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/invoice_confirm_page.dart';
-import 'package:smartrent_mobile/manager/dashboard_page.dart';
+import 'package:smartrent_mobile/manager/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/issue_page.dart';
+import 'package:smartrent_mobile/manager/manager_nav.dart';
 import 'package:smartrent_mobile/manager/room_list_page.dart';
 
 class Tenant {
@@ -1311,7 +1313,15 @@ class _TenantPageState extends State<TenantPage> {
             itemBuilder: (context, index) {
               final issue = issues[index];
               final isNew = issue["status"] == "Mới tiếp nhận";
-              return Container(
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1366,6 +1376,7 @@ class _TenantPageState extends State<TenantPage> {
                     ),
                   ],
                 ),
+              ),
               );
             },
           ),
@@ -1477,9 +1488,10 @@ class _TenantPageState extends State<TenantPage> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    setState(() {
-                      _selectedIndex = 3; // Switch to Sự cố tab
-                    });
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const IssuePage()),
+                    );
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -1525,11 +1537,15 @@ class _TenantPageState extends State<TenantPage> {
             );
             return;
           }
-          if (index == 4) {
+          if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const DashboardPage()),
+              MaterialPageRoute(builder: (context) => const IssuePage()),
             );
+            return;
+          }
+          if (index == 4) {
+            ManagerNav.openDashboard(context);
             return;
           }
           setState(() {
