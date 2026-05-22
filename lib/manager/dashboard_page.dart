@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/room_list_page.dart';
+import 'package:smartrent_mobile/manager/issue_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -353,6 +354,11 @@ class DashboardPage extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const RoomListPage()),
+          );
+        } else if (index == 3) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const IssuePage()),
           );
         }
       },
