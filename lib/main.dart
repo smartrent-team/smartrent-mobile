@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/login_page.dart';
+import 'package:smartrent_mobile/manager/manager.dart';
 
 void main() {
   runApp(const MyApp());

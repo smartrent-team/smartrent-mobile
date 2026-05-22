@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class IssueDetailPage extends StatelessWidget {
   const IssueDetailPage({super.key});
 
-  static const Color primaryGreen = Color(0xFF2E7D32);
-  static const Color bgLightGreen = Color(0xFFF1FDF5);
-  static const Color subtitleGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
           _buildHeader(context),
@@ -49,7 +45,7 @@ class IssueDetailPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
       decoration: const BoxDecoration(
-        color: primaryGreen,
+        color: ManagerColors.primaryGreen,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(40),
           bottomRight: Radius.circular(40),
@@ -125,7 +121,7 @@ class IssueDetailPage extends StatelessWidget {
     return _buildCardWrapper(
       child: Row(
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.calendar_today, color: primaryGreen, size: 24)),
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.calendar_today, color: ManagerColors.primaryGreen, size: 24)),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -160,7 +156,7 @@ class IssueDetailPage extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Sự cố được báo cáo bởi cư dân phòng 305. Vui lòng kiểm tra và xử lý theo quy trình kỹ thuật.',
-            style: TextStyle(color: subtitleGrey, fontSize: 14, height: 1.5),
+            style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14, height: 1.5),
           ),
         ],
       ),
@@ -231,7 +227,7 @@ class IssueDetailPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.check_circle_outline, color: primaryGreen, size: 18),
+              const Icon(Icons.check_circle_outline, color: ManagerColors.primaryGreen, size: 18),
               const SizedBox(width: 8),
               const Text('TRẠNG THÁI XỬ LÝ', style: TextStyle(color: Colors.black26, fontSize: 12, fontWeight: FontWeight.bold)),
             ],
@@ -251,7 +247,7 @@ class IssueDetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: primaryGreen.withOpacity(0.1)),
+        border: Border.all(color: ManagerColors.primaryGreen.withOpacity(0.1)),
       ),
       child: Row(
         children: const [
@@ -301,7 +297,7 @@ class IssueDetailPage extends StatelessWidget {
   }
 
   Widget _buildTimelineLine(bool isCompleted) {
-    return Container(width: 30, height: 2, color: isCompleted ? primaryGreen : Colors.grey.shade200);
+    return Container(width: 30, height: 2, color: isCompleted ? ManagerColors.primaryGreen : Colors.grey.shade200);
   }
 
   Widget _buildCardWrapper({required Widget child}) {
@@ -311,7 +307,7 @@ class IssueDetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
-        boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 15, offset: Offset(0, 5))],
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 15, offset: Offset(0, 5))],
       ),
       child: child,
     );
@@ -325,9 +321,9 @@ class IssueDetailPage extends StatelessWidget {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: primaryGreen,
+          color: ManagerColors.primaryGreen,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: primaryGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
+          boxShadow: [BoxShadow(color: ManagerColors.primaryGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
         ),
         child: Material(
           color: Colors.transparent,

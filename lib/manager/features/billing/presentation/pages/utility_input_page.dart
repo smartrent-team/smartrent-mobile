@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class UtilityInputPage extends StatefulWidget {
   const UtilityInputPage({super.key});
@@ -21,11 +22,6 @@ class _RoomUtilityData {
 }
 
 class _UtilityInputPageState extends State<UtilityInputPage> {
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
   static const Color inputBg = Color(0xFFF5F5F5);
   static const Color electricOrange = Color(0xFFFF9800);
   static const Color waterBlue = Color(0xFF2196F3);
@@ -84,7 +80,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
           _buildHeader(context),
@@ -103,7 +99,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                         '© 2025 RMS · Phiên bản 2.4.1',
                         style: TextStyle(
                           fontSize: 12,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                         ),
                       ),
                     ),
@@ -127,7 +123,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                 content: Text(
                   'Đã nhập $_enteredCount/${_rooms.length} phòng',
                 ),
-                backgroundColor: primaryGreen,
+                backgroundColor: ManagerColors.primaryGreen,
               ),
             );
           },
@@ -141,9 +137,9 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
+            backgroundColor: ManagerColors.primaryGreen,
             elevation: 8,
-            shadowColor: primaryGreen.withValues(alpha: 0.35),
+            shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(27),
             ),
@@ -158,7 +154,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
       clipper: _UtilityHeaderClipper(),
       child: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(color: primaryGreen),
+        decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
         child: SafeArea(
           bottom: false,
           child: Padding(
@@ -317,7 +313,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
           label,
           style: const TextStyle(
             fontSize: 11,
-            color: textGrey,
+            color: ManagerColors.textGrey,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -334,7 +330,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-            color: cardShadow,
+            color: ManagerColors.cardShadow,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -351,12 +347,12 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: primaryGreen.withValues(alpha: 0.12),
+                    color: ManagerColors.primaryGreen.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.meeting_room_outlined,
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     size: 22,
                   ),
                 ),
@@ -370,7 +366,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: textCharcoal,
+                          color: ManagerColors.textCharcoal,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -378,7 +374,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                         'Kỳ trước: ${room.prevElectric} kWh · ${room.prevWater} m³',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                         ),
                       ),
                     ],
@@ -447,7 +443,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                 style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -474,14 +470,14 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                     ),
                     decoration: InputDecoration(
                       hintText: hint,
                       hintStyle: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: textCharcoal.withValues(alpha: 0.35),
+                        color: ManagerColors.textCharcoal.withValues(alpha: 0.35),
                       ),
                       border: InputBorder.none,
                       isDense: true,
@@ -493,7 +489,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                   unit,
                   style: const TextStyle(
                     fontSize: 13,
-                    color: textGrey,
+                    color: ManagerColors.textGrey,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

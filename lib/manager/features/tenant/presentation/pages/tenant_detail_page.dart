@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/edit_tenant_page.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/edit_tenant_page.dart';
 
 class TenantDetailPage extends StatelessWidget {
   const TenantDetailPage({super.key});
 
-  // Design Theme Constants
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -44,7 +38,7 @@ class TenantDetailPage extends StatelessWidget {
                     '© 2025 RMS · Phiên bản 2.4.1',
                     style: TextStyle(
                       fontSize: 12,
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -80,9 +74,9 @@ class TenantDetailPage extends StatelessWidget {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
+            backgroundColor: ManagerColors.primaryGreen,
             elevation: 8,
-            shadowColor: primaryGreen.withOpacity(0.4),
+            shadowColor: ManagerColors.primaryGreen.withOpacity(0.4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(27),
             ),
@@ -98,7 +92,7 @@ class TenantDetailPage extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          color: primaryGreen,
+          color: ManagerColors.primaryGreen,
         ),
         child: SafeArea(
           bottom: false,
@@ -273,12 +267,12 @@ class TenantDetailPage extends StatelessWidget {
           // Section Header
           Row(
             children: const [
-              Icon(Icons.person_outline, color: primaryGreen, size: 20),
+              Icon(Icons.person_outline, color: ManagerColors.primaryGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 "THÔNG TIN CÁ NHÂN",
                 style: TextStyle(
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -295,7 +289,7 @@ class TenantDetailPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -309,7 +303,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "Nguyễn Thị Mai Anh",
                     style: TextStyle(
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -321,7 +315,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "0912 345 678",
                     style: TextStyle(
-                      color: primaryGreen,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -333,7 +327,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "079 201 012 345",
                     style: TextStyle(
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -356,12 +350,12 @@ class TenantDetailPage extends StatelessWidget {
           // Section Header
           Row(
             children: const [
-              Icon(Icons.home_outlined, color: primaryGreen, size: 20),
+              Icon(Icons.home_outlined, color: ManagerColors.primaryGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 "THÔNG TIN THUÊ PHÒNG",
                 style: TextStyle(
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -378,7 +372,7 @@ class TenantDetailPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -392,7 +386,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "Phòng 305 - Tầng 3 - Khu A",
                     style: TextStyle(
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -404,7 +398,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "01/09/2024",
                     style: TextStyle(
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -416,7 +410,7 @@ class TenantDetailPage extends StatelessWidget {
                   valueWidget: const Text(
                     "01/09/2024",
                     style: TextStyle(
-                      color: textCharcoal,
+                      color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -434,7 +428,7 @@ class TenantDetailPage extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
+                          color: ManagerColors.bgMint,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -444,7 +438,7 @@ class TenantDetailPage extends StatelessWidget {
                               width: 6,
                               height: 6,
                               decoration: const BoxDecoration(
-                                color: primaryGreen,
+                                color: ManagerColors.primaryGreen,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -452,7 +446,7 @@ class TenantDetailPage extends StatelessWidget {
                             const Text(
                               "Đang thuê",
                               style: TextStyle(
-                                color: primaryGreen,
+                                color: ManagerColors.primaryGreen,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -483,12 +477,12 @@ class TenantDetailPage extends StatelessWidget {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.text_snippet_outlined, color: primaryGreen, size: 20),
+                  Icon(Icons.text_snippet_outlined, color: ManagerColors.primaryGreen, size: 20),
                   SizedBox(width: 8),
                   Text(
                     "HỢP ĐỒNG GIẤY",
                     style: TextStyle(
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -499,13 +493,13 @@ class TenantDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
+                  color: ManagerColors.bgMint,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
                   "3 ảnh",
                   style: TextStyle(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -522,7 +516,7 @@ class TenantDetailPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -576,14 +570,14 @@ class TenantDetailPage extends StatelessWidget {
                       children: const [
                         Icon(
                           Icons.image_outlined,
-                          color: primaryGreen,
+                          color: ManagerColors.primaryGreen,
                           size: 20,
                         ),
                         SizedBox(width: 8),
                         Text(
                           "Xem ảnh hợp đồng",
                           style: TextStyle(
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -591,7 +585,7 @@ class TenantDetailPage extends StatelessWidget {
                         Spacer(),
                         Icon(
                           Icons.chevron_right,
-                          color: primaryGreen,
+                          color: ManagerColors.primaryGreen,
                           size: 20,
                         ),
                       ],
@@ -675,10 +669,10 @@ class TenantDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE8F5E9),
+                  color: ManagerColors.bgMint,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: primaryGreen, size: 20),
+                child: Icon(icon, color: ManagerColors.primaryGreen, size: 20),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -688,7 +682,7 @@ class TenantDetailPage extends StatelessWidget {
                     Text(
                       label,
                       style: const TextStyle(
-                        color: textGrey,
+                        color: ManagerColors.textGrey,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,

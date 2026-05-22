@@ -1,30 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/login_page.dart';
-import 'package:smartrent_mobile/manager/room_detail_page.dart';
-import 'package:smartrent_mobile/manager/tenant_detail_page.dart';
-import 'package:smartrent_mobile/manager/add_tenant_page.dart';
-import 'package:smartrent_mobile/manager/utility_input_page.dart';
-import 'package:smartrent_mobile/manager/invoice_confirm_page.dart';
-import 'package:smartrent_mobile/manager/issue_detail_page.dart';
-import 'package:smartrent_mobile/manager/issue_page.dart';
-import 'package:smartrent_mobile/manager/manager_nav.dart';
-import 'package:smartrent_mobile/manager/room_list_page.dart';
-
-class Tenant {
-  final String name;
-  final String phone;
-  final String checkInDate;
-  final bool isRoomHead;
-  final String initial;
-
-  const Tenant({
-    required this.name,
-    required this.phone,
-    required this.checkInDate,
-    required this.isRoomHead,
-    required this.initial,
-  });
-}
+import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
+import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
+import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_list_page.dart';
+import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_tenant_page.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_detail_page.dart';
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
@@ -37,13 +23,6 @@ class TenantPage extends StatefulWidget {
 class _TenantPageState extends State<TenantPage> {
   late int _selectedIndex;
   final TextEditingController _searchController = TextEditingController();
-
-  // Color constants to match layout
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
 
   // In-memory list of tenants
   final List<Tenant> _allTenants = [
@@ -138,7 +117,7 @@ class _TenantPageState extends State<TenantPage> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: textCharcoal,
+                        color: ManagerColors.textCharcoal,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -146,9 +125,9 @@ class _TenantPageState extends State<TenantPage> {
                       controller: nameController,
                       decoration: const InputDecoration(
                         labelText: "Họ và tên",
-                        labelStyle: TextStyle(color: textGrey),
+                        labelStyle: TextStyle(color: ManagerColors.textGrey),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: primaryGreen),
+                          borderSide: BorderSide(color: ManagerColors.primaryGreen),
                         ),
                       ),
                     ),
@@ -158,9 +137,9 @@ class _TenantPageState extends State<TenantPage> {
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
                         labelText: "Số điện thoại",
-                        labelStyle: TextStyle(color: textGrey),
+                        labelStyle: TextStyle(color: ManagerColors.textGrey),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: primaryGreen),
+                          borderSide: BorderSide(color: ManagerColors.primaryGreen),
                         ),
                       ),
                     ),
@@ -169,9 +148,9 @@ class _TenantPageState extends State<TenantPage> {
                       controller: dateController,
                       decoration: const InputDecoration(
                         labelText: "Ngày vào ở",
-                        labelStyle: TextStyle(color: textGrey),
+                        labelStyle: TextStyle(color: ManagerColors.textGrey),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: primaryGreen),
+                          borderSide: BorderSide(color: ManagerColors.primaryGreen),
                         ),
                       ),
                     ),
@@ -182,13 +161,13 @@ class _TenantPageState extends State<TenantPage> {
                           "Là chủ phòng",
                           style: TextStyle(
                             fontSize: 16,
-                            color: textCharcoal,
+                            color: ManagerColors.textCharcoal,
                           ),
                         ),
                         const Spacer(),
                         Switch(
                           value: isRoomHead,
-                          activeThumbColor: primaryGreen,
+                          activeThumbColor: ManagerColors.primaryGreen,
                           onChanged: (val) {
                             setStateSheet(() {
                               isRoomHead = val;
@@ -223,7 +202,7 @@ class _TenantPageState extends State<TenantPage> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryGreen,
+                          backgroundColor: ManagerColors.primaryGreen,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -253,14 +232,14 @@ class _TenantPageState extends State<TenantPage> {
     final filtered = _filteredTenants;
 
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
           // 1. Top Header Component
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
-              color: primaryGreen,
+              color: ManagerColors.primaryGreen,
               borderRadius: BorderRadius.vertical(
                 bottom: Radius.circular(28),
               ),
@@ -309,7 +288,7 @@ class _TenantPageState extends State<TenantPage> {
                                 ),
                                 const SizedBox(height: 2),
                                 const Text(
-                                  'Chào, 1111111111 👋',
+                                  'Chào, 0979789878 👋',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -349,7 +328,7 @@ class _TenantPageState extends State<TenantPage> {
                                       color: Colors.redAccent,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: primaryGreen,
+                                        color: ManagerColors.primaryGreen,
                                         width: 1.5,
                                       ),
                                     ),
@@ -452,9 +431,9 @@ class _TenantPageState extends State<TenantPage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen,
+                  backgroundColor: ManagerColors.primaryGreen,
                   elevation: 6,
-                  shadowColor: primaryGreen.withValues(alpha: 0.3),
+                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(26),
                   ),
@@ -477,7 +456,7 @@ class _TenantPageState extends State<TenantPage> {
           ),
           boxShadow: const [
             BoxShadow(
-              color: cardShadow,
+              color: ManagerColors.cardShadow,
               blurRadius: 10,
               offset: Offset(0, -4),
             ),
@@ -534,7 +513,7 @@ class _TenantPageState extends State<TenantPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
                         BoxShadow(
-                          color: cardShadow,
+                          color: ManagerColors.cardShadow,
                           blurRadius: 16,
                           offset: Offset(0, 4),
                         ),
@@ -548,7 +527,7 @@ class _TenantPageState extends State<TenantPage> {
                           style: const TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -556,7 +535,7 @@ class _TenantPageState extends State<TenantPage> {
                           'Tổng cư dân',
                           style: TextStyle(
                             fontSize: 12,
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -573,7 +552,7 @@ class _TenantPageState extends State<TenantPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
                         BoxShadow(
-                          color: cardShadow,
+                          color: ManagerColors.cardShadow,
                           blurRadius: 16,
                           offset: Offset(0, 4),
                         ),
@@ -587,7 +566,7 @@ class _TenantPageState extends State<TenantPage> {
                           style: const TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -595,7 +574,7 @@ class _TenantPageState extends State<TenantPage> {
                           'Đang ở',
                           style: TextStyle(
                             fontSize: 12,
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -619,7 +598,7 @@ class _TenantPageState extends State<TenantPage> {
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: const [
                   BoxShadow(
-                    color: cardShadow,
+                    color: ManagerColors.cardShadow,
                     blurRadius: 12,
                     offset: Offset(0, 3),
                   ),
@@ -636,7 +615,7 @@ class _TenantPageState extends State<TenantPage> {
                   ),
                   prefixIcon: const Icon(
                     Icons.search,
-                    color: textGrey,
+                    color: ManagerColors.textGrey,
                     size: 22,
                   ),
                   border: InputBorder.none,
@@ -658,7 +637,7 @@ class _TenantPageState extends State<TenantPage> {
               children: [
                 const Icon(
                   Icons.people_outline,
-                  color: primaryGreen,
+                  color: ManagerColors.primaryGreen,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -667,7 +646,7 @@ class _TenantPageState extends State<TenantPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: textCharcoal,
+                    color: ManagerColors.textCharcoal,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -677,7 +656,7 @@ class _TenantPageState extends State<TenantPage> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: primaryGreen.withValues(alpha: 0.12),
+                    color: ManagerColors.primaryGreen.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -685,7 +664,7 @@ class _TenantPageState extends State<TenantPage> {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: primaryGreen,
+                      color: ManagerColors.primaryGreen,
                     ),
                   ),
                 ),
@@ -705,7 +684,7 @@ class _TenantPageState extends State<TenantPage> {
                   child: Center(
                     child: Text(
                       'Không tìm thấy cư dân phù hợp.',
-                      style: TextStyle(color: textGrey),
+                      style: TextStyle(color: ManagerColors.textGrey),
                     ),
                   ),
                 )
@@ -737,7 +716,7 @@ class _TenantPageState extends State<TenantPage> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: const [
                           BoxShadow(
-                            color: cardShadow,
+                            color: ManagerColors.cardShadow,
                             blurRadius: 16,
                             offset: Offset(0, 4),
                           ),
@@ -751,7 +730,7 @@ class _TenantPageState extends State<TenantPage> {
                             width: 48,
                             height: 48,
                             decoration: const BoxDecoration(
-                              color: primaryGreen,
+                              color: ManagerColors.primaryGreen,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
@@ -779,7 +758,7 @@ class _TenantPageState extends State<TenantPage> {
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: textCharcoal,
+                                          color: ManagerColors.textCharcoal,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -793,7 +772,7 @@ class _TenantPageState extends State<TenantPage> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: primaryGreen
+                                          color: ManagerColors.primaryGreen
                                               .withValues(alpha: 0.12),
                                           borderRadius:
                                               BorderRadius.circular(6),
@@ -801,7 +780,7 @@ class _TenantPageState extends State<TenantPage> {
                                         child: const Text(
                                           'Chủ phòng',
                                           style: TextStyle(
-                                            color: primaryGreen,
+                                            color: ManagerColors.primaryGreen,
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -816,14 +795,14 @@ class _TenantPageState extends State<TenantPage> {
                                     const Icon(
                                       Icons.phone_outlined,
                                       size: 14,
-                                      color: primaryGreen,
+                                      color: ManagerColors.primaryGreen,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       tenant.phone,
                                       style: const TextStyle(
                                         fontSize: 13,
-                                        color: primaryGreen,
+                                        color: ManagerColors.primaryGreen,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -835,14 +814,14 @@ class _TenantPageState extends State<TenantPage> {
                                     const Icon(
                                       Icons.calendar_month_outlined,
                                       size: 14,
-                                      color: textGrey,
+                                      color: ManagerColors.textGrey,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Vào ở: ${tenant.checkInDate}',
                                       style: const TextStyle(
                                         fontSize: 13,
-                                        color: textGrey,
+                                        color: ManagerColors.textGrey,
                                       ),
                                     ),
                                   ],
@@ -858,10 +837,10 @@ class _TenantPageState extends State<TenantPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: primaryGreen.withValues(alpha: 0.08),
+                              color: ManagerColors.primaryGreen.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: primaryGreen.withValues(alpha: 0.3),
+                                color: ManagerColors.primaryGreen.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -871,13 +850,13 @@ class _TenantPageState extends State<TenantPage> {
                                 Icon(
                                   Icons.check,
                                   size: 12,
-                                  color: primaryGreen,
+                                  color: ManagerColors.primaryGreen,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
                                   'Đang thuê',
                                   style: TextStyle(
-                                    color: primaryGreen,
+                                    color: ManagerColors.primaryGreen,
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -913,7 +892,7 @@ class _TenantPageState extends State<TenantPage> {
         children: [
           const Text(
             "Danh sách phòng",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textCharcoal),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal),
           ),
           const SizedBox(height: 16),
           GridView.builder(
@@ -945,7 +924,7 @@ class _TenantPageState extends State<TenantPage> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
-                      BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4)),
+                      BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
                     ],
                   ),
                   child: Column(
@@ -954,13 +933,13 @@ class _TenantPageState extends State<TenantPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isAvailable ? Colors.blue.withValues(alpha: 0.1) : primaryGreen.withValues(alpha: 0.1),
+                          color: isAvailable ? Colors.blue.withValues(alpha: 0.1) : ManagerColors.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           room["status"],
                           style: TextStyle(
-                            color: isAvailable ? Colors.blue : primaryGreen,
+                            color: isAvailable ? Colors.blue : ManagerColors.primaryGreen,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -969,17 +948,17 @@ class _TenantPageState extends State<TenantPage> {
                       const Spacer(),
                       Text(
                         room["name"],
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textCharcoal),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         room["type"],
-                        style: const TextStyle(fontSize: 12, color: textGrey),
+                        style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         room["price"],
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryGreen),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: ManagerColors.primaryGreen),
                       ),
                     ],
                   ),
@@ -1051,13 +1030,13 @@ class _TenantPageState extends State<TenantPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
               ],
               border: Border.all(
-                color: primaryGreen.withOpacity(0.08),
+                color: ManagerColors.primaryGreen.withOpacity(0.08),
                 width: 1,
               ),
             ),
@@ -1066,12 +1045,12 @@ class _TenantPageState extends State<TenantPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFE8F5E9),
+                    color: ManagerColors.bgMint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.bolt_outlined,
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     size: 24,
                   ),
                 ),
@@ -1085,7 +1064,7 @@ class _TenantPageState extends State<TenantPage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: textCharcoal,
+                          color: ManagerColors.textCharcoal,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -1093,7 +1072,7 @@ class _TenantPageState extends State<TenantPage> {
                         "Kỳ tháng 5/2025 - 8 phòng chờ nhập",
                         style: TextStyle(
                           fontSize: 12,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                         ),
                       ),
                     ],
@@ -1101,7 +1080,7 @@ class _TenantPageState extends State<TenantPage> {
                 ),
                 const Icon(
                   Icons.chevron_right,
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   size: 20,
                 ),
               ],
@@ -1128,13 +1107,13 @@ class _TenantPageState extends State<TenantPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
               ],
               border: Border.all(
-                color: primaryGreen.withOpacity(0.08),
+                color: ManagerColors.primaryGreen.withOpacity(0.08),
                 width: 1,
               ),
             ),
@@ -1143,12 +1122,12 @@ class _TenantPageState extends State<TenantPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFE8F5E9),
+                    color: ManagerColors.bgMint,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.receipt_long_outlined,
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     size: 24,
                   ),
                 ),
@@ -1162,7 +1141,7 @@ class _TenantPageState extends State<TenantPage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: textCharcoal,
+                          color: ManagerColors.textCharcoal,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -1170,7 +1149,7 @@ class _TenantPageState extends State<TenantPage> {
                         "Xác nhận & tạo hóa đơn tháng 5/2025",
                         style: TextStyle(
                           fontSize: 12,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                         ),
                       ),
                     ],
@@ -1178,7 +1157,7 @@ class _TenantPageState extends State<TenantPage> {
                 ),
                 const Icon(
                   Icons.chevron_right,
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   size: 20,
                 ),
               ],
@@ -1194,7 +1173,7 @@ class _TenantPageState extends State<TenantPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: textGrey,
+                color: ManagerColors.textGrey,
                 letterSpacing: 0.5,
               ),
             ),
@@ -1216,7 +1195,7 @@ class _TenantPageState extends State<TenantPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: const [
                     BoxShadow(
-                      color: cardShadow,
+                      color: ManagerColors.cardShadow,
                       blurRadius: 16,
                       offset: Offset(0, 4),
                     ),
@@ -1234,7 +1213,7 @@ class _TenantPageState extends State<TenantPage> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: textCharcoal,
+                              color: ManagerColors.textCharcoal,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -1242,7 +1221,7 @@ class _TenantPageState extends State<TenantPage> {
                             bill["deadline"],
                             style: const TextStyle(
                               fontSize: 12,
-                              color: textGrey,
+                              color: ManagerColors.textGrey,
                             ),
                           ),
                         ],
@@ -1255,7 +1234,7 @@ class _TenantPageState extends State<TenantPage> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: textCharcoal,
+                        color: ManagerColors.textCharcoal,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1267,13 +1246,13 @@ class _TenantPageState extends State<TenantPage> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: isPaid ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                        color: isPaid ? ManagerColors.bgMint : const Color(0xFFFFF3E0),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         bill["status"],
                         style: TextStyle(
-                          color: isPaid ? const Color(0xFF2E7D32) : const Color(0xFFE65100),
+                          color: isPaid ? ManagerColors.primaryGreen : const Color(0xFFE65100),
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1303,7 +1282,7 @@ class _TenantPageState extends State<TenantPage> {
         children: [
           const Text(
             "Danh sách sự cố",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textCharcoal),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal),
           ),
           const SizedBox(height: 16),
           ListView.builder(
@@ -1328,7 +1307,7 @@ class _TenantPageState extends State<TenantPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
-                    BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4)),
+                    BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
                   ],
                 ),
                 child: Row(
@@ -1349,12 +1328,12 @@ class _TenantPageState extends State<TenantPage> {
                         children: [
                           Text(
                             issue["title"],
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textCharcoal),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             "${issue["room"]} · ${issue["date"]}",
-                            style: const TextStyle(fontSize: 12, color: textGrey),
+                            style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey),
                           ),
                         ],
                       ),
@@ -1394,7 +1373,7 @@ class _TenantPageState extends State<TenantPage> {
         children: [
           const Text(
             "Tổng quan RMS",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textCharcoal),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal),
           ),
           const SizedBox(height: 16),
           // Total revenue card
@@ -1410,14 +1389,14 @@ class _TenantPageState extends State<TenantPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [primaryGreen, Color(0xFF42A36E)],
+                  colors: [ManagerColors.primaryGreen, ManagerColors.primaryGreenLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryGreen.withValues(alpha: 0.3),
+                    color: ManagerColors.primaryGreen.withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -1468,17 +1447,17 @@ class _TenantPageState extends State<TenantPage> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
-                        BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4)),
+                        BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
                       ],
                     ),
                     child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.door_front_door_outlined, color: primaryGreen, size: 24),
+                        Icon(Icons.door_front_door_outlined, color: ManagerColors.primaryGreen, size: 24),
                         SizedBox(height: 12),
-                        Text("Phòng trống", style: TextStyle(color: textGrey, fontSize: 12)),
+                        Text("Phòng trống", style: TextStyle(color: ManagerColors.textGrey, fontSize: 12)),
                         SizedBox(height: 4),
-                        Text("2 / 5", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textCharcoal)),
+                        Text("2 / 5", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
                       ],
                     ),
                   ),
@@ -1500,7 +1479,7 @@ class _TenantPageState extends State<TenantPage> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
-                        BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4)),
+                        BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
                       ],
                     ),
                     child: const Column(
@@ -1508,9 +1487,9 @@ class _TenantPageState extends State<TenantPage> {
                       children: [
                         Icon(Icons.report_gmailerrorred_outlined, color: Colors.redAccent, size: 24),
                         SizedBox(height: 12),
-                        Text("Sự cố tồn đọng", style: TextStyle(color: textGrey, fontSize: 12)),
+                        Text("Sự cố tồn đọng", style: TextStyle(color: ManagerColors.textGrey, fontSize: 12)),
                         SizedBox(height: 4),
-                        Text("2 sự cố", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textCharcoal)),
+                        Text("2 sự cố", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
                       ],
                     ),
                   ),
@@ -1525,7 +1504,7 @@ class _TenantPageState extends State<TenantPage> {
 
   Widget _buildNavItem(int index, IconData icon, String label, {int badgeCount = 0}) {
     final isSelected = _selectedIndex == index;
-    final color = isSelected ? primaryGreen : Colors.grey;
+    final color = isSelected ? ManagerColors.primaryGreen : Colors.grey;
 
     return Expanded(
       child: InkWell(
@@ -1563,7 +1542,7 @@ class _TenantPageState extends State<TenantPage> {
                   width: 48,
                   height: 3,
                   decoration: const BoxDecoration(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     borderRadius: BorderRadius.vertical(
                       bottom: Radius.circular(3),
                     ),

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class InvoiceConfirmPage extends StatelessWidget {
   const InvoiceConfirmPage({super.key});
 
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
   static const Color electricOrange = Color(0xFFE65100);
   static const Color electricTint = Color(0xFFFFF8E1);
   static const Color waterBlue = Color(0xFF1565C0);
@@ -16,7 +12,7 @@ class InvoiceConfirmPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -31,7 +27,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                 children: [
                   _buildSectionHeader(
                     Icons.home_outlined,
-                    primaryGreen,
+                    ManagerColors.primaryGreen,
                     'TIỀN PHÒNG',
                   ),
                   const SizedBox(height: 10),
@@ -60,7 +56,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                       '© 2025 RMS · Phiên bản 2.4.1',
                       style: TextStyle(
                         fontSize: 12,
-                        color: textGrey,
+                        color: ManagerColors.textGrey,
                       ),
                     ),
                   ),
@@ -81,7 +77,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Đã xác nhận tạo hóa đơn'),
-                backgroundColor: primaryGreen,
+                backgroundColor: ManagerColors.primaryGreen,
               ),
             );
           },
@@ -107,9 +103,9 @@ class InvoiceConfirmPage extends StatelessWidget {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
+            backgroundColor: ManagerColors.primaryGreen,
             elevation: 8,
-            shadowColor: primaryGreen.withValues(alpha: 0.35),
+            shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(27),
             ),
@@ -124,7 +120,7 @@ class InvoiceConfirmPage extends StatelessWidget {
       clipper: _InvoiceHeaderClipper(),
       child: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(color: primaryGreen),
+        decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
         child: SafeArea(
           bottom: false,
           child: Padding(
@@ -219,7 +215,7 @@ class InvoiceConfirmPage extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: textGrey,
+            color: ManagerColors.textGrey,
             letterSpacing: 0.6,
           ),
         ),
@@ -235,7 +231,7 @@ class InvoiceConfirmPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-            color: cardShadow,
+            color: ManagerColors.cardShadow,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -247,12 +243,12 @@ class InvoiceConfirmPage extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: primaryGreen.withValues(alpha: 0.12),
+              color: ManagerColors.primaryGreen.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.meeting_room_outlined,
-              color: primaryGreen,
+              color: ManagerColors.primaryGreen,
               size: 24,
             ),
           ),
@@ -266,7 +262,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: textCharcoal,
+                    color: ManagerColors.textCharcoal,
                   ),
                 ),
                 SizedBox(height: 2),
@@ -274,7 +270,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                   'Giá thuê cố định',
                   style: TextStyle(
                     fontSize: 12,
-                    color: textGrey,
+                    color: ManagerColors.textGrey,
                   ),
                 ),
               ],
@@ -285,7 +281,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: textCharcoal,
+              color: ManagerColors.textCharcoal,
             ),
           ),
         ],
@@ -342,7 +338,7 @@ class InvoiceConfirmPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-            color: cardShadow,
+            color: ManagerColors.cardShadow,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -403,7 +399,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             row.label,
             style: const TextStyle(
               fontSize: 12,
-              color: textGrey,
+              color: ManagerColors.textGrey,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.3,
             ),
@@ -414,7 +410,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: row.highlight ? primaryGreen : textCharcoal,
+              color: row.highlight ? ManagerColors.primaryGreen : ManagerColors.textCharcoal,
             ),
           ),
         ],
@@ -427,10 +423,10 @@ class InvoiceConfirmPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: primaryGreen, width: 1.5),
+        border: Border.all(color: ManagerColors.primaryGreen, width: 1.5),
         boxShadow: const [
           BoxShadow(
-            color: cardShadow,
+            color: ManagerColors.cardShadow,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -448,7 +444,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -466,7 +462,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                         'Tổng tiền phải trả',
                         style: TextStyle(
                           fontSize: 13,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -475,7 +471,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                         'Tháng 5/2025',
                         style: TextStyle(
                           fontSize: 12,
-                          color: textGrey,
+                          color: ManagerColors.textGrey,
                         ),
                       ),
                     ],
@@ -486,7 +482,7 @@ class InvoiceConfirmPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                   ),
                 ),
               ],
@@ -512,7 +508,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 13,
-              color: textGrey,
+              color: ManagerColors.textGrey,
             ),
           ),
           const Spacer(),
@@ -521,7 +517,7 @@ class InvoiceConfirmPage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: textCharcoal,
+              color: ManagerColors.textCharcoal,
             ),
           ),
         ],

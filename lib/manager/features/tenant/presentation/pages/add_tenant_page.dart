@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class AddTenantPage extends StatefulWidget {
   const AddTenantPage({super.key});
@@ -8,13 +9,6 @@ class AddTenantPage extends StatefulWidget {
 }
 
 class _AddTenantPageState extends State<AddTenantPage> {
-  // Theme Color Constants
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
-
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -56,13 +50,13 @@ class _AddTenantPageState extends State<AddTenantPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: primaryGreen,
+              primary: ManagerColors.primaryGreen,
               onPrimary: Colors.white,
-              onSurface: textCharcoal,
+              onSurface: ManagerColors.textCharcoal,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: primaryGreen,
+                foregroundColor: ManagerColors.primaryGreen,
               ),
             ),
           ),
@@ -80,7 +74,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -126,7 +120,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                         content: Text(
                           'Đang thêm cư dân: ${_nameController.text}',
                         ),
-                        backgroundColor: primaryGreen,
+                        backgroundColor: ManagerColors.primaryGreen,
                       ),
                     );
                     Navigator.pop(context, {
@@ -147,10 +141,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
-            disabledBackgroundColor: primaryGreen.withOpacity(0.35),
+            backgroundColor: ManagerColors.primaryGreen,
+            disabledBackgroundColor: ManagerColors.primaryGreen.withOpacity(0.35),
             elevation: _isFormValid ? 8 : 0,
-            shadowColor: primaryGreen.withOpacity(0.4),
+            shadowColor: ManagerColors.primaryGreen.withOpacity(0.4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(27),
             ),
@@ -166,7 +160,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          color: primaryGreen,
+          color: ManagerColors.primaryGreen,
         ),
         child: SafeArea(
           bottom: false,
@@ -294,12 +288,12 @@ class _AddTenantPageState extends State<AddTenantPage> {
           // Section Title
           Row(
             children: const [
-              Icon(Icons.person_outline, color: primaryGreen, size: 20),
+              Icon(Icons.person_outline, color: ManagerColors.primaryGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 "Thông tin cá nhân",
                 style: TextStyle(
-                  color: textCharcoal,
+                  color: ManagerColors.textCharcoal,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -315,7 +309,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -333,7 +327,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                         text: const TextSpan(
                           text: "HỌ VÀ TÊN",
                           style: TextStyle(
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -350,7 +344,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(
-                          color: textCharcoal,
+                          color: ManagerColors.textCharcoal,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -387,7 +381,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                         text: const TextSpan(
                           text: "SỐ ĐIỆN THOẠI",
                           style: TextStyle(
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -407,7 +401,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                           const Text(
                             "+84",
                             style: TextStyle(
-                              color: textCharcoal,
+                              color: ManagerColors.textCharcoal,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -424,7 +418,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
                               style: const TextStyle(
-                                color: textCharcoal,
+                                color: ManagerColors.textCharcoal,
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -473,7 +467,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                           text: const TextSpan(
                             text: "NGÀY DỌN VÀO",
                             style: TextStyle(
-                              color: textGrey,
+                              color: ManagerColors.textGrey,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
@@ -491,7 +485,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                           children: [
                             const Icon(
                               Icons.calendar_month_outlined,
-                              color: primaryGreen,
+                              color: ManagerColors.primaryGreen,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -500,7 +494,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                                 child: TextFormField(
                                   controller: _dateController,
                                   style: const TextStyle(
-                                    color: textCharcoal,
+                                    color: ManagerColors.textCharcoal,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -527,7 +521,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                             ),
                             const Icon(
                               Icons.calendar_today_outlined,
-                              color: textGrey,
+                              color: ManagerColors.textGrey,
                               size: 16,
                             ),
                           ],
@@ -552,12 +546,12 @@ class _AddTenantPageState extends State<AddTenantPage> {
           // Section Title
           Row(
             children: const [
-              Icon(Icons.text_snippet_outlined, color: primaryGreen, size: 20),
+              Icon(Icons.text_snippet_outlined, color: ManagerColors.primaryGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 "Ảnh hợp đồng giấy ",
                 style: TextStyle(
-                  color: textCharcoal,
+                  color: ManagerColors.textCharcoal,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -565,7 +559,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
               Text(
                 "(không bắt buộc)",
                 style: TextStyle(
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
                 ),
@@ -577,7 +571,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
           // Dashed Upload Area Box
           CustomPaint(
             painter: DashedBorderPainter(
-              color: primaryGreen.withOpacity(0.4),
+              color: ManagerColors.primaryGreen.withOpacity(0.4),
               borderRadius: 20,
               strokeWidth: 1.5,
             ),
@@ -585,7 +579,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 28),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1FDF5),
+                color: ManagerColors.bgMintPale,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -594,12 +588,12 @@ class _AddTenantPageState extends State<AddTenantPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE8F5E9),
+                      color: ManagerColors.bgMint,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.camera_alt_outlined,
-                      color: primaryGreen,
+                      color: ManagerColors.primaryGreen,
                       size: 24,
                     ),
                   ),
@@ -607,7 +601,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                   const Text(
                     "Chụp hợp đồng",
                     style: TextStyle(
-                      color: primaryGreen,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -616,7 +610,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
                   const Text(
                     "Chụp ảnh hợp đồng giấy để lưu trữ",
                     style: TextStyle(
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontSize: 11,
                     ),
                   ),

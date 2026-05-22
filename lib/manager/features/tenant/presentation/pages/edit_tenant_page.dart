@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class EditTenantPage extends StatefulWidget {
   const EditTenantPage({super.key});
@@ -8,14 +9,6 @@ class EditTenantPage extends StatefulWidget {
 }
 
 class _EditTenantPageState extends State<EditTenantPage> {
-  // Color Constants to match visual branding
-  static const Color primaryGreen = Color(0xFF2D9D5E);
-  static const Color bgLightGreen = Color(0xFFF4F9F6);
-  static const Color fieldBgTint = Color(0xFFF1FDF5);
-  static const Color textCharcoal = Color(0xFF2D312E);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
-
   final _formKey = GlobalKey<FormState>();
   
   // Controllers initialized with current values
@@ -55,13 +48,13 @@ class _EditTenantPageState extends State<EditTenantPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: primaryGreen,
+              primary: ManagerColors.primaryGreen,
               onPrimary: Colors.white,
-              onSurface: textCharcoal,
+              onSurface: ManagerColors.textCharcoal,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: primaryGreen,
+                foregroundColor: ManagerColors.primaryGreen,
               ),
             ),
           ),
@@ -87,7 +80,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Đã thêm ảnh hợp đồng mới'),
-        backgroundColor: primaryGreen,
+        backgroundColor: ManagerColors.primaryGreen,
         duration: Duration(seconds: 1),
       ),
     );
@@ -102,7 +95,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -134,7 +127,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                       '© 2025 RMS · Phiên bản 2.4.1',
                       style: TextStyle(
                         fontSize: 12,
-                        color: textGrey,
+                        color: ManagerColors.textGrey,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -158,7 +151,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Đã cập nhật thông tin cư dân thành công!'),
-                  backgroundColor: primaryGreen,
+                  backgroundColor: ManagerColors.primaryGreen,
                 ),
               );
               Navigator.pop(context, {
@@ -179,9 +172,9 @@ class _EditTenantPageState extends State<EditTenantPage> {
             ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryGreen,
+            backgroundColor: ManagerColors.primaryGreen,
             elevation: 8,
-            shadowColor: primaryGreen.withOpacity(0.4),
+            shadowColor: ManagerColors.primaryGreen.withOpacity(0.4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(27),
             ),
@@ -197,7 +190,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          color: primaryGreen,
+          color: ManagerColors.primaryGreen,
         ),
         child: SafeArea(
           bottom: false,
@@ -306,12 +299,12 @@ class _EditTenantPageState extends State<EditTenantPage> {
           // Section Title Header
           Row(
             children: const [
-              Icon(Icons.person_outline, color: primaryGreen, size: 20),
+              Icon(Icons.person_outline, color: ManagerColors.primaryGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 "THÔNG TIN CÁ NHÂN",
                 style: TextStyle(
-                  color: textGrey,
+                  color: ManagerColors.textGrey,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -328,7 +321,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -341,13 +334,13 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   label: "Họ và tên",
                   child: Row(
                     children: [
-                      const Icon(Icons.person_pin_outlined, color: primaryGreen, size: 20),
+                      const Icon(Icons.person_pin_outlined, color: ManagerColors.primaryGreen, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _nameController,
                           style: const TextStyle(
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -374,14 +367,14 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   label: "Số điện thoại",
                   child: Row(
                     children: [
-                      const Icon(Icons.phone_outlined, color: primaryGreen, size: 20),
+                      const Icon(Icons.phone_outlined, color: ManagerColors.primaryGreen, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           style: const TextStyle(
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -414,14 +407,14 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     label: "Ngày dọn vào",
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_month_outlined, color: primaryGreen, size: 20),
+                        const Icon(Icons.calendar_month_outlined, color: ManagerColors.primaryGreen, size: 20),
                         const SizedBox(width: 12),
                         Expanded(
                           child: IgnorePointer(
                             child: TextFormField(
                               controller: _dateController,
                               style: const TextStyle(
-                                color: primaryGreen,
+                                color: ManagerColors.primaryGreen,
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -439,7 +432,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                             ),
                           ),
                         ),
-                        const Icon(Icons.calendar_today_outlined, color: textGrey, size: 16),
+                        const Icon(Icons.calendar_today_outlined, color: ManagerColors.textGrey, size: 16),
                       ],
                     ),
                   ),
@@ -469,13 +462,13 @@ class _EditTenantPageState extends State<EditTenantPage> {
                       ),
                     ],
                     style: const TextStyle(
-                      color: primaryGreen,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
-                    icon: const Icon(Icons.keyboard_arrow_down, color: textGrey),
+                    icon: const Icon(Icons.keyboard_arrow_down, color: ManagerColors.textGrey),
                     decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.check_circle_outline, color: primaryGreen, size: 20),
+                      prefixIcon: Icon(Icons.check_circle_outline, color: ManagerColors.primaryGreen, size: 20),
                       prefixIconConstraints: BoxConstraints(minWidth: 32, maxHeight: 20),
                       border: InputBorder.none,
                       isDense: true,
@@ -500,7 +493,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
           Text(
             label,
             style: const TextStyle(
-              color: textGrey,
+              color: ManagerColors.textGrey,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
@@ -509,10 +502,10 @@ class _EditTenantPageState extends State<EditTenantPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: fieldBgTint,
+              color: ManagerColors.fieldBgTint,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: primaryGreen.withOpacity(0.08),
+                color: ManagerColors.primaryGreen.withOpacity(0.08),
                 width: 1,
               ),
             ),
@@ -534,12 +527,12 @@ class _EditTenantPageState extends State<EditTenantPage> {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.text_snippet_outlined, color: primaryGreen, size: 20),
+                  Icon(Icons.text_snippet_outlined, color: ManagerColors.primaryGreen, size: 20),
                   SizedBox(width: 8),
                   Text(
                     "HỢP ĐỒNG GIẤY",
                     style: TextStyle(
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -550,13 +543,13 @@ class _EditTenantPageState extends State<EditTenantPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
+                  color: ManagerColors.bgMint,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   "${_contractImages.length} ảnh",
                   style: const TextStyle(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -574,7 +567,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
-                  color: cardShadow,
+                  color: ManagerColors.cardShadow,
                   blurRadius: 16,
                   offset: Offset(0, 4),
                 ),
@@ -589,7 +582,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     child: Center(
                       child: Text(
                         "Không có ảnh hợp đồng nào",
-                        style: TextStyle(color: textGrey, fontSize: 13),
+                        style: TextStyle(color: ManagerColors.textGrey, fontSize: 13),
                       ),
                     ),
                   )
@@ -617,17 +610,17 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   height: 48,
                   child: OutlinedButton.icon(
                     onPressed: _addNewContractPhoto,
-                    icon: const Icon(Icons.add, color: primaryGreen, size: 20),
+                    icon: const Icon(Icons.add, color: ManagerColors.primaryGreen, size: 20),
                     label: const Text(
                       "Thêm ảnh hợp đồng",
                       style: TextStyle(
-                        color: primaryGreen,
+                        color: ManagerColors.primaryGreen,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: primaryGreen.withOpacity(0.3), width: 1),
+                      side: BorderSide(color: ManagerColors.primaryGreen.withOpacity(0.3), width: 1),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -642,7 +635,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   "Chụp hoặc chọn ảnh từ thư viện. Mỗi trang hợp đồng thêm một ảnh riêng.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: textGrey,
+                    color: ManagerColors.textGrey,
                     fontSize: 11,
                   ),
                 ),
@@ -767,7 +760,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-              color: cardShadow,
+              color: ManagerColors.cardShadow,
               blurRadius: 16,
               offset: Offset(0, 4),
             ),
@@ -783,10 +776,10 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE8F5E9),
+                      color: ManagerColors.bgMint,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.home_work_outlined, color: primaryGreen, size: 20),
+                    child: const Icon(Icons.home_work_outlined, color: ManagerColors.primaryGreen, size: 20),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -796,7 +789,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                         Text(
                           "Phòng",
                           style: TextStyle(
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -806,7 +799,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                         Text(
                           "Phòng 305",
                           style: TextStyle(
-                            color: textCharcoal,
+                            color: ManagerColors.textCharcoal,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -817,7 +810,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   const Text(
                     "Không thể thay đổi",
                     style: TextStyle(
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
@@ -838,10 +831,10 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE8F5E9),
+                      color: ManagerColors.bgMint,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.layers_outlined, color: primaryGreen, size: 20),
+                    child: const Icon(Icons.layers_outlined, color: ManagerColors.primaryGreen, size: 20),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -851,7 +844,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                         Text(
                           "Tầng",
                           style: TextStyle(
-                            color: textGrey,
+                            color: ManagerColors.textGrey,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -861,7 +854,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                         Text(
                           "Tầng 3",
                           style: TextStyle(
-                            color: textCharcoal,
+                            color: ManagerColors.textCharcoal,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
@@ -872,7 +865,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   const Text(
                     "Không thể thay đổi",
                     style: TextStyle(
-                      color: textGrey,
+                      color: ManagerColors.textGrey,
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),

@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/invoice_confirm_page.dart';
-import 'package:smartrent_mobile/manager/issue_detail_page.dart';
-import 'package:smartrent_mobile/manager/manager_nav.dart';
-import 'package:smartrent_mobile/manager/utility_input_page.dart';
+import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
+import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  static const Color primaryGreen = Color(0xFF2E7D32);
-  static const Color bgLightGreen = Color(0xFFF1FDF5);
-  static const Color cardShadow = Color(0x0D000000);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgLightGreen,
+      backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
-          _buildHeader(),
+          _buildHeader(context),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -37,8 +35,8 @@ class DashboardPage extends StatelessWidget {
                           'Tạo hóa đơn',
                           'Xác nhận & tạo hóa đơn mới',
                           Icons.request_quote_outlined,
-                          const Color(0xFFE8F5E9),
-                          primaryGreen,
+                          ManagerColors.bgMint,
+                          ManagerColors.primaryGreen,
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => const InvoiceConfirmPage()),
@@ -105,60 +103,148 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-      decoration: const BoxDecoration(color: primaryGreen),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      decoration: const BoxDecoration(
+        color: ManagerColors.primaryGreen,
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                alignment: Alignment.center,
-                child: const Text('RMS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Quản lý cơ sở', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  // Left Profile Info
                   Row(
-                    children: const [
-                      Text('Chào, 0979789878', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 4),
-                      Icon(Icons.front_hand_rounded, color: Colors.orangeAccent, size: 18),
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'RMS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Quản lý cơ sở',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Chào, 0979789878 👋',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Right Notification & Exit Buttons
+                  Row(
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.notifications_none_outlined,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              onPressed: () {},
+                            ),
+                          ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: ManagerColors.primaryGreen,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.logout_outlined,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginPage(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
-              const Spacer(),
-              _buildHeaderIcon(Icons.notifications_none_outlined, hasBadge: true),
-              const SizedBox(width: 12),
-              _buildHeaderIcon(Icons.logout_rounded),
+              const SizedBox(height: 20),
+              // Date display
+              Text(
+                'Thứ Sáu, 22 tháng 5, 2026',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text('Thứ Sáu, 22 tháng 5, 2026', style: TextStyle(color: Colors.white70, fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderIcon(IconData icon, {bool hasBadge = false}) {
-    return Stack(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: Colors.white, size: 22),
         ),
-        if (hasBadge)
-          Positioned(right: 4, top: 4, child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, border: Border.all(color: primaryGreen, width: 1.5)))),
-      ],
+      ),
     );
   }
 
@@ -185,7 +271,7 @@ class DashboardPage extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -212,7 +298,7 @@ class DashboardPage extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.1)), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.1)), boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,7 +322,7 @@ class DashboardPage extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Row(
         children: [
           Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 22)),
@@ -309,7 +395,7 @@ class DashboardPage extends StatelessWidget {
           if (showAction)
             GestureDetector(
               onTap: onSeeAll,
-              child: Text('Xem tất cả >', style: TextStyle(color: primaryGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+              child: Text('Xem tất cả >', style: TextStyle(color: ManagerColors.primaryGreen, fontSize: 13, fontWeight: FontWeight.w600)),
             ),
         ],
       ),
@@ -335,7 +421,7 @@ class DashboardPage extends StatelessWidget {
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Row(
         children: [
           Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.build_outlined, color: statusColor, size: 20)),
@@ -360,7 +446,7 @@ class DashboardPage extends StatelessWidget {
   Widget _buildUtilizationCard() {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -388,21 +474,111 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: 4,
-      selectedItemColor: primaryGreen,
-      unselectedItemColor: Colors.grey,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-      unselectedLabelStyle: const TextStyle(fontSize: 11),
-      onTap: (index) => ManagerNav.bottomNav(context, index, currentIndex: 4),
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_work_outlined), label: 'Phòng'),
-        BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Cư dân'),
-        BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), label: 'Hóa đơn'),
-        BottomNavigationBarItem(icon: Stack(children: [Icon(Icons.report_gmailerrorred_rounded), Positioned(right: 0, top: 0, child: CircleAvatar(radius: 6, backgroundColor: Colors.red, child: Text('2', style: TextStyle(fontSize: 8, color: Colors.white))))]), label: 'Sự cố'),
-        BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),
-      ],
+    return Container(
+      height: 76,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: ManagerColors.cardShadow,
+            blurRadius: 10,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(context, 0, Icons.meeting_room_outlined, 'Phòng'),
+          _buildNavItem(context, 1, Icons.people_alt, 'Cư dân'),
+          _buildNavItem(context, 2, Icons.receipt_long_outlined, 'Hóa đơn'),
+          _buildNavItem(context, 3, Icons.report_problem_outlined, 'Sự cố', badgeCount: 2),
+          _buildNavItem(context, 4, Icons.grid_view_outlined, 'Dashboard'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label, {int badgeCount = 0}) {
+    final isSelected = index == 4;
+    final color = isSelected ? ManagerColors.primaryGreen : Colors.grey;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => ManagerNav.bottomNav(context, index, currentIndex: 4),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isSelected)
+              Positioned(
+                top: 0,
+                child: Container(
+                  width: 48,
+                  height: 3,
+                  decoration: const BoxDecoration(
+                    color: ManagerColors.primaryGreen,
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(3),
+                    ),
+                  ),
+                ),
+              ),
+
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 4),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(icon, color: color, size: 24),
+                    if (badgeCount > 0)
+                      Positioned(
+                        top: -6,
+                        right: -10,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$badgeCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

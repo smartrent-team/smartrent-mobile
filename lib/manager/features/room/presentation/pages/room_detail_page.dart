@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
 class RoomDetailPage extends StatelessWidget {
   const RoomDetailPage({super.key});
-
-  static const Color primaryGreen = Color(0xFF2E7D32);
-  static const Color bgLightGreen = Color(0xFFF1FDF5);
-  static const Color subtitleGrey = Color(0xFF757575);
-  static const Color cardShadow = Color(0x0D000000);
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +58,9 @@ class RoomDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: bgLightGreen,
+        color: ManagerColors.bgLightGreen,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryGreen.withOpacity(0.05)),
+        border: Border.all(color: ManagerColors.primaryGreen.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -73,18 +69,18 @@ class RoomDetailPage extends StatelessWidget {
           _buildVerticalDivider(),
           _buildHeaderStat('Giá thuê', '4.5tr/th'),
           _buildVerticalDivider(),
-          _buildHeaderStat('Trạng thái', 'Đã thuê', valueColor: primaryGreen),
+          _buildHeaderStat('Trạng thái', 'Đã thuê', valueColor: ManagerColors.primaryGreen),
         ],
       ),
     );
   }
 
-  Widget _buildVerticalDivider() => Container(width: 1, height: 30, color: primaryGreen.withOpacity(0.1));
+  Widget _buildVerticalDivider() => Container(width: 1, height: 30, color: ManagerColors.primaryGreen.withOpacity(0.1));
 
   Widget _buildHeaderStat(String label, String value, {Color? valueColor}) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: subtitleGrey, fontSize: 12)),
+        Text(label, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
         const SizedBox(height: 4),
         Text(value, style: TextStyle(color: valueColor ?? Colors.black87, fontWeight: FontWeight.bold, fontSize: 15)),
       ],
@@ -97,7 +93,7 @@ class RoomDetailPage extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
-        boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +102,7 @@ class RoomDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(icon, color: primaryGreen, size: 20),
+                Icon(icon, color: ManagerColors.primaryGreen, size: 20),
                 const SizedBox(width: 8),
                 Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -130,7 +126,7 @@ class RoomDetailPage extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: subtitleGrey, fontSize: 14)),
+              Text(label, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
               Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             ],
           ),
@@ -145,8 +141,8 @@ class RoomDetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryGreen.withOpacity(0.1)),
-        boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+        border: Border.all(color: ManagerColors.primaryGreen.withOpacity(0.1)),
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -154,7 +150,7 @@ class RoomDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Icon(Icons.account_circle_outlined, color: primaryGreen, size: 20),
+                const Icon(Icons.account_circle_outlined, color: ManagerColors.primaryGreen, size: 20),
                 const SizedBox(width: 8),
                 const Text('Cư dân đang thuê', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -169,7 +165,7 @@ class RoomDetailPage extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: primaryGreen.withOpacity(0.8),
+                      backgroundColor: ManagerColors.primaryGreen.withOpacity(0.8),
                       child: const Text('A', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 16),
@@ -177,30 +173,30 @@ class RoomDetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text('Nguyễn Thị Mai Anh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text('CCCD: 079 201 012 345', style: TextStyle(color: subtitleGrey, fontSize: 14)),
+                        Text('CCCD: 079 201 012 345', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                _buildTenantInfoRow('Số điện thoại', '0912 345 678', primaryGreen),
+                _buildTenantInfoRow('Số điện thoại', '0912 345 678', ManagerColors.primaryGreen),
                 const SizedBox(height: 12),
                 _buildTenantInfoRow('Ngày vào ở', '01/09/2024', Colors.black87),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: bgLightGreen, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: ManagerColors.bgLightGreen, borderRadius: BorderRadius.circular(12)),
                   child: Row(
                     children: [
-                      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.description_outlined, color: primaryGreen, size: 20)),
+                      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.description_outlined, color: ManagerColors.primaryGreen, size: 20)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
                           Text('Ảnh hợp đồng giấy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text('Nhấn để xem ảnh hợp đồng', style: TextStyle(color: subtitleGrey, fontSize: 12)),
+                          Text('Nhấn để xem ảnh hợp đồng', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
                         ]),
                       ),
-                      const Icon(Icons.chevron_right, color: subtitleGrey, size: 20),
+                      const Icon(Icons.chevron_right, color: ManagerColors.subtitleGrey, size: 20),
                     ],
                   ),
                 ),
@@ -217,9 +213,9 @@ class RoomDetailPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(children: [
-           Icon(label.contains('thoại') ? Icons.phone_outlined : Icons.calendar_today_outlined, color: primaryGreen, size: 18),
+           Icon(label.contains('thoại') ? Icons.phone_outlined : Icons.calendar_today_outlined, color: ManagerColors.primaryGreen, size: 18),
            const SizedBox(width: 8),
-           Text(label, style: const TextStyle(color: subtitleGrey, fontSize: 14)),
+           Text(label, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
         ]),
         Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: valueColor)),
       ],
@@ -232,7 +228,7 @@ class RoomDetailPage extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
-        boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -240,7 +236,7 @@ class RoomDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: const [
-                Icon(Icons.receipt_long_outlined, color: primaryGreen, size: 20),
+                Icon(Icons.receipt_long_outlined, color: ManagerColors.primaryGreen, size: 20),
                 SizedBox(width: 8),
                 Text('Lịch sử hóa đơn', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -253,7 +249,7 @@ class RoomDetailPage extends StatelessWidget {
           const Divider(height: 1),
           TextButton(
             onPressed: () {},
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.keyboard_arrow_down, size: 18, color: primaryGreen), Text(' Xem thêm 2 tháng', style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold))]),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.keyboard_arrow_down, size: 18, color: ManagerColors.primaryGreen), Text(' Xem thêm 2 tháng', style: TextStyle(color: ManagerColors.primaryGreen, fontWeight: FontWeight.bold))]),
           ),
         ],
       ),
@@ -272,7 +268,7 @@ class RoomDetailPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(month, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('Hạn: $due', style: const TextStyle(color: subtitleGrey, fontSize: 12)),
+                Text('Hạn: $due', style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
               ],
             ),
           ),
@@ -294,7 +290,7 @@ class RoomDetailPage extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
-        boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -302,7 +298,7 @@ class RoomDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: const [
-                Icon(Icons.build_outlined, color: primaryGreen, size: 20),
+                Icon(Icons.build_outlined, color: ManagerColors.primaryGreen, size: 20),
                 SizedBox(width: 8),
                 Text('Lịch sử sự cố', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -315,7 +311,7 @@ class RoomDetailPage extends StatelessWidget {
           const Divider(height: 1),
           TextButton(
             onPressed: () {},
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.keyboard_arrow_down, size: 18, color: primaryGreen), Text(' Xem thêm 1 sự cố', style: TextStyle(color: primaryGreen, fontWeight: FontWeight.bold))]),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.keyboard_arrow_down, size: 18, color: ManagerColors.primaryGreen), Text(' Xem thêm 1 sự cố', style: TextStyle(color: ManagerColors.primaryGreen, fontWeight: FontWeight.bold))]),
           ),
         ],
       ),
@@ -335,7 +331,7 @@ class RoomDetailPage extends StatelessWidget {
               children: [
                 Row(children: [Text(id, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)), const SizedBox(width: 8), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: (priority == 'Khẩn' ? Colors.red : Colors.orange).withOpacity(0.1), borderRadius: BorderRadius.circular(6)), child: Text(priority, style: TextStyle(color: priority == 'Khẩn' ? Colors.red : Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)))]),
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(date, style: const TextStyle(color: subtitleGrey, fontSize: 12)),
+                Text(date, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
               ],
             ),
           ),
