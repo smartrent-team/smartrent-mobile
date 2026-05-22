@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/otp_page.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/otp_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
-
-  // Constants for colors
-  static const Color primaryGreen = Color(0xFF42A36E);
-  static const Color lightGreenBorder = Color(0xFFB9E4C9);
-  static const Color bgMint = Color(0xFFE8F5E9);
-  static const Color subtitleGrey = Color(0xFF9E9E9E);
-  static const Color cardShadow = Color(0x0D000000); // Very light shadow
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +15,7 @@ class LoginPage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, bgMint],
+            colors: [Colors.white, ManagerColors.bgMint],
           ),
         ),
         child: SafeArea(
@@ -36,11 +30,11 @@ class LoginPage extends StatelessWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: const [
                       BoxShadow(
-                        color: cardShadow,
+                        color: ManagerColors.cardShadow,
                         blurRadius: 10,
                         offset: Offset(0, 4),
                       ),
@@ -62,7 +56,7 @@ class LoginPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.eco_outlined,
-                        size: 16, color: primaryGreen),
+                        size: 16, color: ManagerColors.primaryGreen),
                     const SizedBox(width: 6),
                     Text(
                       'RESOURCE MANAGEMENT SYSTEM',
@@ -85,7 +79,7 @@ class LoginPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
                       BoxShadow(
-                        color: cardShadow,
+                        color: ManagerColors.cardShadow,
                         blurRadius: 30,
                         offset: Offset(0, 10),
                       ),
@@ -107,7 +101,7 @@ class LoginPage extends StatelessWidget {
                         'Nhập số điện thoại để tiếp tục',
                         style: TextStyle(
                           fontSize: 15,
-                          color: subtitleGrey,
+                          color: ManagerColors.subtitleGrey,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -125,12 +119,12 @@ class LoginPage extends StatelessWidget {
                         height: 56,
                         child: TextField(
                           keyboardType: TextInputType.phone,
-                          cursorColor: primaryGreen,
+                          cursorColor: ManagerColors.primaryGreen,
                           decoration: InputDecoration(
                             hintText: '0979789878',
                             hintStyle: TextStyle(color: Colors.grey.shade400),
                             prefixIcon: const Icon(Icons.phone_outlined,
-                                color: subtitleGrey),
+                                color: ManagerColors.subtitleGrey),
                             filled: true,
                             fillColor: const Color(0xFFFBFDFA),
                             contentPadding: const EdgeInsets.symmetric(
@@ -138,12 +132,12 @@ class LoginPage extends StatelessWidget {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide:
-                                  const BorderSide(color: lightGreenBorder),
+                                  const BorderSide(color: ManagerColors.lightGreenBorder),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: const BorderSide(
-                                  color: primaryGreen, width: 1.5),
+                                  color: ManagerColors.primaryGreen, width: 1.5),
                             ),
                           ),
                         ),
@@ -163,9 +157,9 @@ class LoginPage extends StatelessWidget {
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryGreen,
+                            backgroundColor: ManagerColors.primaryGreen,
                             elevation: 4,
-                            shadowColor: primaryGreen.withOpacity(0.3),
+                            shadowColor: ManagerColors.primaryGreen.withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -187,7 +181,7 @@ class LoginPage extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: subtitleGrey,
+                            color: ManagerColors.subtitleGrey,
                           ),
                         ),
                       ),

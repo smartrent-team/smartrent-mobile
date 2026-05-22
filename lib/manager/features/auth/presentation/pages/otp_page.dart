@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/manager/dashboard_page.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
 
 class OtpPage extends StatelessWidget {
   const OtpPage({super.key});
-
-  // Constants to match login screen
-  static const Color primaryGreen = Color(0xFF42A36E);
-  static const Color lightGreenBg = Color(0xFFE1F2E8);
-  static const Color bgMint = Color(0xFFE8F5E9);
-  static const Color subtitleGrey = Color(0xFF9E9E9E);
-  static const Color cardShadow = Color(0x0D000000);
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +15,7 @@ class OtpPage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, bgMint],
+            colors: [Colors.white, ManagerColors.bgMint],
           ),
         ),
         child: SafeArea(
@@ -47,11 +41,11 @@ class OtpPage extends StatelessWidget {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: primaryGreen,
+                    color: ManagerColors.primaryGreen,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: const [
                       BoxShadow(
-                        color: cardShadow,
+                        color: ManagerColors.cardShadow,
                         blurRadius: 10,
                         offset: Offset(0, 4),
                       ),
@@ -73,7 +67,7 @@ class OtpPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(Icons.eco_outlined,
-                        size: 14, color: primaryGreen),
+                        size: 14, color: ManagerColors.primaryGreen),
                     const SizedBox(width: 4),
                     Text(
                       'RESOURCE MANAGEMENT SYSTEM',
@@ -96,7 +90,7 @@ class OtpPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
                       BoxShadow(
-                        color: cardShadow,
+                        color: ManagerColors.cardShadow,
                         blurRadius: 30,
                         offset: Offset(0, 10),
                       ),
@@ -111,11 +105,11 @@ class OtpPage extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
+                              color: ManagerColors.bgMint,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.verified_user_outlined,
-                                color: primaryGreen, size: 24),
+                                color: ManagerColors.primaryGreen, size: 24),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -152,10 +146,10 @@ class OtpPage extends StatelessWidget {
                             width: 45,
                             height: 52,
                             decoration: BoxDecoration(
-                              color: index == 0 ? Colors.white : const Color(0xFFF1FDF5),
+                              color: index == 0 ? Colors.white : ManagerColors.bgMintPale,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: index == 0 ? primaryGreen : const Color(0xFFE0E0E0),
+                                color: index == 0 ? ManagerColors.primaryGreen : const Color(0xFFE0E0E0),
                                 width: index == 0 ? 1.5 : 1,
                               ),
                             ),
@@ -190,15 +184,17 @@ class OtpPage extends StatelessWidget {
                         height: 52,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const DashboardPage(),
+                                settings: const RouteSettings(name: 'dashboard'),
                               ),
+                              (route) => false,
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: lightGreenBg,
+                            backgroundColor: ManagerColors.lightGreenBg,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -218,11 +214,11 @@ class OtpPage extends StatelessWidget {
                       // Resend Link
                       TextButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.refresh, size: 18, color: primaryGreen),
+                        icon: const Icon(Icons.refresh, size: 18, color: ManagerColors.primaryGreen),
                         label: const Text(
                           'Gửi lại mã OTP',
                           style: TextStyle(
-                            color: primaryGreen,
+                            color: ManagerColors.primaryGreen,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
