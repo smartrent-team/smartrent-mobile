@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/room_detail_page.dart';
+import 'package:smartrent_mobile/manager/tenant_page.dart';
 
 class RoomListPage extends StatelessWidget {
   const RoomListPage({super.key});
@@ -209,9 +210,17 @@ class RoomListPage extends StatelessWidget {
           const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
       unselectedLabelStyle: const TextStyle(fontSize: 11),
       onTap: (index) {
+        if (index == 0) return;
         if (index == 4) {
           Navigator.pop(context);
+          return;
         }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TenantPage(initialIndex: index),
+          ),
+        );
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_work), label: 'Phòng'),

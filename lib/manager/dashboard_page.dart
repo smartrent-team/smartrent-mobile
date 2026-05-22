@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/room_list_page.dart';
+import 'package:smartrent_mobile/manager/tenant_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -22,7 +23,7 @@ class DashboardPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 1. Summary Grid
-                  _buildSummaryGrid(),
+                  _buildSummaryGrid(context),
                   const SizedBox(height: 24),
 
                   // 2. Quick Actions
@@ -148,7 +149,7 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryGrid() {
+  Widget _buildSummaryGrid(BuildContext context) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -157,16 +158,33 @@ class DashboardPage extends StatelessWidget {
       mainAxisSpacing: 16,
       childAspectRatio: 1.1,
       children: [
-        _buildStatCard('48', 'Tổng phòng', '42 đang thuê · 6 trống', Icons.home_work_outlined, '+2', Colors.green),
-        _buildStatCard('136', 'Cư dân', '12 mới tháng này', Icons.people_alt_outlined, '+12', Colors.blue),
-        _buildStatCard('23', 'Hóa đơn chờ', 'Tổng 18,4 triệu đ', Icons.receipt_long_outlined, '-5', Colors.orange),
-        _buildStatCard('7', 'Sự cố mở', '2 khẩn cấp', Icons.report_gmailerrorred_rounded, '+2', Colors.red),
+        _buildStatCard('48', 'Tổng phòng', '42 đang thuê · 6 trống', Icons.home_work_outlined, '+2', Colors.green, onTap: () => _openRoomList(context)),
+        _buildStatCard('136', 'Cư dân', '12 mới tháng này', Icons.people_alt_outlined, '+12', Colors.blue, onTap: () => _openTenantTab(context, 1)),
+        _buildStatCard('23', 'Hóa đơn chờ', 'Tổng 18,4 triệu đ', Icons.receipt_long_outlined, '-5', Colors.orange, onTap: () => _openTenantTab(context, 2)),
+        _buildStatCard('7', 'Sự cố mở', '2 khẩn cấp', Icons.report_gmailerrorred_rounded, '+2', Colors.red, onTap: () => _openTenantTab(context, 3)),
       ],
     );
   }
 
-  Widget _buildStatCard(String value, String title, String subtitle, IconData icon, String trend, Color color) {
-    return Container(
+  static void _openRoomList(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RoomListPage()),
+    );
+  }
+
+  static void _openTenantTab(BuildContext context, int tabIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TenantPage(initialIndex: tabIndex)),
+    );
+  }
+
+  Widget _buildStatCard(String value, String title, String subtitle, IconData icon, String trend, Color color, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: cardShadow, blurRadius: 10, offset: Offset(0, 4))]),
       child: Column(
@@ -185,6 +203,7 @@ class DashboardPage extends StatelessWidget {
           Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.black38), overflow: TextOverflow.ellipsis),
         ],
       ),
+    ),
     );
   }
 
@@ -349,11 +368,11 @@ class DashboardPage extends StatelessWidget {
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
       unselectedLabelStyle: const TextStyle(fontSize: 11),
       onTap: (index) {
+        if (index == 4) return;
         if (index == 0) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const RoomListPage()),
-          );
+          _openRoomList(context);
+        } else {
+          _openTenantTab(context, index);
         }
       },
       items: const [
