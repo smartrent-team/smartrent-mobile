@@ -3,7 +3,8 @@ import 'package:smartrent_mobile/tanent/home_tanent.dart';
 import 'package:smartrent_mobile/tanent/payment_qr_tanent.dart';
 
 class OrderTanent extends StatefulWidget {
-  const OrderTanent({super.key});
+  final bool showBottomNav;
+  const OrderTanent({super.key, this.showBottomNav = true});
   @override
   State<OrderTanent> createState() => _OrderTanentState();
 }
@@ -159,7 +160,7 @@ class _OrderTanentState extends State<OrderTanent> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
     );
   }
 
