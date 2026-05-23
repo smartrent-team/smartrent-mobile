@@ -3,7 +3,9 @@ import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
 
 class OtpPage extends StatelessWidget {
-  const OtpPage({super.key});
+  final Widget? targetNav;
+  final String? phoneNumber;
+  const OtpPage({super.key, this.targetNav, this.phoneNumber});
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +126,7 @@ class OtpPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Mã 6 chữ số đã gửi tới 0979789878',
+                                  'Mã 6 chữ số đã gửi tới ${phoneNumber ?? "0979789878"}',
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
@@ -187,8 +189,10 @@ class OtpPage extends StatelessWidget {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const DashboardPage(),
-                                settings: const RouteSettings(name: 'dashboard'),
+                                builder: (context) => targetNav ?? const DashboardPage(),
+                                settings: RouteSettings(
+                                  name: targetNav != null ? 'tenant' : 'dashboard',
+                                ),
                               ),
                               (route) => false,
                             );

@@ -1,30 +1,47 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:smartrent_mobile/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('HomeTanent renders correctly and expands bill card details', (WidgetTester tester) async {
+    // Set a taller window size to prevent scrolling issues in test environment
+    tester.view.physicalSize = const Size(1080, 2220);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(const MyApp());
+    await tester.pump(const Duration(milliseconds: 800));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Nguyễn Văn A'), findsOneWidget);
+    expect(find.text('Xin chào 👋'), findsOneWidget);
+    expect(find.text('Tiền phòng'), findsOneWidget);
+    expect(find.text('Tiền điện'), findsOneWidget);
+    expect(find.text('Tiền nước'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Prior to expansion, Internet and Phí dịch vụ should not be visible
+    expect(find.text('Internet'), findsNothing);
+    expect(find.text('Phí dịch vụ'), findsNothing);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Ensure expanded button is visible & tap it
+    final expandButton = find.text('Xem thêm 2 khoản ▼');
+    await tester.ensureVisible(expandButton);
+    await tester.tap(expandButton);
+    await tester.pumpAndSettle();
+
+    // Now they should be rendered
+    expect(find.text('Internet'), findsOneWidget);
+    expect(find.text('Phí dịch vụ'), findsOneWidget);
+    expect(find.text('120.000 đ'), findsOneWidget);
+    expect(find.text('140.000 đ'), findsOneWidget);
+
+    // Tap to collapse
+    final collapseButton = find.text('Thu gọn ▲');
+    await tester.ensureVisible(collapseButton);
+    await tester.tap(collapseButton);
+    await tester.pumpAndSettle();
+
+    // Should disappear again
+    expect(find.text('Internet'), findsNothing);
   });
 }
