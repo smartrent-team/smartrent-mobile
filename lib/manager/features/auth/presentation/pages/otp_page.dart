@@ -1,11 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/auth_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 
-class OtpPage extends StatelessWidget {
-  final Widget? targetNav;
+class OtpPage extends StatefulWidget {
   final String? phoneNumber;
-  const OtpPage({super.key, this.targetNav, this.phoneNumber});
+  const OtpPage({super.key, this.phoneNumber});
+
+  @override
+  State<OtpPage> createState() => _OtpPageState();
+}
+
+class _OtpPageState extends State<OtpPage> {
+  final List<TextEditingController> _controllers =
+      List.generate(6, (index) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final AuthService _authService = AuthService();
+  final TokenService _tokenService = TokenService();
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  String get _otp => _controllers.map((e) => e.text).join();
+
+  Future<void> _onVerify() async {
+    final otp = _otp;
+    if (otp.length < 6) {
+      setState(() {
+        _errorMessage = 'Vui lòng nhập đầy đủ mã OTP';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _authService.verifyOtp(widget.phoneNumber ?? '', otp);
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final token = data['token'];
+        final role = data['user']['role'];
+
+        if (token != null) {
+          await _tokenService.saveToken(token);
+        }
+
+        if (!mounted) return;
+
+        Widget target;
+        if (role == 'manager') {
+          target = const DashboardPage();
+        } else if (role == 'tenant') {
+          target = const TenantNav();
+        } else {
+          setState(() {
+            _errorMessage = 'Vai trò người dùng không hợp lệ';
+          });
+          return;
+        }
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => target),
+          (route) => false,
+        );
+      } else {
+        setState(() {
+          _errorMessage = 'Xác thực OTP thất bại';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi: ${e.toString()}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +115,6 @@ class OtpPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               children: [
-                // Back Button
                 Align(
                   alignment: Alignment.topLeft,
                   child: TextButton.icon(
@@ -38,20 +127,12 @@ class OtpPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Logo Section
                 Container(
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
                     color: ManagerColors.primaryGreen,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: ManagerColors.cardShadow,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
                   ),
                   alignment: Alignment.center,
                   child: const Text(
@@ -64,26 +145,8 @@ class OtpPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Sub-logo Text
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.eco_outlined,
-                        size: 14, color: ManagerColors.primaryGreen),
-                    const SizedBox(width: 4),
-                    Text(
-                      'RESOURCE MANAGEMENT SYSTEM',
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 1.5,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                const Text('RESOURCE MANAGEMENT SYSTEM', style: TextStyle(fontSize: 11, letterSpacing: 1.5)),
                 const SizedBox(height: 40),
-                // Card Form
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24.0),
@@ -91,155 +154,69 @@ class OtpPage extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: const [
-                      BoxShadow(
-                        color: ManagerColors.cardShadow,
-                        blurRadius: 30,
-                        offset: Offset(0, 10),
-                      ),
+                      BoxShadow(color: ManagerColors.cardShadow, blurRadius: 30, offset: Offset(0, 10)),
                     ],
                   ),
                   child: Column(
                     children: [
-                      // Shield Icon Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: ManagerColors.bgMint,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.verified_user_outlined,
-                                color: ManagerColors.primaryGreen, size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Xác thực OTP',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'Mã 6 chữ số đã gửi tới ${phoneNumber ?? "0979789878"}',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      const Text('Xác thực OTP', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text('Mã đã gửi tới ${widget.phoneNumber ?? ""}'),
                       const SizedBox(height: 32),
-                      // 6 Digit Input Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: List.generate(
                           6,
-                          (index) => Container(
+                          (index) => SizedBox(
                             width: 45,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: index == 0 ? Colors.white : ManagerColors.bgMintPale,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: index == 0 ? ManagerColors.primaryGreen : const Color(0xFFE0E0E0),
-                                width: index == 0 ? 1.5 : 1,
+                            child: TextField(
+                              controller: _controllers[index],
+                              focusNode: _focusNodes[index],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              maxLength: 1,
+                              decoration: InputDecoration(
+                                counterText: "",
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: ManagerColors.primaryGreen)),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: index == 0 
-                              ? const VerticalDivider(color: Colors.black, indent: 12, endIndent: 12, width: 1)
-                              : null,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Dots
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          6,
-                          (index) => Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              shape: BoxShape.circle,
+                              onChanged: (value) {
+                                if (value.isNotEmpty && index < 5) {
+                                  _focusNodes[index + 1].requestFocus();
+                                } else if (value.isEmpty && index > 0) {
+                                  _focusNodes[index - 1].requestFocus();
+                                }
+                              },
                             ),
                           ),
                         ),
                       ),
+                      if (_errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                        ),
                       const SizedBox(height: 32),
-                      // Confirm Button
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => targetNav ?? const DashboardPage(),
-                                settings: RouteSettings(
-                                  name: targetNav != null ? 'tenant' : 'dashboard',
-                                ),
-                              ),
-                              (route) => false,
-                            );
-                          },
+                          onPressed: _isLoading ? null : _onVerify,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: ManagerColors.lightGreenBg,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                            backgroundColor: ManagerColors.primaryGreen,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: const Text(
-                            'Xác nhận OTP',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text('Xác nhận OTP', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Resend Link
-                      TextButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.refresh, size: 18, color: ManagerColors.primaryGreen),
-                        label: const Text(
-                          'Gửi lại mã OTP',
-                          style: TextStyle(
-                            color: ManagerColors.primaryGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      TextButton(onPressed: () {}, child: const Text('Gửi lại mã OTP', style: TextStyle(color: ManagerColors.primaryGreen))),
                     ],
                   ),
                 ),
                 const SizedBox(height: 48),
-                // Footer
-                const Text(
-                  '© 2025 RMS · Phiên bản 2.4.1',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black38,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const Text('© 2025 RMS · Phiên bản 2.4.1', style: TextStyle(fontSize: 12, color: Colors.black38)),
               ],
             ),
           ),

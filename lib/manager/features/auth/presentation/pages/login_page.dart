@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/otp_page.dart';
-import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   final Widget? targetNav;
@@ -14,7 +13,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _phoneController = TextEditingController();
+  final AuthService _authService = AuthService();
   String? _errorMessage;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -22,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _onContinue() {
+  Future<void> _onContinue() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
       setState(() {
@@ -31,32 +32,37 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    Widget target;
-    if (widget.targetNav != null) {
-      target = widget.targetNav!;
-    } else {
-      if (phone == '0911111111') {
-        target = const TenantNav();
-      } else if (phone == '0922222222') {
-        target = const DashboardPage();
-      } else {
-        setState(() {
-          _errorMessage = 'Số điện thoại không hợp lệ cho thử nghiệm';
-        });
-        return;
-      }
-    }
-
     setState(() {
+      _isLoading = true;
       _errorMessage = null;
     });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OtpPage(targetNav: target, phoneNumber: phone),
-      ),
-    );
+    try {
+      final response = await _authService.sendOtp(phone);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpPage(phoneNumber: phone),
+          ),
+        );
+      } else {
+        setState(() {
+          _errorMessage = 'Gửi OTP thất bại. Vui lòng thử lại.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -305,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _onContinue,
+                          onPressed: _isLoading ? null : _onContinue,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ManagerColors.primaryGreen,
                             elevation: 4,
@@ -314,14 +320,23 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          child: const Text(
-                            'Tiếp tục',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Tiếp tục',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 16),
