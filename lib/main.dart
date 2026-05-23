@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/new_ui/main_navigation_screen.dart';
+import 'package:smartrent_mobile/tenant/tenant.dart';
+import 'package:smartrent_mobile/manager/manager.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,13 +12,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SmartRent New UI',
+      title: 'SmartRent Tenant',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF5CB85C)),
+        colorScheme: ColorScheme.fromSeed(seedColor: TenantColors.primaryGreen),
         useMaterial3: true,
       ),
-      home: const MainNavigationScreen(),
+      home: const LoginPage(),
     );
   }
 }
