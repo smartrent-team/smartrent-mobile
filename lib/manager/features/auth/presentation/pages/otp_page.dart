@@ -60,6 +60,19 @@ class _OtpPageState extends State<OtpPage> {
           await _tokenService.saveToken(token);
         }
 
+        final branchData = data['user']['branch'];
+        if (branchData != null) {
+          String? bId;
+          if (branchData is Map) {
+            bId = branchData['id']?.toString();
+          } else {
+            bId = branchData.toString();
+          }
+          if (bId != null) {
+            await _tokenService.saveBranchId(bId);
+          }
+        }
+
         if (!mounted) return;
 
         Widget target;
