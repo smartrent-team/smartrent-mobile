@@ -6,7 +6,6 @@ import 'package:smartrent_mobile/manager/features/billing/presentation/pages/inv
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
-import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_list_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_tenant_page.dart';
@@ -913,7 +912,7 @@ class _TenantPageState extends State<TenantPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RoomDetailPage(),
+                      builder: (context) => const RoomListPage(),
                     ),
                   );
                 },
