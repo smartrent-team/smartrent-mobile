@@ -913,7 +913,7 @@ class _TenantPageState extends State<TenantPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RoomDetailPage(),
+                      builder: (context) => RoomDetailPage(roomId: index + 1),
                     ),
                   );
                 },

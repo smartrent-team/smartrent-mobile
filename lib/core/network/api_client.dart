@@ -15,7 +15,7 @@ class ApiClient {
       onRequest: (options, handler) async {
         final token = await _tokenService.getToken();
         if (token != null) {
-          options.headers['Authorization'] = 'JWT $token';
+          options.headers['Authorization'] = 'Bearer $token';
         }
         // Log request for debugging
         print('Request: ${options.method} ${options.uri}');

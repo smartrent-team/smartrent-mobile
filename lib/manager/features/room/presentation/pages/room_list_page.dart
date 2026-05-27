@@ -3,9 +3,87 @@ import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 
-class RoomListPage extends StatelessWidget {
+class RoomListPage extends StatefulWidget {
   const RoomListPage({super.key});
+
+  @override
+  State<RoomListPage> createState() => _RoomListPageState();
+}
+
+class _RoomListPageState extends State<RoomListPage> {
+  final RoomService _roomService = RoomService();
+  List<dynamic> _rooms = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRooms();
+  }
+
+  Future<void> _fetchRooms() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _roomService.getRooms();
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          setState(() {
+            _rooms = data['docs'] ?? [];
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = data['message'] ?? 'Không thể tải danh sách phòng';
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Lỗi máy chủ: ${response.statusCode}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'occupied':
+        return 'Đã thuê';
+      case 'available':
+        return 'Trống';
+      case 'maintenance':
+        return 'Bảo trì';
+      default:
+        return status;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'occupied':
+        return Colors.green;
+      case 'available':
+        return Colors.blue;
+      case 'maintenance':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,28 +93,118 @@ class RoomListPage extends StatelessWidget {
         children: [
           _buildHeader(context),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Danh sách phòng',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRoomCard(context, 'Phòng 305', 'Tầng 3 · 28 m²', 'Nguyễn Thị Mai Anh', 'Đã thuê', Colors.green),
-                  _buildRoomCard(context, 'Phòng 306', 'Tầng 3 · 25 m²', null, 'Trống', Colors.blue),
-                  _buildRoomCard(context, 'Phòng 201', 'Tầng 2 · 30 m²', 'Trần Văn Bình', 'Đang cọc', Colors.orange),
-                  _buildRoomCard(context, 'Phòng 112', 'Tầng 1 · 22 m²', null, 'Đang sửa chữa', Colors.grey),
-                  const SizedBox(height: 24),
-                ],
-              ),
+            child: RefreshIndicator(
+              onRefresh: _fetchRooms,
+              color: ManagerColors.primaryGreen,
+              child: _buildBody(),
             ),
           ),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: ManagerColors.primaryGreen,
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24.0),
+        child: SizedBox(
+          height: 300,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 15, color: Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _fetchRooms,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ManagerColors.primaryGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_rooms.isEmpty) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24.0),
+        child: SizedBox(
+          height: 300,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.meeting_room_outlined, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Không có phòng nào trong danh sách',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16.0),
+      itemCount: _rooms.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return const Padding(
+            padding: EdgeInsets.only(bottom: 16.0),
+            child: Text(
+              'Danh sách phòng',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          );
+        }
+
+        final room = _rooms[index - 1];
+        final roomId = room['id'] ?? 0;
+        final roomCode = room['roomCode'] ?? 'Chưa xác định';
+        final floor = room['floor'] ?? 0;
+        final area = room['area'] ?? 0.0;
+        final status = room['status'] ?? 'available';
+        final tenantName = room['tenant']?['name'];
+
+        return _buildRoomCard(
+          context,
+          roomId,
+          roomCode,
+          'Tầng $floor · ${area.toStringAsFixed(0)} m²',
+          tenantName,
+          _getStatusText(status),
+          _getStatusColor(status),
+        );
+      },
     );
   }
 
@@ -185,13 +353,13 @@ class RoomListPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRoomCard(BuildContext context, String name, String details,
+  Widget _buildRoomCard(BuildContext context, int roomId, String name, String details,
       String? tenant, String status, Color statusColor) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const RoomDetailPage()),
+          MaterialPageRoute(builder: (context) => RoomDetailPage(roomId: roomId)),
         );
       },
       borderRadius: BorderRadius.circular(20),
