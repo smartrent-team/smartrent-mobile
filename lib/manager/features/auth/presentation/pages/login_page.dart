@@ -15,7 +15,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   final TokenService _tokenService = TokenService();
@@ -25,18 +25,18 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneNumberController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _onLogin() async {
-    final email = _emailController.text.trim();
+    final phone = _phoneNumberController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (phone.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập đầy đủ email và mật khẩu';
+        _errorMessage = 'Vui lòng nhập đầy đủ số điện thoại và mật khẩu';
       });
       return;
     }
@@ -47,51 +47,49 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await _authService.login(email, password);
+      final response = await _authService.login(phone, password);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
-        final token = data['token'];
-        final role = data['user']['role'];
+        if (data['success'] == true) {
+          final token = data['access_token'];
+          final role = data['user']['role'];
 
-        if (token != null) {
-          await _tokenService.saveToken(token);
-        }
+          if (token != null) {
+            await _tokenService.saveToken(token);
+          }
 
-        final branchData = data['user']['branch'];
-        if (branchData != null) {
-          String? bId;
-          if (branchData is Map) {
-            bId = branchData['id']?.toString();
+          final branchId = data['user']['branch_id'];
+          if (branchId != null) {
+            await _tokenService.saveBranchId(branchId.toString());
+          }
+
+          if (!mounted) return;
+
+          Widget target;
+          if (role == 'manager' || role == 'super_admin') {
+            target = const DashboardPage();
+          } else if (role == 'tenant') {
+            target = const TenantNav();
           } else {
-            bId = branchData.toString();
+            setState(() {
+              _errorMessage = 'Vai trò người dùng không hợp lệ: $role';
+            });
+            return;
           }
-          if (bId != null) {
-            await _tokenService.saveBranchId(bId);
-          }
-        }
 
-        if (!mounted) return;
-
-        Widget target;
-        if (role == 'manager') {
-          target = const DashboardPage();
-        } else if (role == 'tenant') {
-          target = const TenantNav();
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => target),
+            (route) => false,
+          );
         } else {
           setState(() {
-            _errorMessage = 'Vai trò người dùng không hợp lệ';
+            _errorMessage = data['message'] ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
           });
-          return;
         }
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => target),
-          (route) => false,
-        );
       } else {
         setState(() {
-          _errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
+          _errorMessage = 'Lỗi máy chủ: ${response.statusCode}';
         });
       }
     } catch (e) {
@@ -200,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Nhập email và mật khẩu để tiếp tục',
+                        'Nhập số điện thoại và mật khẩu để tiếp tục',
                         style: TextStyle(
                           fontSize: 15,
                           color: ManagerColors.subtitleGrey,
@@ -208,7 +206,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 32),
                       const Text(
-                        'Email',
+                        'Số điện thoại',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -217,13 +215,13 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: _phoneNumberController,
+                        keyboardType: TextInputType.phone,
                         cursorColor: ManagerColors.primaryGreen,
                         decoration: InputDecoration(
-                          hintText: 'Nhập email',
+                          hintText: 'Nhập số điện thoại',
                           hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: const Icon(Icons.email_outlined,
+                          prefixIcon: const Icon(Icons.phone_android_outlined,
                               color: ManagerColors.subtitleGrey),
                           filled: true,
                           fillColor: const Color(0xFFFBFDFA),
@@ -332,13 +330,13 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: 8),
                             InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _emailController.text = 'manager1@rms.com';
-                                  _passwordController.text = 'Ttai140999!!';
-                                  _errorMessage = null;
-                                });
-                              },
+                                onTap: () {
+                                  setState(() {
+                                    _phoneNumberController.text = '0901234567';
+                                    _passwordController.text = 'Ttai140999!!';
+                                    _errorMessage = null;
+                                  });
+                                },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                                 child: Row(
@@ -351,7 +349,7 @@ class _LoginPageState extends State<LoginPage> {
                                       style: TextStyle(fontSize: 12, color: Colors.black87),
                                     ),
                                     Text(
-                                      'manager1@rms.com',
+                                      '0901234567',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
