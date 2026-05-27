@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/otp_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/auth_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 
 class LoginPage extends StatefulWidget {
   final Widget? targetNav;
@@ -12,22 +15,28 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  final TokenService _tokenService = TokenService();
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _onContinue() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
+  Future<void> _onLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập số điện thoại';
+        _errorMessage = 'Vui lòng nhập đầy đủ email và mật khẩu';
       });
       return;
     }
@@ -38,23 +47,56 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await _authService.sendOtp(phone);
+      final response = await _authService.login(email, password);
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        final token = data['token'];
+        final role = data['user']['role'];
+
+        if (token != null) {
+          await _tokenService.saveToken(token);
+        }
+
+        final branchData = data['user']['branch'];
+        if (branchData != null) {
+          String? bId;
+          if (branchData is Map) {
+            bId = branchData['id']?.toString();
+          } else {
+            bId = branchData.toString();
+          }
+          if (bId != null) {
+            await _tokenService.saveBranchId(bId);
+          }
+        }
+
         if (!mounted) return;
-        Navigator.push(
+
+        Widget target;
+        if (role == 'manager') {
+          target = const DashboardPage();
+        } else if (role == 'tenant') {
+          target = const TenantNav();
+        } else {
+          setState(() {
+            _errorMessage = 'Vai trò người dùng không hợp lệ';
+          });
+          return;
+        }
+
+        Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-            builder: (context) => OtpPage(phoneNumber: phone),
-          ),
+          MaterialPageRoute(builder: (context) => target),
+          (route) => false,
         );
       } else {
         setState(() {
-          _errorMessage = 'Gửi OTP thất bại. Vui lòng thử lại.';
+          _errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        _errorMessage = 'Lỗi kết nối hoặc sai thông tin: ${e.toString()}';
       });
     } finally {
       if (mounted) {
@@ -158,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Nhập số điện thoại để tiếp tục',
+                        'Nhập email và mật khẩu để tiếp tục',
                         style: TextStyle(
                           fontSize: 15,
                           color: ManagerColors.subtitleGrey,
@@ -166,7 +208,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 32),
                       const Text(
-                        'Số điện thoại',
+                        'Email',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -174,16 +216,63 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // Custom TextField
                       TextField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         cursorColor: ManagerColors.primaryGreen,
                         decoration: InputDecoration(
-                          hintText: 'Nhập số điện thoại',
+                          hintText: 'Nhập email',
                           hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: const Icon(Icons.phone_outlined,
+                          prefixIcon: const Icon(Icons.email_outlined,
                               color: ManagerColors.subtitleGrey),
+                          filled: true,
+                          fillColor: const Color(0xFFFBFDFA),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide:
+                                const BorderSide(color: ManagerColors.lightGreenBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                                color: ManagerColors.primaryGreen, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Mật khẩu',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: !_isPasswordVisible,
+                        cursorColor: ManagerColors.primaryGreen,
+                        decoration: InputDecoration(
+                          hintText: 'Nhập mật khẩu',
+                          hintStyle: TextStyle(color: Colors.grey.shade400),
+                          prefixIcon: const Icon(Icons.lock_outline,
+                              color: ManagerColors.subtitleGrey),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: ManagerColors.subtitleGrey,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                           filled: true,
                           fillColor: const Color(0xFFFBFDFA),
                           errorText: _errorMessage,
@@ -245,37 +334,8 @@ class _LoginPageState extends State<LoginPage> {
                             InkWell(
                               onTap: () {
                                 setState(() {
-                                  _phoneController.text = '0911111111';
-                                  _errorMessage = null;
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.person_outline,
-                                        size: 14, color: Colors.blue),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Tenant (Người thuê): ',
-                                      style: TextStyle(fontSize: 12, color: Colors.black87),
-                                    ),
-                                    Text(
-                                      '0911111111',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: ManagerColors.primaryGreen,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _phoneController.text = '0922222222';
+                                  _emailController.text = 'manager1@rms.com';
+                                  _passwordController.text = 'Ttai140999!!';
                                   _errorMessage = null;
                                 });
                               },
@@ -287,11 +347,11 @@ class _LoginPageState extends State<LoginPage> {
                                         size: 14, color: Colors.orange),
                                     const SizedBox(width: 6),
                                     const Text(
-                                      'Manager (Quản lý): ',
+                                      'Manager: ',
                                       style: TextStyle(fontSize: 12, color: Colors.black87),
                                     ),
                                     Text(
-                                      '0922222222',
+                                      'manager1@rms.com',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
@@ -311,7 +371,7 @@ class _LoginPageState extends State<LoginPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _onContinue,
+                          onPressed: _isLoading ? null : _onLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ManagerColors.primaryGreen,
                             elevation: 4,
@@ -330,7 +390,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 )
                               : const Text(
-                                  'Tiếp tục',
+                                  'Đăng nhập',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -342,7 +402,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       const Center(
                         child: Text(
-                          'Chúng tôi sẽ gửi mã OTP tới số điện thoại của bạn',
+                          'Đăng nhập để quản lý hệ thống của bạn',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
