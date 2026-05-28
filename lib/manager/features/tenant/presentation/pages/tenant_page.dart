@@ -11,6 +11,7 @@ import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_l
 import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_tenant_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
@@ -23,31 +24,41 @@ class TenantPage extends StatefulWidget {
 class _TenantPageState extends State<TenantPage> {
   late int _selectedIndex;
   final TextEditingController _searchController = TextEditingController();
+  final TenantService _tenantService = TenantService();
 
-  // In-memory list of tenants
-  final List<Tenant> _allTenants = [
-    const Tenant(
-      name: 'Nguyễn Thị Mai Anh',
-      phone: '0912 345 678',
-      checkInDate: '01/09/2024',
-      isRoomHead: true,
-      initial: 'A',
-    ),
-    const Tenant(
-      name: 'Trần Minh Tuấn',
-      phone: '0987 654 321',
-      checkInDate: '01/09/2024',
-      isRoomHead: false,
-      initial: 'T',
-    ),
-    const Tenant(
-      name: 'Lê Hồng Nhung',
-      phone: '0903 112 233',
-      checkInDate: '15/10/2024',
-      isRoomHead: false,
-      initial: 'N',
-    ),
-  ];
+  List<Tenant> _allTenants = [];
+  bool _isLoading = false;
+
+  Future<void> _fetchTenants() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final response = await _tenantService.getTenants();
+      if (response.statusCode == 200) {
+        final List<dynamic> docs = response.data['docs'];
+        setState(() {
+          _allTenants = docs.map((doc) => Tenant(
+            name: doc['name']?.toString() ?? '',
+            phone: doc['phone']?.toString() ?? '',
+            checkInDate: doc['checkInDate']?.toString() ?? '',
+            isRoomHead: doc['isRoomHead'] == true,
+            initial: doc['initial']?.toString() ?? 'C',
+          )).toList();
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Fetch tenants error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -56,6 +67,7 @@ class _TenantPageState extends State<TenantPage> {
     _searchController.addListener(() {
       setState(() {});
     });
+    _fetchTenants();
   }
 
   @override
@@ -400,21 +412,7 @@ class _TenantPageState extends State<TenantPage> {
                     ),
                   );
                   if (result != null) {
-                    final name = result["name"] ?? "";
-                    final phone = result["phone"] ?? "";
-                    final date = result["date"] ?? "";
-                    final initial = name.isNotEmpty
-                        ? name.split(' ').last[0].toUpperCase()
-                        : 'C';
-                    setState(() {
-                      _allTenants.add(Tenant(
-                        name: name,
-                        phone: phone,
-                        checkInDate: date,
-                        isRoomHead: false,
-                        initial: initial,
-                      ));
-                    });
+                    _fetchTenants();
                   }
                 },
                 icon: const Icon(
@@ -675,20 +673,29 @@ class _TenantPageState extends State<TenantPage> {
           const SizedBox(height: 12),
 
           // 5. Scrollable List of Tenants
-          filtered.isEmpty
+          _isLoading
               ? const Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 32,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(
-                    child: Text(
-                      'Không tìm thấy cư dân phù hợp.',
-                      style: TextStyle(color: ManagerColors.textGrey),
+                    child: CircularProgressIndicator(
+                      color: ManagerColors.primaryGreen,
                     ),
                   ),
                 )
-              : ListView.builder(
+              : filtered.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 32,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Không tìm thấy cư dân phù hợp.',
+                          style: TextStyle(color: ManagerColors.textGrey),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
                   padding: const EdgeInsets.only(bottom: 96),
