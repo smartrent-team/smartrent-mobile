@@ -36,4 +36,17 @@ class AuthService {
       rethrow;
     }
   }
+
+  Future<Response> changePassword(String newPassword) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/auth/change-password',
+        data: {
+          'new_password': newPassword,
+        },
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
 }

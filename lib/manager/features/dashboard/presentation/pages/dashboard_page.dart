@@ -5,6 +5,7 @@ import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/change_password_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -57,6 +58,26 @@ class DashboardPage extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          'Đổi mật khẩu',
+                          'Cập nhật mật khẩu mới',
+                          Icons.lock_reset_rounded,
+                          const Color(0xFFF3E5F5),
+                          Colors.purple,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Spacer(),
                     ],
                   ),
                   const SizedBox(height: 24),

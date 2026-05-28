@@ -4,6 +4,7 @@ import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/widgets/info_tile.dart';
+import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/tenant_change_password_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -21,7 +22,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 16),
             _buildRoomInfoCard(),
             const SizedBox(height: 16),
-            _buildMenuActions(),
+            _buildMenuActions(context),
             const SizedBox(height: 16),
             _buildLogoutButton(context),
             const SizedBox(height: 40),
@@ -221,7 +222,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuActions() {
+  Widget _buildMenuActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -231,6 +232,10 @@ class ProfilePage extends StatelessWidget {
             color: TenantColors.primaryGreenDark,
             title: "Đổi mật khẩu",
             subtitle: "Thay đổi mật khẩu đăng nhập",
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TenantChangePasswordPage()),
+            ),
           ),
           MenuActionTile(
             icon: Icons.call_outlined,
