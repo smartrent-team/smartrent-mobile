@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
 import 'package:smartrent_mobile/manager/manager.dart';
 
-void main() {
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi_VN', null);
   runApp(const MyApp());
 }
 
