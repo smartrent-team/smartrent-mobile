@@ -6,6 +6,7 @@ import 'package:smartrent_mobile/manager/features/billing/presentation/pages/inv
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/change_password_page.dart';
+import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -374,7 +375,7 @@ class DashboardPage extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+        MaterialPageRoute(builder: (context) => IssueDetailPage(issue: TicketModel(id: 0, roomName: 'N/A', status: 'pending'))),
       ),
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -436,7 +437,7 @@ class DashboardPage extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+        MaterialPageRoute(builder: (context) => IssueDetailPage(issue: TicketModel(id: 0, roomName: 'N/A', status: 'pending'))),
       ),
       borderRadius: BorderRadius.circular(16),
       child: Container(

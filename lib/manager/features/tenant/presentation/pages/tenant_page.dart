@@ -12,6 +12,7 @@ import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant.da
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_tenant_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
+import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
@@ -1303,7 +1304,16 @@ class _TenantPageState extends State<TenantPage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const IssueDetailPage()),
+                    MaterialPageRoute(
+                      builder: (context) => IssueDetailPage(
+                        issue: TicketModel(
+                          id: 0,
+                          description: issue["title"] ?? "Sự cố",
+                          roomName: issue["room"] ?? "N/A",
+                          status: issue["status"] == "Mới tiếp nhận" ? "pending" : "in_progress",
+                        ),
+                      ),
+                    ),
                   );
                 },
                 borderRadius: BorderRadius.circular(16),

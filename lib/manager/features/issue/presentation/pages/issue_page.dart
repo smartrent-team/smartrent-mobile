@@ -3,6 +3,9 @@ import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
+import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
+import 'package:intl/intl.dart';
 
 class IssuePage extends StatefulWidget {
   const IssuePage({super.key});
@@ -12,69 +15,101 @@ class IssuePage extends StatefulWidget {
 }
 
 class _IssuePageState extends State<IssuePage> {
-  String selectedFilter = 'Tất cả (5)';
+  final TicketService _ticketService = TicketService();
+  String selectedFilter = 'Tất cả';
+  List<TicketModel> _allTickets = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  // Fake Data List
-  final List<Map<String, dynamic>> allIssues = [
-    {
-      'id': '#T-091',
-      'room': 'Phòng 305',
-      'floor': 'Tầng 3',
-      'status': 'Tiếp nhận',
-      'statusColor': Colors.orange,
-      'description': 'Hỏng điều hòa, không làm mát',
-      'date': '18/05/2025 • 14:30',
-      'hasImage': true,
-    },
-    {
-      'id': '#T-089',
-      'room': 'Phòng 201',
-      'floor': 'Tầng 2',
-      'status': 'Đang sửa',
-      'statusColor': Colors.blue,
-      'description': 'Rò rỉ vòi sen phòng tắm',
-      'date': '17/05/2025 • 09:15',
-      'hasImage': true,
-    },
-    {
-      'id': '#T-102',
-      'room': 'Phòng 102',
-      'floor': 'Tầng 1',
-      'status': 'Tiếp nhận',
-      'statusColor': Colors.orange,
-      'description': 'Bóng đèn trần bị hỏng',
-      'date': '16/05/2025 • 11:00',
-      'hasImage': false,
-    },
-    {
-      'id': '#T-085',
-      'room': 'Phòng 408',
-      'floor': 'Tầng 4',
-      'status': 'Đang sửa',
-      'statusColor': Colors.blue,
-      'description': 'Khóa cửa bị kẹt không mở được',
-      'date': '15/05/2025 • 08:30',
-      'hasImage': false,
-    },
-    {
-      'id': '#T-077',
-      'room': 'Phòng 301',
-      'floor': 'Tầng 3',
-      'status': 'Tiếp nhận',
-      'statusColor': Colors.orange,
-      'description': 'Tường bị thấm nước khi trời mưa',
-      'date': '14/05/2025 • 16:20',
-      'hasImage': true,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    print('DEBUG: IssuePage initState called');
+    _fetchTickets();
+  }
 
-  List<Map<String, dynamic>> get filteredIssues {
-    if (selectedFilter.contains('Tiếp nhận')) {
-      return allIssues.where((i) => i['status'] == 'Tiếp nhận').toList();
-    } else if (selectedFilter.contains('Đang sửa')) {
-      return allIssues.where((i) => i['status'] == 'Đang sửa').toList();
+  Future<void> _fetchTickets() async {
+    print('DEBUG: _fetchTickets started');
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _ticketService.getTickets();
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          final List<dynamic> ticketsData = data['data'] ?? [];
+          setState(() {
+            _allTickets = ticketsData.map((json) => TicketModel.fromJson(json)).toList();
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = data['message'] ?? 'Không thể tải danh sách sự cố';
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = 'Lỗi máy chủ: ${response.statusCode}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+        _isLoading = false;
+      });
     }
-    return allIssues;
+  }
+
+  List<TicketModel> get filteredIssues {
+    if (selectedFilter == 'Tiếp nhận') {
+      return _allTickets.where((i) => i.status == 'new').toList();
+    } else if (selectedFilter == 'Đang sửa') {
+      return _allTickets.where((i) => i.status == 'in_progress').toList();
+    }
+    return _allTickets;
+  }
+
+  String _getStatusText(String? status) {
+    switch (status) {
+      case 'new':
+      case 'pending':
+        return 'Tiếp nhận';
+      case 'in_progress':
+        return 'Đang sửa';
+      case 'resolved':
+        return 'Đã xong';
+      default:
+        return 'Chờ xử lý';
+    }
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'new':
+      case 'pending':
+        return Colors.orange;
+      case 'in_progress':
+        return Colors.blue;
+      case 'resolved':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'N/A';
+    try {
+      final dateTime = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy • HH:mm').format(dateTime);
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   @override
@@ -83,24 +118,15 @@ class _IssuePageState extends State<IssuePage> {
       backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
-          // 1. Header
           _buildHeader(context),
-          
           const SizedBox(height: 16),
-
-          // 2. Filter Bar
           _buildFilterBar(),
-
           const SizedBox(height: 8),
-
-          // 3. Issue List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: filteredIssues.length,
-              itemBuilder: (context, index) {
-                return _buildIssueCard(filteredIssues[index]);
-              },
+            child: RefreshIndicator(
+              onRefresh: _fetchTickets,
+              color: ManagerColors.primaryGreen,
+              child: _buildBody(),
             ),
           ),
         ],
@@ -109,15 +135,52 @@ class _IssuePageState extends State<IssuePage> {
     );
   }
 
-  // --- SECTION: Header ---
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: ManagerColors.primaryGreen));
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchTickets,
+              style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+              child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final issues = filteredIssues;
+    if (issues.isEmpty) {
+      return const Center(
+        child: Text('Không có sự cố nào trong danh sách', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: issues.length,
+      itemBuilder: (context, index) {
+        return _buildIssueCard(issues[index]);
+      },
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         color: ManagerColors.primaryGreen,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(28),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       child: SafeArea(
         bottom: false,
@@ -129,125 +192,43 @@ class _IssuePageState extends State<IssuePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left Profile Info
                   Row(
                     children: [
                       Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'RMS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: const Text('RMS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Quản lý cơ sở',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+                          Text('Quản lý cơ sở', style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11)),
                           const SizedBox(height: 2),
-                          const Text(
-                            'Chào, 0979789878 👋',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          const Text('Chào, 0979789878 👋', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ],
                   ),
-                  // Right Notification & Exit Buttons
                   Row(
                     children: [
-                      Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.notifications_none_outlined,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              onPressed: () {},
-                            ),
-                          ),
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: ManagerColors.primaryGreen,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none_outlined, color: Colors.white, size: 22),
+                        onPressed: () {},
                       ),
-                      const SizedBox(width: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.logout_outlined,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginPage(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.logout_outlined, color: Colors.white, size: 22),
+                        onPressed: () {
+                          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginPage()), (route) => false);
+                        },
                       ),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              // Date display
-              Text(
-                'Thứ Sáu, 22 tháng 5, 2026',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
+              Text(DateFormat('EEEE, dd MMMM, yyyy', 'vi_VN').format(DateTime.now()), style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 14)),
             ],
           ),
         ),
@@ -255,7 +236,6 @@ class _IssuePageState extends State<IssuePage> {
     );
   }
 
-  // --- SECTION: Filter Bar ---
   Widget _buildFilterBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -263,9 +243,9 @@ class _IssuePageState extends State<IssuePage> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildFilterTab('Tất cả (5)'),
+            _buildFilterTab('Tất cả'),
             const SizedBox(width: 12),
-            _buildFilterTab('Tiếp nhận (1)'),
+            _buildFilterTab('Tiếp nhận'),
             const SizedBox(width: 12),
             _buildFilterTab('Đang sửa'),
           ],
@@ -276,6 +256,13 @@ class _IssuePageState extends State<IssuePage> {
 
   Widget _buildFilterTab(String label) {
     final bool isActive = selectedFilter == label;
+    int count = 0;
+    if (label == 'Tất cả') count = _allTickets.length;
+    else if (label == 'Tiếp nhận') count = _allTickets.where((t) => t.status == 'new').length;
+    else if (label == 'Đang sửa') count = _allTickets.where((t) => t.status == 'in_progress').length;
+
+    final displayLabel = count > 0 ? '$label ($count)' : label;
+
     return GestureDetector(
       onTap: () => setState(() => selectedFilter = label),
       child: Container(
@@ -285,30 +272,38 @@ class _IssuePageState extends State<IssuePage> {
           borderRadius: BorderRadius.circular(30),
         ),
         child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.black54,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          displayLabel,
+          style: TextStyle(color: isActive ? Colors.white : Colors.black54, fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
     );
   }
 
-  // --- SECTION: Issue List & Card ---
-  Widget _buildIssueCard(Map<String, dynamic> issue) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 15, offset: Offset(0, 5))],
-      ),
+  Widget _buildIssueCard(TicketModel issue) {
+    final statusText = _getStatusText(issue.status);
+    final statusColor = _getStatusColor(issue.status);
+    final hasImage = issue.images != null && issue.images!.isNotEmpty;
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => IssueDetailPage(issue: issue),
+          ),
+        ).then((_) => _fetchTickets());
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 15, offset: Offset(0, 5))],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // Allow card to wrap contents efficiently
         children: [
           Row(
             children: [
@@ -317,15 +312,15 @@ class _IssuePageState extends State<IssuePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(issue['room'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(issue['floor'], style: const TextStyle(color: Colors.black38, fontSize: 12)),
+                  Text(issue.roomName ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Tầng ${issue.floor ?? 'N/A'}', style: const TextStyle(color: Colors.black38, fontSize: 12)),
                 ],
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: issue['statusColor'].withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                child: Text(issue['status'], style: TextStyle(color: issue['statusColor'], fontSize: 12, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -339,21 +334,23 @@ class _IssuePageState extends State<IssuePage> {
                   children: [
                     const Text('Mô tả sự cố', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
                     const SizedBox(height: 4),
-                    Text(issue['description'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(issue.description ?? 'Trống', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              if (issue['hasImage']) ...[
+              if (hasImage) ...[
                 const SizedBox(width: 12),
                 Container(
                   width: 80, height: 80,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade100,
-                    border: Border.all(color: Colors.grey.shade200),
+                    image: DecorationImage(
+                      image: NetworkImage(issue.images![0].startsWith('http') 
+                          ? issue.images![0] 
+                          : 'http://10.0.2.2:3000${issue.images![0]}'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.image_outlined, color: Colors.grey),
                 ),
               ],
             ],
@@ -364,8 +361,8 @@ class _IssuePageState extends State<IssuePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [const Icon(Icons.calendar_today_outlined, size: 14, color: ManagerColors.primaryGreen), const SizedBox(width: 6), Text(issue['date'], style: const TextStyle(color: Colors.black45, fontSize: 12))]),
-              Text(issue['id'], style: const TextStyle(color: Colors.black26, fontSize: 12, fontWeight: FontWeight.bold)),
+              Row(children: [const Icon(Icons.calendar_today_outlined, size: 14, color: ManagerColors.primaryGreen), const SizedBox(width: 6), Text(_formatDate(issue.createdAt), style: const TextStyle(color: Colors.black45, fontSize: 12))]),
+              Text('#T-${issue.id}', style: const TextStyle(color: Colors.black26, fontSize: 12, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 16),
@@ -374,7 +371,12 @@ class _IssuePageState extends State<IssuePage> {
             height: 48,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const IssueDetailPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => IssueDetailPage(issue: issue),
+                  ),
+                ).then((_) => _fetchTickets());
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: ManagerColors.primaryGreen,
@@ -394,28 +396,17 @@ class _IssuePageState extends State<IssuePage> {
           ),
         ],
       ),
+    ),
     );
   }
 
-  // --- SECTION: Navigation ---
   Widget _buildBottomNav(BuildContext context) {
     return Container(
       height: 76,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: ManagerColors.cardShadow,
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.15), width: 1)),
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, -4))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -423,7 +414,7 @@ class _IssuePageState extends State<IssuePage> {
           _buildNavItem(context, 0, Icons.meeting_room_outlined, 'Phòng'),
           _buildNavItem(context, 1, Icons.people_alt, 'Cư dân'),
           _buildNavItem(context, 2, Icons.receipt_long_outlined, 'Hóa đơn'),
-          _buildNavItem(context, 3, Icons.report_problem_outlined, 'Sự cố', badgeCount: 2),
+          _buildNavItem(context, 3, Icons.report_problem_outlined, 'Sự cố', badgeCount: _allTickets.where((t) => t.status == 'new').length),
           _buildNavItem(context, 4, Icons.grid_view_outlined, 'Dashboard'),
         ],
       ),
@@ -444,17 +435,10 @@ class _IssuePageState extends State<IssuePage> {
               Positioned(
                 top: 0,
                 child: Container(
-                  width: 48,
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    color: ManagerColors.primaryGreen,
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(3),
-                    ),
-                  ),
+                  width: 48, height: 3,
+                  decoration: const BoxDecoration(color: ManagerColors.primaryGreen, borderRadius: BorderRadius.vertical(bottom: Radius.circular(3))),
                 ),
               ),
-
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -465,40 +449,19 @@ class _IssuePageState extends State<IssuePage> {
                     Icon(icon, color: color, size: 24),
                     if (badgeCount > 0)
                       Positioned(
-                        top: -6,
-                        right: -10,
+                        top: -6, right: -10,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
+                          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                           alignment: Alignment.center,
-                          child: Text(
-                            '$badgeCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: Text('$badgeCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
+                Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
               ],
             ),
           ],
