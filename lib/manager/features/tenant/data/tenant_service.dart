@@ -7,25 +7,39 @@ class TenantService {
   Future<Response> addTenant({
     required String phone,
     required String fullName,
+    required String password,
     required dynamic branch,
     String role = 'tenant',
+    dynamic roomId,
   }) async {
     try {
       // For Postgres backends, IDs are often integers. 
       // If branch is a String that can be parsed to int, we convert it.
-      dynamic finalBranch = branch;
+      dynamic finalBranchId = branch;
       if (branch is String) {
-        finalBranch = int.tryParse(branch) ?? branch;
+        finalBranchId = int.tryParse(branch) ?? branch;
+      }
+
+      dynamic finalRoomId = roomId;
+      if (roomId is String) {
+        finalRoomId = int.tryParse(roomId) ?? roomId;
+      }
+
+      final Map<String, dynamic> requestData = {
+        'phone': phone,
+        'password': password,
+        'full_name': fullName,
+        'role': role,
+        'branch_id': finalBranchId,
+      };
+
+      if (finalRoomId != null) {
+        requestData['room_id'] = finalRoomId;
       }
 
       return await _apiClient.dio.post(
-        '/api/users',
-        data: {
-          'phone': phone,
-          'fullName': fullName,
-          'role': role,
-          'branch': finalBranch,
-        },
+        '/api/users/create',
+        data: requestData,
       );
     } on DioException catch (e) {
       rethrow;
@@ -35,6 +49,14 @@ class TenantService {
   Future<Response> getBranches() async {
     try {
       return await _apiClient.dio.get('/api/branches');
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> getTenants() async {
+    try {
+      return await _apiClient.dio.get('/api/tenants');
     } on DioException catch (e) {
       rethrow;
     }
