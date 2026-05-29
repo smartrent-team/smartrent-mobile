@@ -16,6 +16,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final TokenService _tokenService = TokenService();
@@ -42,6 +43,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
     super.initState();
     _nameController.addListener(_validateForm);
     _phoneController.addListener(_validateForm);
+    _emailController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
     _initData();
   }
@@ -167,6 +169,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -174,11 +177,15 @@ class _AddTenantPageState extends State<AddTenantPage> {
   void _validateForm() {
     setState(() {
       final bool isRoomValid = _selectedRole != 'tenant' || _selectedRoom != null;
+      final bool isEmailValid = _emailController.text.trim().isEmpty || 
+          RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim());
+      
       _isFormValid = _nameController.text.trim().isNotEmpty &&
           _phoneController.text.trim().isNotEmpty &&
           _passwordController.text.trim().isNotEmpty &&
           _selectedBranch != null &&
-          isRoomValid;
+          isRoomValid &&
+          isEmailValid;
     });
   }
 
@@ -191,6 +198,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
       await _tenantService.addTenant(
         phone: _phoneController.text.trim(),
         fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
         branch: _selectedBranch!,
         role: _selectedRole ?? 'tenant',
@@ -289,6 +297,15 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       hintText: "0987654321",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
+                      enabled: !_isLoading,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildFieldLabel("Email"),
+                    _buildTextField(
+                      controller: _emailController,
+                      hintText: "email@example.com",
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
                       enabled: !_isLoading,
                     ),
                     const SizedBox(height: 20),
