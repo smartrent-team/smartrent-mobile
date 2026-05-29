@@ -9,6 +9,7 @@ class TenantService {
     required String fullName,
     required String password,
     required dynamic branch,
+    String? email,
     String role = 'tenant',
     dynamic roomId,
   }) async {
@@ -32,6 +33,10 @@ class TenantService {
         'role': role,
         'branch_id': finalBranchId,
       };
+
+      if (email != null && email.isNotEmpty) {
+        requestData['email'] = email;
+      }
 
       if (finalRoomId != null) {
         requestData['room_id'] = finalRoomId;
