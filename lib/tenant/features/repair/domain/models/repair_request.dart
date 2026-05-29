@@ -22,6 +22,54 @@ class RepairRequest {
     required this.status,
     required this.icon,
   });
+
+  factory RepairRequest.fromJson(Map<String, dynamic> json) {
+    final title = json['title'] ?? '';
+    String category = 'Khác';
+    IconData icon = Icons.build_rounded;
+
+    final lowerTitle = title.toLowerCase();
+    if (lowerTitle.contains('điện') || lowerTitle.contains('đèn') || lowerTitle.contains('bóng') || lowerTitle.contains('phích') || lowerTitle.contains('ổ cắm')) {
+      category = 'Điện';
+      icon = Icons.flash_on_rounded;
+    } else if (lowerTitle.contains('nước') || lowerTitle.contains('vòi') || lowerTitle.contains('ống') || lowerTitle.contains('rò') || lowerTitle.contains('bồn')) {
+      category = 'Nước';
+      icon = Icons.water_drop_rounded;
+    } else if (lowerTitle.contains('điều hòa') || lowerTitle.contains('lạnh') || lowerTitle.contains('máy lạnh') || lowerTitle.contains('quạt')) {
+      category = 'Điều hòa';
+      icon = Icons.air_rounded;
+    } else if (lowerTitle.contains('khóa') || lowerTitle.contains('cửa') || lowerTitle.contains('chốt') || lowerTitle.contains('bản lề') || lowerTitle.contains('tay nắm')) {
+      category = 'Cửa / Khóa';
+      icon = Icons.lock_rounded;
+    }
+
+    RepairStatus status = RepairStatus.received;
+    final statusStr = json['status'] ?? 'pending';
+    if (statusStr == 'in-progress') {
+      status = RepairStatus.processing;
+    } else if (statusStr == 'resolved') {
+      status = RepairStatus.completed;
+    }
+
+    final createdAtStr = json['created_at'] ?? '';
+    DateTime dateTime = DateTime.now();
+    if (createdAtStr.isNotEmpty) {
+      try {
+        dateTime = DateTime.parse(createdAtStr).toLocal();
+      } catch (e) {
+        // Fallback to now
+      }
+    }
+
+    return RepairRequest(
+      id: "RQ-2026-${json['id'].toString().padLeft(3, '0')}",
+      title: title,
+      category: category,
+      dateTime: dateTime,
+      status: status,
+      icon: icon,
+    );
+  }
 }
 
 final List<RepairRequest> fakeRepairRequests = [
