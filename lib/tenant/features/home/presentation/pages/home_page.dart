@@ -37,7 +37,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
         final docs = (res.data['docs'] as List? ?? [])
             .map((e) => TenantInvoice.fromJson(e as Map<String, dynamic>))
             .toList();
-        final unpaid = docs.where((i) => !i.isPaid && i.canPay).toList();
+        final unpaid = docs.where((i) => !i.isPaid).toList();
         if (mounted) {
           setState(() => _unpaidInvoice = unpaid.isNotEmpty ? unpaid.first : null);
         }

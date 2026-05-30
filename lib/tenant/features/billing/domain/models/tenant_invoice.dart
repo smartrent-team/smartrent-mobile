@@ -76,7 +76,8 @@ class TenantInvoice {
       paymentBankBin: json['paymentBankBin'] as String?,
       paymentDescription: json['paymentDescription'] as String?,
       isPaid: json['isPaid'] as bool? ?? (json['paymentStatus'] == 'paid' || json['payment_status'] == 'paid'),
-      hasQr: json['hasQr'] as bool? ?? (json['qrPayload'] != null),
+      hasQr: json['hasQr'] as bool? ??
+          _hasNonEmpty(json['qrPayload'] as String?),
     );
   }
 
@@ -88,5 +89,11 @@ class TenantInvoice {
     return 'SmartRent';
   }
 
-  bool get canPay => !isPaid && (hasQr || (checkoutUrl != null && checkoutUrl!.isNotEmpty));
+  bool get canPay =>
+      !isPaid &&
+      (hasQr ||
+          (checkoutUrl != null && checkoutUrl!.trim().isNotEmpty));
+
+  static bool _hasNonEmpty(String? value) =>
+      value != null && value.trim().isNotEmpty;
 }

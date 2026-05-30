@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/payment/domain/tenant_payment_args.dart';
+import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_messages.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_success_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -282,7 +283,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage>
               size: 64, color: TenantColors.textGrey),
           const SizedBox(height: 12),
           const Text(
-            'Chưa có mã QR',
+            'Chưa có mã thanh toán',
             style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -290,7 +291,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Hóa đơn đã tạo nhưng chưa sinh được QR PayOS. Thử mở link thanh toán hoặc liên hệ quản lý.',
+            TenantPaymentMessages.noQrYet,
             textAlign: TextAlign.center,
             style: TextStyle(color: TenantColors.textGrey, fontSize: 13),
           ),

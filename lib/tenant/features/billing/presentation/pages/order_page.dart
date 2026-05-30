@@ -4,6 +4,7 @@ import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
 import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_invoice.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
+import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -17,6 +18,7 @@ class TenantOrderPage extends StatefulWidget {
 
 class _TenantOrderPageState extends State<TenantOrderPage> {
   final TenantInvoiceService _invoiceService = TenantInvoiceService();
+  final ProfileService _profileService = ProfileService();
   final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
 
   int _currentNav = 1;
@@ -24,6 +26,10 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
   int? _expandedIndex;
   bool _isLoadingInvoices = true;
   String? _loadError;
+
+  /// Nguồn dữ liệu từ API — thống kê header/tab tính từ list này.
+  List<TenantInvoice> _invoiceList = [];
+  String? _roomSubtitle;
 
   List<Map<String, dynamic>> _invoices = [];
 
@@ -45,6 +51,8 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     _loadInvoices();
   }
 
+  Future<void> _reloadAfterPayment() => _loadInvoices();
+
   Future<void> _loadInvoices() async {
     setState(() {
       _isLoadingInvoices = true;
@@ -52,12 +60,25 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     });
     try {
       final response = await _invoiceService.getMyInvoices();
+      final profile = await _profileService.getProfile();
+
       if (response.statusCode == 200 && response.data['success'] == true) {
         final docs = (response.data['docs'] as List? ?? [])
             .map((e) => TenantInvoice.fromJson(e as Map<String, dynamic>))
             .toList();
+
+        String? subtitle;
+        if (profile != null && profile.room != null) {
+          final r = profile.room!;
+          subtitle = '${r.branchName} · Phòng ${r.roomCode}';
+        } else if (docs.isNotEmpty) {
+          subtitle = docs.first.roomLabel;
+        }
+
         if (!mounted) return;
         setState(() {
+          _invoiceList = docs;
+          _roomSubtitle = subtitle;
           _invoices = docs.map(_mapInvoiceToUi).toList();
           _payments = docs
               .where((i) => i.isPaid)
@@ -168,6 +189,56 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     return _invoices;
   }
 
+  int get _countAll => _invoiceList.length;
+
+  int get _countPaid => _invoiceList.where((i) => i.isPaid).length;
+
+  int get _countUnpaid => _invoiceList.where((i) => !i.isPaid).length;
+
+  String get _headerRoomLabel {
+    if (_roomSubtitle != null && _roomSubtitle!.isNotEmpty) {
+      return _roomSubtitle!;
+    }
+    if (_invoiceList.isNotEmpty) return _invoiceList.first.roomLabel;
+    return _isLoadingInvoices ? 'Đang tải...' : 'SmartRent';
+  }
+
+  String _formatSummaryAmount(num amount) {
+    if (amount >= 1000000) {
+      final m = amount / 1000000;
+      final text = m >= 100
+          ? m.toStringAsFixed(0)
+          : (m >= 10 ? m.toStringAsFixed(1) : m.toStringAsFixed(2));
+      return '${text.replaceAll(RegExp(r'\.0$'), '')}M đ';
+    }
+    return _currency.format(amount);
+  }
+
+  ({num total, int count}) _paidStatsThisYear() {
+    final year = DateTime.now().year;
+    num total = 0;
+    var count = 0;
+    for (final inv in _invoiceList) {
+      if (!inv.isPaid) continue;
+      final issued = DateTime.tryParse(inv.issuedAt ?? inv.createdAt ?? '');
+      if (issued == null || issued.year != year) continue;
+      total += inv.totalAmount;
+      count++;
+    }
+    return (total: total, count: count);
+  }
+
+  ({num total, int count}) _unpaidStats() {
+    num total = 0;
+    var count = 0;
+    for (final inv in _invoiceList) {
+      if (inv.isPaid) continue;
+      total += inv.totalAmount;
+      count++;
+    }
+    return (total: total, count: count);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,14 +326,18 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phòng P203 · Nhà trọ Phúc An',
-                        style: TextStyle(color: Colors.white60, fontSize: 13)),
-                    SizedBox(height: 4),
-                    Text('Hóa đơn',
+                    Text(
+                      _headerRoomLabel,
+                      style: const TextStyle(color: Colors.white60, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Hóa đơn',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -284,35 +359,81 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  icon: Icons.trending_up_rounded,
-                  iconBg: Colors.white24,
-                  label: 'Đã TT năm 2025',
-                  amount: '11.27M đ',
-                  sub: '6 hóa đơn',
-                  amountColor: Colors.white,
-                  bgColor: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryCard(
-                  icon: Icons.monetization_on_outlined,
-                  iconBg: const Color(0xFFD4A017).withValues(alpha: 0.3),
-                  label: 'Cần thanh toán',
-                  amount: '2.85M đ',
-                  sub: '1 hóa đơn chưa TT',
-                  amountColor: const Color(0xFFFFD60A),
-                  bgColor: const Color(0xFF5C4300).withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
+          _buildSummaryRow(),
         ],
       ),
+    );
+  }
+
+  Widget _buildSummaryRow() {
+    if (_isLoadingInvoices) {
+      return Row(
+        children: [
+          Expanded(
+            child: _buildSummaryCard(
+              icon: Icons.trending_up_rounded,
+              iconBg: Colors.white24,
+              label: 'Đã TT năm ${DateTime.now().year}',
+              amount: '—',
+              sub: 'Đang tải...',
+              amountColor: Colors.white70,
+              bgColor: Colors.white.withValues(alpha: 0.12),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildSummaryCard(
+              icon: Icons.monetization_on_outlined,
+              iconBg: const Color(0xFFD4A017).withValues(alpha: 0.3),
+              label: 'Cần thanh toán',
+              amount: '—',
+              sub: 'Đang tải...',
+              amountColor: const Color(0xFFFFD60A),
+              bgColor: const Color(0xFF5C4300).withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final paidYear = _paidStatsThisYear();
+    final unpaid = _unpaidStats();
+    final year = DateTime.now().year;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildSummaryCard(
+            icon: Icons.trending_up_rounded,
+            iconBg: Colors.white24,
+            label: 'Đã TT năm $year',
+            amount: paidYear.count > 0
+                ? _formatSummaryAmount(paidYear.total)
+                : '0 đ',
+            sub: paidYear.count > 0
+                ? '${paidYear.count} hóa đơn'
+                : 'Chưa có trong năm $year',
+            amountColor: Colors.white,
+            bgColor: Colors.white.withValues(alpha: 0.12),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildSummaryCard(
+            icon: Icons.monetization_on_outlined,
+            iconBg: const Color(0xFFD4A017).withValues(alpha: 0.3),
+            label: 'Cần thanh toán',
+            amount: unpaid.count > 0
+                ? _formatSummaryAmount(unpaid.total)
+                : '0 đ',
+            sub: unpaid.count > 0
+                ? '${unpaid.count} hóa đơn chưa TT'
+                : 'Không còn nợ',
+            amountColor: const Color(0xFFFFD60A),
+            bgColor: const Color(0xFF5C4300).withValues(alpha: 0.6),
+          ),
+        ),
+      ],
     );
   }
 
@@ -364,9 +485,9 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
 
   Widget _buildTabBar() {
     final tabs = [
-      {'label': 'Tất cả', 'count': '7'},
-      {'label': 'Đã thanh toán', 'count': '6'},
-      {'label': 'Chưa thanh toán', 'count': '1'},
+      {'label': 'Tất cả', 'count': _countAll},
+      {'label': 'Đã thanh toán', 'count': _countPaid},
+      {'label': 'Chưa thanh toán', 'count': _countUnpaid},
     ];
     return Container(
       color: TenantColors.bgLightGreen,
@@ -741,10 +862,11 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   final tenantInv = inv['_tenantInvoice'] as TenantInvoice?;
                   if (tenantInv != null) {
-                    openTenantPaymentQr(context, tenantInv);
+                    await openTenantPaymentQr(context, tenantInv);
+                    if (mounted) _reloadAfterPayment();
                   }
                 },
                 icon: const Icon(Icons.qr_code_scanner_outlined,

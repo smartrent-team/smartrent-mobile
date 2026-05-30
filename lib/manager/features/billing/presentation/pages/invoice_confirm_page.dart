@@ -209,15 +209,26 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final payment = response.data['payment'];
+        final paymentWarning = response.data['paymentWarning'] as String?;
         final hasQr = payment != null && payment['qrPayload'] != null;
+        if (paymentWarning != null && paymentWarning.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(paymentWarning),
+              backgroundColor: Colors.orange.shade800,
+              duration: const Duration(seconds: 8),
+            ),
+          );
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               hasQr
                   ? 'Hóa đơn đã tạo! Mã QR thanh toán đã gửi sang app cư dân.'
-                  : 'Hóa đơn đã được tạo thành công!',
+                  : 'Hóa đơn đã tạo nhưng CHƯA có QR — kiểm tra PayOS (.env) hoặc migration DB, sau đó cư dân bấm "Thanh toán QR".',
             ),
-            backgroundColor: ManagerColors.primaryGreen,
+            backgroundColor: hasQr ? ManagerColors.primaryGreen : Colors.orange.shade800,
+            duration: Duration(seconds: hasQr ? 4 : 8),
           ),
         );
         Navigator.pop(context, true); // Pop page
