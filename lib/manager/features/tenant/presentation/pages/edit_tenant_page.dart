@@ -1,8 +1,13 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
+import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant_detail.dart';
 
 class EditTenantPage extends StatefulWidget {
-  const EditTenantPage({super.key});
+  final int tenantId;
+
+  const EditTenantPage({super.key, required this.tenantId});
 
   @override
   State<EditTenantPage> createState() => _EditTenantPageState();
@@ -10,25 +15,151 @@ class EditTenantPage extends StatefulWidget {
 
 class _EditTenantPageState extends State<EditTenantPage> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Controllers initialized with current values
-  final _nameController = TextEditingController(text: "Nguyễn Thị Mai Anh");
-  final _phoneController = TextEditingController(text: "0912 345 678");
-  final _dateController = TextEditingController(text: "09/01/2024");
-  
-  String _selectedStatus = "Đang thuê";
-  
-  // Contract Images State list to allow interactive deleting
-  final List<Map<String, String>> _contractImages = [
-    {
-      "url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&fit=crop",
-      "label": "Trang 1"
-    },
-    {
-      "url": "https://images.unsplash.com/photo-1450133064473-71024230f91b?w=400&fit=crop",
-      "label": "Trang 2"
+  final TenantService _tenantService = TenantService();
+
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _dateController = TextEditingController();
+
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String? _errorMessage;
+  String _headerInitial = 'C';
+  String _headerName = '';
+  String _headerRoomLabel = '';
+  String? _roomCode;
+  int? _floor;
+  DateTime? _moveInDate;
+
+  String _selectedStatus = 'Đang thuê';
+  final List<String> _contractImageUrls = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _tenantService.getTenantDetail(widget.tenantId);
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final detail = TenantDetail.fromJson(
+          response.data['data'] as Map<String, dynamic>,
+        );
+        _applyDetail(detail);
+        setState(() => _isLoading = false);
+      } else {
+        setState(() {
+          _errorMessage =
+              response.data['error']?.toString() ?? 'Không thể tải thông tin cư dân';
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Không thể kết nối máy chủ. Vui lòng thử lại.';
+        _isLoading = false;
+      });
     }
-  ];
+  }
+
+  void _applyDetail(TenantDetail detail) {
+    _headerInitial = detail.initial;
+    _headerName = detail.name;
+    _headerRoomLabel = detail.roomLabel;
+    _roomCode = detail.roomCode;
+    _floor = detail.floor;
+    _nameController.text = detail.name;
+    _phoneController.text = _phoneForEdit(detail.phone);
+    _moveInDate = _parseViDate(detail.checkInDate);
+    if (_moveInDate != null) {
+      _dateController.text = _formatDateForField(_moveInDate!);
+    } else if (detail.checkInDate != 'Chưa cập nhật') {
+      _dateController.text = detail.checkInDate;
+    }
+    _selectedStatus = detail.isActive ? 'Đang thuê' : 'Đã trả phòng';
+    _contractImageUrls
+      ..clear()
+      ..addAll(detail.contractImages);
+  }
+
+  String _phoneForEdit(String phone) {
+    if (phone == 'Chưa cập nhật') return '';
+    final digits = phone.replaceAll(RegExp(r'\s'), '');
+    if (digits.startsWith('+84') && digits.length > 3) {
+      return '0${digits.substring(3)}';
+    }
+    return digits;
+  }
+
+  DateTime? _parseViDate(String value) {
+    if (value.isEmpty || value == 'Chưa cập nhật') return null;
+    final parts = value.split('/');
+    if (parts.length != 3) return null;
+    final day = int.tryParse(parts[0].trim());
+    final month = int.tryParse(parts[1].trim());
+    final year = int.tryParse(parts[2].trim());
+    if (day == null || month == null || year == null) return null;
+    return DateTime(year, month, day);
+  }
+
+  String _formatDateForField(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate() || _isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final response = await _tenantService.updateTenant(widget.tenantId, {
+        'fullName': _nameController.text.trim(),
+        'phone': _phoneController.text.trim().replaceAll(RegExp(r'\s'), ''),
+        'moveInDate': _dateController.text.trim(),
+        'isActive': _selectedStatus == 'Đang thuê',
+        'contractImages': _contractImageUrls,
+      });
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã cập nhật thông tin cư dân thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+          ),
+        );
+        Navigator.pop(context, true);
+        return;
+      }
+
+      final message =
+          response.data['error']?.toString() ?? 'Không thể lưu thông tin cư dân';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response!.data['error']?.toString() ??
+              'Không thể lưu thông tin cư dân')
+          : 'Không thể kết nối máy chủ. Vui lòng thử lại.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -41,7 +172,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(2024, 1, 9),
+      initialDate: _moveInDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
       builder: (context, child) {
@@ -64,36 +195,73 @@ class _EditTenantPageState extends State<EditTenantPage> {
     );
     if (picked != null) {
       setState(() {
-        _dateController.text = "${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}";
+        _moveInDate = picked;
+        _dateController.text = _formatDateForField(picked);
       });
     }
   }
 
   void _addNewContractPhoto() {
-    setState(() {
-      final newIndex = _contractImages.length + 1;
-      _contractImages.add({
-        "url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&fit=crop",
-        "label": "Trang $newIndex"
-      });
-    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Đã thêm ảnh hợp đồng mới'),
-        backgroundColor: ManagerColors.primaryGreen,
-        duration: Duration(seconds: 1),
+        content: Text('Upload ảnh từ app sẽ được bổ sung sau. Bạn có thể xóa ảnh hiện có.'),
+        duration: Duration(seconds: 2),
       ),
     );
   }
 
   void _removeContractPhoto(int index) {
     setState(() {
-      _contractImages.removeAt(index);
+      _contractImageUrls.removeAt(index);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: ManagerColors.bgLightGreen,
+        body: Center(
+          child: CircularProgressIndicator(color: ManagerColors.primaryGreen),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: ManagerColors.bgLightGreen,
+        appBar: AppBar(
+          backgroundColor: ManagerColors.primaryGreen,
+          foregroundColor: Colors.white,
+          title: const Text('Sửa thông tin cư dân'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: ManagerColors.textCharcoal),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadDetail,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ManagerColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: ManagerColors.bgLightGreen,
       body: Stack(
@@ -146,25 +314,19 @@ class _EditTenantPageState extends State<EditTenantPage> {
         height: 54,
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: ElevatedButton.icon(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đã cập nhật thông tin cư dân thành công!'),
-                  backgroundColor: ManagerColors.primaryGreen,
-                ),
-              );
-              Navigator.pop(context, {
-                "name": _nameController.text.trim(),
-                "phone": _phoneController.text.trim(),
-                "date": _dateController.text.trim(),
-                "status": _selectedStatus,
-              });
-            }
-          },
-          icon: const Icon(Icons.check, color: Colors.white, size: 20),
-          label: const Text(
-            "Lưu thay đổi",
+          onPressed: _isSaving ? null : _save,
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.check, color: Colors.white, size: 20),
+          label: Text(
+            _isSaving ? 'Đang lưu...' : 'Lưu thay đổi',
             style: TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -247,9 +409,9 @@ class _EditTenantPageState extends State<EditTenantPage> {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'A',
-                        style: TextStyle(
+                      child: Text(
+                        _headerInitial,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -260,19 +422,19 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Nguyễn Thị Mai Anh",
-                            style: TextStyle(
+                            _headerName,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            "Phòng 305 - Tầng 3",
-                            style: TextStyle(
+                            _headerRoomLabel,
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
@@ -547,7 +709,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  "${_contractImages.length} ảnh",
+                  '${_contractImageUrls.length} ảnh',
                   style: const TextStyle(
                     color: ManagerColors.primaryGreen,
                     fontSize: 11,
@@ -576,7 +738,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
             child: Column(
               children: [
                 // Horizontal scrollable contract images with overlays
-                if (_contractImages.isEmpty)
+                if (_contractImageUrls.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
@@ -588,14 +750,18 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   )
                 else
                   Row(
-                    children: List.generate(_contractImages.length, (index) {
-                      final item = _contractImages[index];
+                    children: List.generate(_contractImageUrls.length, (index) {
+                      final url = _contractImageUrls[index];
                       return Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
-                            right: index == _contractImages.length - 1 ? 0 : 12.0,
+                            right: index == _contractImageUrls.length - 1 ? 0 : 12.0,
                           ),
-                          child: _buildInteractiveContractImage(index, item["url"]!, item["label"]!),
+                          child: _buildInteractiveContractImage(
+                            index,
+                            url,
+                            'Trang ${index + 1}',
+                          ),
                         ),
                       );
                     }),
@@ -785,9 +951,9 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Phòng",
+                      children: [
+                        const Text(
+                          'Phòng',
                           style: TextStyle(
                             color: ManagerColors.textGrey,
                             fontSize: 10,
@@ -795,10 +961,10 @@ class _EditTenantPageState extends State<EditTenantPage> {
                             letterSpacing: 0.5,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          "Phòng 305",
-                          style: TextStyle(
+                          _roomCode != null ? 'Phòng $_roomCode' : 'Chưa có phòng',
+                          style: const TextStyle(
                             color: ManagerColors.textCharcoal,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -840,9 +1006,9 @@ class _EditTenantPageState extends State<EditTenantPage> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Tầng",
+                      children: [
+                        const Text(
+                          'Tầng',
                           style: TextStyle(
                             color: ManagerColors.textGrey,
                             fontSize: 10,
@@ -850,10 +1016,10 @@ class _EditTenantPageState extends State<EditTenantPage> {
                             letterSpacing: 0.5,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          "Tầng 3",
-                          style: TextStyle(
+                          _floor != null ? 'Tầng $_floor' : '—',
+                          style: const TextStyle(
                             color: ManagerColors.textCharcoal,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
