@@ -142,20 +142,17 @@ class _OtpPageState extends State<OtpPage> {
                 ),
                 const SizedBox(height: 40),
                 Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: ManagerColors.primaryGreen,
-                    borderRadius: BorderRadius.circular(24),
+                  width: 140,
+                  height: 140,
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    'RMS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Image.asset(
+                    'logo/logo1.png',
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 16),

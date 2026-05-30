@@ -85,20 +85,16 @@ class _ManagerAppHeaderState extends State<ManagerAppHeader> {
                   Row(
                     children: [
                       Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(
+                          color: Colors.transparent,
                         ),
+                        padding: const EdgeInsets.all(6),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'RMS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                        child: Image.asset(
+                          'logo/logo1.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(width: 12),

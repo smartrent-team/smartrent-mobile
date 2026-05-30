@@ -4,12 +4,12 @@ import 'package:smartrent_mobile/core/network/api_client.dart';
 class AuthService {
   final ApiClient _apiClient = ApiClient();
 
-  Future<Response> login(String phone, String password) async {
+  Future<Response> login(String identity, String password) async {
     try {
       return await _apiClient.dio.post(
         '/api/auth/login',
         data: {
-          'phone': phone,
+          'phone': identity,
           'password': password,
         },
       );

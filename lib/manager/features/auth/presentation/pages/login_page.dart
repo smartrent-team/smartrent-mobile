@@ -17,39 +17,43 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _identityController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   final TokenService _tokenService = TokenService();
-  String? _errorMessage;
+  String? _identityError;
+  String? _passwordError;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _phoneNumberController.dispose();
+    _identityController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _onLogin() async {
-    final phone = _phoneNumberController.text.trim();
+    final identity = _identityController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (phone.isEmpty || password.isEmpty) {
-      setState(() {
-        _errorMessage = 'Vui lòng nhập đầy đủ số điện thoại và mật khẩu';
-      });
+    setState(() {
+      _identityError = identity.isEmpty ? 'Vui lòng nhập số điện thoại hoặc email' : null;
+      _passwordError = password.isEmpty ? 'Vui lòng nhập mật khẩu' : null;
+    });
+
+    if (_identityError != null || _passwordError != null) {
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _identityError = null;
+      _passwordError = null;
     });
 
     try {
-      final response = await _authService.login(phone, password);
+      final response = await _authService.login(identity, password);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         if (data['success'] == true) {
@@ -66,10 +70,10 @@ class _LoginPageState extends State<LoginPage> {
             await _tokenService.saveBranchId(branchId.toString());
           }
           final savedPhone = ManagerAppHeader.formatPhoneDisplay(
-            user?['phone']?.toString() ?? phone,
+            user?['phone']?.toString() ?? identity,
           );
           await _tokenService.saveUserProfile(
-            phone: savedPhone.isNotEmpty ? savedPhone : phone,
+            phone: savedPhone.isNotEmpty ? savedPhone : identity,
             fullName: user?['full_name']?.toString(),
           );
 
@@ -82,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
             target = const TenantNav();
           } else {
             setState(() {
-              _errorMessage = 'Vai trò người dùng không hợp lệ: $role';
+              _passwordError = 'Vai trò người dùng không hợp lệ: $role';
             });
             return;
           }
@@ -94,17 +98,17 @@ class _LoginPageState extends State<LoginPage> {
           );
         } else {
           setState(() {
-            _errorMessage = data['message'] ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
+            _passwordError = data['message'] ?? 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
           });
         }
       } else {
         setState(() {
-          _errorMessage = 'Lỗi máy chủ: ${response.statusCode}';
+          _passwordError = 'Lỗi máy chủ: ${response.statusCode}';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Lỗi kết nối hoặc sai thông tin: ${e.toString()}';
+        _passwordError = 'Lỗi kết nối hoặc sai thông tin: ${e.toString()}';
       });
     } finally {
       if (mounted) {
@@ -137,27 +141,17 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 80),
                 // Logo Section
                 Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: ManagerColors.primaryGreen,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: ManagerColors.cardShadow,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                  width: 140,
+                  height: 140,
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
                   ),
                   alignment: Alignment.center,
-                  child: const Text(
-                    'RMS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Image.asset(
+                    'logo/logo.png',
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -208,7 +202,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Nhập số điện thoại và mật khẩu để tiếp tục',
+                        'Nhập số điện thoại hoặc email và mật khẩu để tiếp tục',
                         style: TextStyle(
                           fontSize: 15,
                           color: ManagerColors.subtitleGrey,
@@ -216,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 32),
                       const Text(
-                        'Số điện thoại',
+                        'Số điện thoại hoặc Email',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -225,16 +219,17 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: _phoneNumberController,
-                        keyboardType: TextInputType.phone,
+                        controller: _identityController,
+                        keyboardType: TextInputType.emailAddress,
                         cursorColor: ManagerColors.primaryGreen,
                         decoration: InputDecoration(
-                          hintText: 'Nhập số điện thoại',
+                          hintText: 'Nhập số điện thoại hoặc email',
                           hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: const Icon(Icons.phone_android_outlined,
+                          prefixIcon: const Icon(Icons.person_outline,
                               color: ManagerColors.subtitleGrey),
                           filled: true,
                           fillColor: const Color(0xFFFBFDFA),
+                          errorText: _identityError,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                           enabledBorder: OutlineInputBorder(
@@ -246,6 +241,16 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
                                 color: ManagerColors.primaryGreen, width: 1.5),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                                color: Colors.redAccent, width: 1.0),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                                color: Colors.redAccent, width: 1.5),
                           ),
                         ),
                       ),
@@ -283,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           filled: true,
                           fillColor: const Color(0xFFFBFDFA),
-                          errorText: _errorMessage,
+                          errorText: _passwordError,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                           enabledBorder: OutlineInputBorder(
@@ -309,71 +314,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Helper Test Accounts Section
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: ManagerColors.bgMintPale.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: ManagerColors.lightGreenBorder,
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.info_outline,
-                                    size: 16, color: ManagerColors.primaryGreen),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Tài khoản thử nghiệm (Chạm để điền):',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _phoneNumberController.text = '0901234567';
-                                    _passwordController.text = 'Ttai140999!!';
-                                    _errorMessage = null;
-                                  });
-                                },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.admin_panel_settings_outlined,
-                                        size: 14, color: Colors.orange),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Manager: ',
-                                      style: TextStyle(fontSize: 12, color: Colors.black87),
-                                    ),
-                                    Text(
-                                      '0901234567',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: ManagerColors.primaryGreen,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       // Continue Button
                       SizedBox(
                         width: double.infinity,
