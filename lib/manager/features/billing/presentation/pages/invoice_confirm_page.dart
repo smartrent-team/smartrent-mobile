@@ -208,9 +208,15 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       Navigator.pop(context); // Pop loading spinner
 
       if (response.statusCode == 200 && response.data['success'] == true) {
+        final payment = response.data['payment'];
+        final hasQr = payment != null && payment['qrPayload'] != null;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hóa đơn đã được tạo thành công!'),
+          SnackBar(
+            content: Text(
+              hasQr
+                  ? 'Hóa đơn đã tạo! Mã QR thanh toán đã gửi sang app cư dân.'
+                  : 'Hóa đơn đã được tạo thành công!',
+            ),
             backgroundColor: ManagerColors.primaryGreen,
           ),
         );

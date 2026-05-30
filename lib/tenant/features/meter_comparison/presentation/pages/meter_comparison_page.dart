@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/core/lottie/app_lottie.dart';
+import 'package:smartrent_mobile/core/lottie/lottie_assets.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/meter_comparison_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/domain/models/utility_analysis.dart';
@@ -990,8 +992,8 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     return AnimatedBuilder(
       animation: _aiLoadingAnim,
       builder: (context, _) {
-        final t = _aiLoadingAnim.value;
-        final stepIndex = (t * steps.length).floor() % steps.length;
+        final stepIndex =
+            (_aiLoadingAnim.value * steps.length).floor() % steps.length;
 
         return Center(
           child: Padding(
@@ -999,47 +1001,12 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      _buildPulseRing(t, 0.0, 0.35),
-                      _buildPulseRing(t, 0.33, 0.25),
-                      _buildPulseRing(t, 0.66, 0.18),
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF1B5E20),
-                              TenantColors.primaryGreen,
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: TenantColors.primaryGreen
-                                  .withValues(alpha: 0.35),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.psychology_rounded,
-                          color: Colors.white.withValues(
-                            alpha: 0.85 + 0.15 * math.sin(t * math.pi * 2),
-                          ),
-                          size: 32,
-                        ),
-                      ),
-                    ],
-                  ),
+                const AppLottie(
+                  assetPath: LottieAssets.aiLoading,
+                  width: 220,
+                  height: 220,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
                 Text(
                   'AI đang phân tích',
                   style: GoogleFonts.outfit(
@@ -1071,140 +1038,8 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
-                _buildAnalyzingDots(t),
-                const SizedBox(height: 32),
-                _buildAnalyzingSkeletonCard(),
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPulseRing(double t, double offset, double maxOpacity) {
-    final progress = (t + offset) % 1.0;
-    final scale = 0.55 + progress * 0.85;
-    final opacity = maxOpacity * (1 - progress);
-
-    return Transform.scale(
-      scale: scale,
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: TenantColors.primaryGreen.withValues(alpha: opacity),
-            width: 2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnalyzingDots(double t) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (i) {
-        final delay = i * 0.2;
-        final wave = math.sin((t + delay) * math.pi * 2);
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: TenantColors.primaryGreen.withValues(
-              alpha: 0.35 + 0.65 * ((wave + 1) / 2),
-            ),
-            shape: BoxShape.circle,
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildAnalyzingSkeletonCard() {
-    return AnimatedBuilder(
-      animation: _aiLoadingAnim,
-      builder: (_, __) {
-        final shimmer = 0.4 + 0.6 * ((math.sin(_aiLoadingAnim.value * math.pi * 2) + 1) / 2);
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: TenantColors.cardShadow,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: TenantColors.bgMint.withValues(alpha: shimmer),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 12,
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200
-                                .withValues(alpha: shimmer),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 10,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100
-                                .withValues(alpha: shimmer),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 8,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100.withValues(alpha: shimmer),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 8,
-                width: 200,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100.withValues(alpha: shimmer),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
           ),
         );
       },

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
+import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_invoice.dart';
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
-import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_qr_page.dart';
+import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/contract_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -14,8 +17,44 @@ class TenantHomePage extends StatefulWidget {
 }
 
 class _TenantHomePageState extends State<TenantHomePage> {
+  final TenantInvoiceService _invoiceService = TenantInvoiceService();
+  final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+
   int _currentIndex = 0;
   bool _isBillExpanded = false;
+  TenantInvoice? _unpaidInvoice;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnpaidInvoice();
+  }
+
+  Future<void> _loadUnpaidInvoice() async {
+    try {
+      final res = await _invoiceService.getMyInvoices();
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        final docs = (res.data['docs'] as List? ?? [])
+            .map((e) => TenantInvoice.fromJson(e as Map<String, dynamic>))
+            .toList();
+        final unpaid = docs.where((i) => !i.isPaid && i.canPay).toList();
+        if (mounted) {
+          setState(() => _unpaidInvoice = unpaid.isNotEmpty ? unpaid.first : null);
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _openPayment() {
+    if (_unpaidInvoice != null) {
+      openTenantPaymentQr(context, _unpaidInvoice!);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const TenantOrderPage()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -408,11 +447,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const TenantPaymentQRPage()),
-                    ),
+                    onPressed: _openPayment,
                     icon: const Icon(Icons.qr_code_scanner_outlined,
                         color: Colors.white),
                     label: const Text(
@@ -513,9 +548,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
               child: _buildServiceItem(
                   'Thanh toán QR', Icons.qr_code_outlined,
                   const Color(0xFF26A69A),
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const TenantPaymentQRPage()))),
+                  onTap: _openPayment),
             ),
             const SizedBox(width: 12),
             Expanded(

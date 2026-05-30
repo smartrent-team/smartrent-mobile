@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
+import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_invoice.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
-import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_qr_page.dart';
+import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TenantOrderPage extends StatefulWidget {
@@ -13,117 +16,151 @@ class TenantOrderPage extends StatefulWidget {
 }
 
 class _TenantOrderPageState extends State<TenantOrderPage> {
+  final TenantInvoiceService _invoiceService = TenantInvoiceService();
+  final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+
   int _currentNav = 1;
   int _selectedTab = 0;
   int? _expandedIndex;
+  bool _isLoadingInvoices = true;
+  String? _loadError;
 
-  final List<Map<String, dynamic>> _invoices = [
-    {
-      'year': '2025', 'month': 'T5', 'label': 'Tháng 5/2025',
-      'amount': '2.850.000 đ', 'date': 'Hạn: 10/06/2025',
-      'paid': false, 'isNew': true,
+  List<Map<String, dynamic>> _invoices = [];
+
+  List<Map<String, dynamic>> _payments = [];
+
+  static const _tabColors = [
+    TenantColors.primaryGreen,
+    Color(0xFF3F51B5),
+    Color(0xFF9C27B0),
+    Color(0xFFE91E63),
+    Color(0xFFFF9800),
+    Color(0xFFF44336),
+    Color(0xFF009688),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInvoices();
+  }
+
+  Future<void> _loadInvoices() async {
+    setState(() {
+      _isLoadingInvoices = true;
+      _loadError = null;
+    });
+    try {
+      final response = await _invoiceService.getMyInvoices();
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final docs = (response.data['docs'] as List? ?? [])
+            .map((e) => TenantInvoice.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (!mounted) return;
+        setState(() {
+          _invoices = docs.map(_mapInvoiceToUi).toList();
+          _payments = docs
+              .where((i) => i.isPaid)
+              .take(5)
+              .map(_mapPaymentHistory)
+              .toList();
+          _isLoadingInvoices = false;
+        });
+      } else {
+        throw Exception(response.data['error'] ?? 'Không tải được hóa đơn');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = e.toString();
+        _isLoadingInvoices = false;
+      });
+    }
+  }
+
+  Map<String, dynamic> _mapInvoiceToUi(TenantInvoice inv) {
+    final issued = DateTime.tryParse(inv.issuedAt ?? inv.createdAt ?? '');
+    final month = issued?.month ?? 0;
+    final year = issued?.year ?? 0;
+    final color = _tabColors[inv.id % _tabColors.length];
+
+    final items = <Map<String, dynamic>>[];
+    if (inv.roomPrice > 0) {
+      items.add({
+        'icon': Icons.home_work_outlined,
+        'color': TenantColors.primaryGreen,
+        'name': 'Tiền phòng',
+        'value': _currency.format(inv.roomPrice),
+      });
+    }
+    if (inv.electricCost > 0) {
+      final usage = (inv.electricNew != null && inv.electricOld != null)
+          ? ' (${(inv.electricNew! - inv.electricOld!).round()} kWh)'
+          : '';
+      items.add({
+        'icon': Icons.bolt_outlined,
+        'color': const Color(0xFFFF9800),
+        'name': 'Tiền điện$usage',
+        'value': _currency.format(inv.electricCost),
+      });
+    }
+    if (inv.waterCost > 0) {
+      final usage = (inv.waterNew != null && inv.waterOld != null)
+          ? ' (${(inv.waterNew! - inv.waterOld!).round()} m³)'
+          : '';
+      items.add({
+        'icon': Icons.water_drop_outlined,
+        'color': const Color(0xFF2196F3),
+        'name': 'Tiền nước$usage',
+        'value': _currency.format(inv.waterCost),
+      });
+    }
+    if (inv.serviceCost > 0) {
+      items.add({
+        'icon': Icons.star_outline_rounded,
+        'color': const Color(0xFFEC407A),
+        'name': 'Phí dịch vụ',
+        'value': _currency.format(inv.serviceCost),
+      });
+    }
+
+    final deadline = issued != null
+        ? DateTime(issued.year, issued.month + 1, 10)
+        : null;
+
+    return {
+      '_tenantInvoice': inv,
+      'year': '$year',
+      'month': month > 0 ? 'T$month' : '--',
+      'label': month > 0 ? 'Tháng $month/$year' : inv.invoiceCode,
+      'amount': _currency.format(inv.totalAmount),
+      'date': inv.isPaid
+          ? 'Đã thanh toán'
+          : (deadline != null
+              ? 'Hạn: ${deadline.day.toString().padLeft(2, '0')}/${deadline.month.toString().padLeft(2, '0')}/${deadline.year}'
+              : 'Chờ thanh toán'),
+      'paid': inv.isPaid,
+      'isNew': !inv.isPaid && inv.hasQr,
+      'color': color,
+      'code': inv.invoiceCode,
+      'items': items,
+    };
+  }
+
+  Map<String, dynamic> _mapPaymentHistory(TenantInvoice inv) {
+    final issued = DateTime.tryParse(inv.issuedAt ?? '');
+    final label = issued != null ? 'Tháng ${issued.month}/${issued.year}' : inv.invoiceCode;
+    return {
+      'label': label,
+      'method': 'PayOS / Chuyển khoản',
+      'date': issued != null
+          ? '${issued.day.toString().padLeft(2, '0')}/${issued.month.toString().padLeft(2, '0')}/${issued.year}'
+          : inv.invoiceCode,
+      'amount': '-${_currency.format(inv.totalAmount)}',
+      'icon': Icons.account_balance_wallet_outlined,
       'color': TenantColors.primaryGreen,
-      'code': 'HD-2025-05-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (248 kWh)', 'value': '322.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (6 m³)', 'value': '68.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '140.000 đ'},
-      ],
-    },
-    {
-      'year': '2025', 'month': 'T4', 'label': 'Tháng 4/2025',
-      'amount': '2.780.000 đ', 'date': 'Đã TT: 05/05/2025',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFF3F51B5),
-      'code': 'HD-2025-04-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (230 kWh)', 'value': '299.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (5 m³)', 'value': '56.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '105.000 đ'},
-      ],
-    },
-    {
-      'year': '2025', 'month': 'T3', 'label': 'Tháng 3/2025',
-      'amount': '2.830.000 đ', 'date': 'Đã TT: 08/04/2025',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFF9C27B0),
-      'code': 'HD-2025-03-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (255 kWh)', 'value': '332.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (6 m³)', 'value': '68.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '110.000 đ'},
-      ],
-    },
-    {
-      'year': '2025', 'month': 'T2', 'label': 'Tháng 2/2025',
-      'amount': '2.760.000 đ', 'date': 'Đã TT: 07/03/2025',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFFE91E63),
-      'code': 'HD-2025-02-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (218 kWh)', 'value': '283.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (5 m³)', 'value': '56.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '101.000 đ'},
-      ],
-    },
-    {
-      'year': '2025', 'month': 'T1', 'label': 'Tháng 1/2025',
-      'amount': '2.900.000 đ', 'date': 'Đã TT: 09/02/2025',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFFFF9800),
-      'code': 'HD-2025-01-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (280 kWh)', 'value': '364.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (7 m³)', 'value': '84.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '132.000 đ'},
-      ],
-    },
-    {
-      'year': '2024', 'month': 'T12', 'label': 'Tháng 12/2024',
-      'amount': '3.100.000 đ', 'date': 'Đã TT: 08/01/2025',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFFF44336),
-      'code': 'HD-2024-12-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (312 kWh)', 'value': '406.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (8 m³)', 'value': '92.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '182.000 đ'},
-        {'icon': Icons.celebration_outlined, 'color': Color(0xFFFF7043), 'name': 'Phụ thu lễ TT', 'value': '100.000 đ'},
-      ],
-    },
-    {
-      'year': '2024', 'month': 'T11', 'label': 'Tháng 11/2024',
-      'amount': '2.750.000 đ', 'date': 'Đã TT: 10/12/2024',
-      'paid': true, 'isNew': false,
-      'color': const Color(0xFF009688),
-      'code': 'HD-2024-11-203',
-      'items': [
-        {'icon': Icons.home_work_outlined, 'color': TenantColors.primaryGreen, 'name': 'Tiền phòng', 'value': '2.200.000 đ'},
-        {'icon': Icons.bolt_outlined, 'color': Color(0xFFFFB300), 'name': 'Tiền điện (219 kWh)', 'value': '285.000 đ'},
-        {'icon': Icons.water_drop_outlined, 'color': Color(0xFF29B6F6), 'name': 'Tiền nước (5 m³)', 'value': '56.000 đ'},
-        {'icon': Icons.wifi_outlined, 'color': Color(0xFF7E57C2), 'name': 'Internet', 'value': '120.000 đ'},
-        {'icon': Icons.star_outline_rounded, 'color': Color(0xFFEC407A), 'name': 'Phí dịch vụ', 'value': '89.000 đ'},
-      ],
-    },
-  ];
-
-  final List<Map<String, dynamic>> _payments = [
-    {'label': 'Tháng 4/...', 'method': 'Chuyển khoản', 'date': '05/05/2025 · 14:23', 'amount': '-2.780.000 đ', 'icon': Icons.account_balance_wallet_outlined, 'color': TenantColors.primaryGreen},
-    {'label': 'Tháng 3/2025', 'method': 'MoMo', 'date': '08/04/2025 · 09:15', 'amount': '-2.830.000 đ', 'icon': Icons.monetization_on_outlined, 'color': Color(0xFFE91E63)},
-    {'label': 'Tháng 2/...', 'method': 'Chuyển khoản', 'date': '07/03/2025 · 16:47', 'amount': '-2.760.000 đ', 'icon': Icons.account_balance_wallet_outlined, 'color': TenantColors.primaryGreen},
-  ];
+    };
+  }
 
   List<Map<String, dynamic>> get _filtered {
     if (_selectedTab == 1) return _invoices.where((e) => e['paid'] == true).toList();
@@ -140,20 +177,52 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
           _buildHeader(),
           _buildTabBar(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_selectedTab == 1) ...[
-                    const SizedBox(height: 16),
-                    _buildPaymentHistory(),
-                    const SizedBox(height: 16),
-                  ] else
-                    const SizedBox(height: 16),
-                  ..._buildGroupedList(),
-                  const SizedBox(height: 24),
-                ],
+            child: RefreshIndicator(
+              onRefresh: _loadInvoices,
+              color: TenantColors.primaryGreen,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_selectedTab == 1) ...[
+                      const SizedBox(height: 16),
+                      _buildPaymentHistory(),
+                      const SizedBox(height: 16),
+                    ] else
+                      const SizedBox(height: 16),
+                    if (_isLoadingInvoices)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 48),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: TenantColors.primaryGreen,
+                          ),
+                        ),
+                      )
+                    else if (_loadError != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(_loadError!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: TenantColors.textGrey)),
+                        ),
+                      )
+                    else if (_filtered.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 48),
+                        child: Center(
+                          child: Text('Chưa có hóa đơn',
+                              style: TextStyle(color: TenantColors.textGrey)),
+                        ),
+                      )
+                    else
+                      ..._buildGroupedList(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
@@ -667,14 +736,17 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
                     color: TenantColors.primaryGreen)),
           ]),
           const SizedBox(height: 14),
+          if (!(inv['paid'] as bool)) ...[
           Row(children: [
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const TenantPaymentQRPage())),
+                onPressed: () {
+                  final tenantInv = inv['_tenantInvoice'] as TenantInvoice?;
+                  if (tenantInv != null) {
+                    openTenantPaymentQr(context, tenantInv);
+                  }
+                },
                 icon: const Icon(Icons.qr_code_scanner_outlined,
                     color: Colors.white, size: 18),
                 label: const Text('Thanh toán QR',
@@ -708,6 +780,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
               ),
             ),
           ]),
+          ],
         ],
       ]),
     );
