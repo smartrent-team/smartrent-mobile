@@ -66,4 +66,20 @@ class TenantService {
       rethrow;
     }
   }
+
+  Future<Response> getTenantDetail(int tenantId) async {
+    try {
+      return await _apiClient.dio.get('/api/tenants/$tenantId');
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> updateTenant(int tenantId, Map<String, dynamic> data) async {
+    try {
+      return await _apiClient.dio.patch('/api/tenants/$tenantId', data: data);
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
 }

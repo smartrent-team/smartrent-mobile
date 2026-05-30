@@ -53,6 +53,7 @@ class _TenantPageState extends State<TenantPage> {
         final List<dynamic> docs = response.data['docs'];
         setState(() {
           _allTenants = docs.map((doc) => Tenant(
+            id: (doc['id'] as num?)?.toInt() ?? 0,
             name: doc['name']?.toString() ?? '',
             phone: doc['phone']?.toString() ?? '',
             checkInDate: doc['checkInDate']?.toString() ?? '',
@@ -277,6 +278,7 @@ class _TenantPageState extends State<TenantPage> {
                                 : 'C';
                             setState(() {
                               _allTenants.add(Tenant(
+                                id: 0,
                                 name: name,
                                 phone: phone,
                                 checkInDate: dateController.text,
@@ -642,9 +644,13 @@ class _TenantPageState extends State<TenantPage> {
                   itemBuilder: (context, index) {
                     final tenant = filtered[index];
                     return InkWell(
-                      onTap: () {
-                        context.pushSlide(const TenantDetailPage());
-                      },
+                      onTap: tenant.id > 0
+                          ? () {
+                              context.pushSlide(
+                                TenantDetailPage(tenantId: tenant.id),
+                              );
+                            }
+                          : null,
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         margin: const EdgeInsets.symmetric(
