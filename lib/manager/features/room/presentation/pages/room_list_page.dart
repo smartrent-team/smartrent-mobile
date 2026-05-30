@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
+import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
-import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 
 class RoomListPage extends StatefulWidget {
-  const RoomListPage({super.key});
+  final bool embedInShell;
+
+  const RoomListPage({super.key, this.embedInShell = false});
 
   @override
   State<RoomListPage> createState() => _RoomListPageState();
@@ -87,21 +91,28 @@ class _RoomListPageState extends State<RoomListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final content = RefreshIndicator(
+      onRefresh: _fetchRooms,
+      color: ManagerColors.primaryGreen,
+      child: _buildBody(),
+    );
+
+    if (widget.embedInShell) {
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
-          _buildHeader(context),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _fetchRooms,
-              color: ManagerColors.primaryGreen,
-              child: _buildBody(),
-            ),
-          ),
+          const ManagerAppHeader(),
+          Expanded(child: content),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: ManagerBottomNav(
+        currentIndex: 0,
+        onTap: (index) => ManagerNav.bottomNav(context, index, currentIndex: 0),
+      ),
     );
   }
 
@@ -208,159 +219,11 @@ class _RoomListPageState extends State<RoomListPage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: ManagerColors.primaryGreen,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(28),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left Profile Info
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'RMS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Quản lý cơ sở',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Chào, 0979789878 👋',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  // Right Notification & Exit Buttons
-                  Row(
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.notifications_none_outlined,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              onPressed: () {},
-                            ),
-                          ),
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: ManagerColors.primaryGreen,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.logout_outlined,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginPage(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Date display
-              Text(
-                'Thứ Sáu, 22 tháng 5, 2026',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildRoomCard(BuildContext context, int roomId, String name, String details,
       String? tenant, String status, Color statusColor) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => RoomDetailPage(roomId: roomId)),
-        );
+        context.pushSlide(RoomDetailPage(roomId: roomId));
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -428,112 +291,4 @@ class _RoomListPageState extends State<RoomListPage> {
     );
   }
 
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      height: 76,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: ManagerColors.cardShadow,
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(context, 0, Icons.meeting_room_outlined, 'Phòng'),
-          _buildNavItem(context, 1, Icons.people_alt, 'Cư dân'),
-          _buildNavItem(context, 2, Icons.receipt_long_outlined, 'Hóa đơn'),
-          _buildNavItem(context, 3, Icons.report_problem_outlined, 'Sự cố', badgeCount: 2),
-          _buildNavItem(context, 4, Icons.grid_view_outlined, 'Dashboard'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label, {int badgeCount = 0}) {
-    final isSelected = index == 0;
-    final color = isSelected ? ManagerColors.primaryGreen : Colors.grey;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => ManagerNav.bottomNav(context, index, currentIndex: 0),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (isSelected)
-              Positioned(
-                top: 0,
-                child: Container(
-                  width: 48,
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    color: ManagerColors.primaryGreen,
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(3),
-                    ),
-                  ),
-                ),
-              ),
-
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 4),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(icon, color: color, size: 24),
-                    if (badgeCount > 0)
-                      Positioned(
-                        top: -6,
-                        right: -10,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$badgeCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

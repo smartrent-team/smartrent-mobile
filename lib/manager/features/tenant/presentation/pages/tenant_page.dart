@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
-import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
+import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
@@ -18,7 +20,13 @@ import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dar
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
-  const TenantPage({super.key, this.initialIndex = 1});
+  final bool embedInShell;
+
+  const TenantPage({
+    super.key,
+    this.initialIndex = 1,
+    this.embedInShell = false,
+  });
 
   @override
   State<TenantPage> createState() => _TenantPageState();
@@ -308,239 +316,104 @@ class _TenantPageState extends State<TenantPage> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredTenants;
+    final showFab = widget.embedInShell
+        ? widget.initialIndex == 1
+        : _selectedIndex == 1;
+
+    if (widget.embedInShell) {
+      return Scaffold(
+        backgroundColor: ManagerColors.bgLightGreen,
+        body: _buildBody(filtered),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: showFab ? _buildAddTenantFab() : null,
+      );
+    }
 
     return Scaffold(
       backgroundColor: ManagerColors.bgLightGreen,
       body: Column(
         children: [
-          // 1. Top Header Component
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: ManagerColors.primaryGreen,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Left Profile Info
-                        Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'RMS',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Quản lý cơ sở',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'Chào, 0979789878 👋',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        // Right Notification & Exit Buttons
-                        Row(
-                          children: [
-                            Stack(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.notifications_none_outlined,
-                                      color: Colors.white,
-                                      size: 22,
-                                    ),
-                                    onPressed: () {},
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Colors.redAccent,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: ManagerColors.primaryGreen,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.logout_outlined,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                                onPressed: () {
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginPage(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Date display
-                    Text(
-                      'Thứ Sáu, 22 tháng 5, 2026',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Scrollable Body Content
-          Expanded(
-            child: _buildBody(filtered),
-          ),
+          const ManagerAppHeader(),
+          Expanded(child: _buildBody(filtered)),
         ],
       ),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _selectedIndex == 1
-          ? Container(
-              height: 52,
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.push<Map<String, String>>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddTenantPage(),
-                    ),
-                  );
-                  if (result != null) {
-                    _fetchTenants();
-                  }
-                },
-                icon: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                label: const Text(
-                  'Thêm cư dân',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ManagerColors.primaryGreen,
-                  elevation: 6,
-                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                ),
-              ),
-            )
-          : null,
+      floatingActionButton: showFab ? _buildAddTenantFab() : null,
 
-      // 7. Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        height: 76,
-        decoration: BoxDecoration(
+      bottomNavigationBar: ManagerBottomNav(
+        currentIndex: _selectedIndex.clamp(0, 4),
+        onTap: (index) {
+          if (index == 0) {
+            ManagerNav.openRoomList(context);
+            return;
+          }
+          if (index == 3) {
+            ManagerNav.openIssuePage(context);
+            return;
+          }
+          if (index == 4) {
+            ManagerNav.openDashboard(context);
+            return;
+          }
+          setState(() {
+            _selectedIndex = index;
+            if (index == 2) {
+              _fetchInvoices();
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  Widget? _buildAddTenantFab() {
+    return Container(
+      height: 52,
+      margin: const EdgeInsets.symmetric(horizontal: 40),
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          final result = await context.pushModal<Map<String, String>>(
+            const AddTenantPage(),
+          );
+          if (result != null) {
+            _fetchTenants();
+          }
+        },
+        icon: const Icon(
+          Icons.add,
           color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.withValues(alpha: 0.15),
-              width: 1,
-            ),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: ManagerColors.cardShadow,
-              blurRadius: 10,
-              offset: Offset(0, -4),
-            ),
-          ],
+          size: 20,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, Icons.meeting_room_outlined, 'Phòng'),
-            _buildNavItem(1, Icons.people_alt, 'Cư dân'),
-            _buildNavItem(2, Icons.receipt_long_outlined, 'Hóa đơn'),
-            _buildNavItem(3, Icons.report_problem_outlined, 'Sự cố', badgeCount: 2),
-            _buildNavItem(4, Icons.grid_view_outlined, 'Dashboard'),
-          ],
+        label: const Text(
+          'Thêm cư dân',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: ManagerColors.primaryGreen,
+          elevation: 6,
+          shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
       ),
     );
   }
 
   Widget _buildBody(List<Tenant> filtered) {
+    if (widget.embedInShell) {
+      if (widget.initialIndex == 2) {
+        return _buildBillsTab();
+      }
+      return _buildTenantsTab(filtered);
+    }
+
     switch (_selectedIndex) {
       case 0:
         return _buildRoomsTab();
@@ -770,12 +643,7 @@ class _TenantPageState extends State<TenantPage> {
                     final tenant = filtered[index];
                     return InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TenantDetailPage(),
-                          ),
-                        );
+                        context.pushSlide(const TenantDetailPage());
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
@@ -983,12 +851,7 @@ class _TenantPageState extends State<TenantPage> {
               final isAvailable = room["status"] == "Còn trống";
               return InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RoomDetailPage(roomId: index + 1),
-                    ),
-                  );
+                  context.pushSlide(RoomDetailPage(roomId: index + 1));
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -1058,12 +921,7 @@ class _TenantPageState extends State<TenantPage> {
             // Card 1: Utility Input
             InkWell(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UtilityInputPage(),
-                  ),
-                );
+                context.pushModal(const UtilityInputPage());
               },
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -1135,12 +993,7 @@ class _TenantPageState extends State<TenantPage> {
             // Card 2: Create Bill
             InkWell(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InvoiceConfirmPage(),
-                  ),
-                );
+                context.pushModal(const InvoiceConfirmPage());
               },
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -1384,10 +1237,8 @@ class _TenantPageState extends State<TenantPage> {
               final isNew = issue["status"] == "Mới tiếp nhận";
               return InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => IssueDetailPage(
+                    context.pushSlide(
+                      IssueDetailPage(
                         issue: TicketModel(
                           id: 0,
                           description: issue["title"] ?? "Sự cố",
@@ -1395,8 +1246,7 @@ class _TenantPageState extends State<TenantPage> {
                           status: issue["status"] == "Mới tiếp nhận" ? "pending" : "in_progress",
                         ),
                       ),
-                    ),
-                  );
+                    );
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -1566,10 +1416,7 @@ class _TenantPageState extends State<TenantPage> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const IssuePage()),
-                    );
+                    ManagerNav.openIssuePage(context);
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -1597,109 +1444,6 @@ class _TenantPageState extends State<TenantPage> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label, {int badgeCount = 0}) {
-    final isSelected = _selectedIndex == index;
-    final color = isSelected ? ManagerColors.primaryGreen : Colors.grey;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          if (index == 0) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const RoomListPage()),
-            );
-            return;
-          }
-          if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const IssuePage()),
-            );
-            return;
-          }
-          if (index == 4) {
-            ManagerNav.openDashboard(context);
-            return;
-          }
-          setState(() {
-            _selectedIndex = index;
-            if (index == 2) {
-              _fetchInvoices();
-            }
-          });
-        },
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Top active indicator line
-            if (isSelected)
-              Positioned(
-                top: 0,
-                child: Container(
-                  width: 48,
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    color: ManagerColors.primaryGreen,
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(3),
-                    ),
-                  ),
-                ),
-              ),
-
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 4),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(icon, color: color, size: 24),
-                    if (badgeCount > 0)
-                      Positioned(
-                        top: -6,
-                        right: -10,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$badgeCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

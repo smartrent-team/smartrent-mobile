@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/edit_tenant_page.dart';
 
@@ -57,12 +58,7 @@ class TenantDetailPage extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: ElevatedButton.icon(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const EditTenantPage(),
-              ),
-            );
+            context.pushSlide(const EditTenantPage());
           },
           icon: const Icon(Icons.edit, color: Colors.white, size: 20),
           label: const Text(
