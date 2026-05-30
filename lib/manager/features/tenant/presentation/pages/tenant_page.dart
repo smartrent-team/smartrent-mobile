@@ -13,6 +13,8 @@ import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
+import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
+import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dart';
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
@@ -26,9 +28,13 @@ class _TenantPageState extends State<TenantPage> {
   late int _selectedIndex;
   final TextEditingController _searchController = TextEditingController();
   final TenantService _tenantService = TenantService();
+  final InvoiceService _invoiceService = InvoiceService();
 
   List<Tenant> _allTenants = [];
   bool _isLoading = false;
+
+  List<Invoice> _allInvoices = [];
+  bool _isLoadingInvoices = false;
 
   Future<void> _fetchTenants() async {
     if (!mounted) return;
@@ -61,6 +67,64 @@ class _TenantPageState extends State<TenantPage> {
     }
   }
 
+  Future<void> _fetchInvoices() async {
+    if (!mounted) return;
+    setState(() => _isLoadingInvoices = true);
+    try {
+      final response = await _invoiceService.getInvoices();
+      if (response.statusCode == 200) {
+        final List<dynamic> docs = response.data['docs'] ?? [];
+        setState(() {
+          _allInvoices = docs.map((doc) => Invoice.fromJson(doc)).toList();
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Fetch invoices error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingInvoices = false);
+      }
+    }
+  }
+
+  String _formatInvoiceMonth(Invoice invoice) {
+    try {
+      final dateStr = invoice.issuedAt ?? invoice.createdAt;
+      if (dateStr != null) {
+        final date = DateTime.parse(dateStr);
+        return "Tháng ${date.month}/${date.year}";
+      }
+    } catch (e) {}
+    if (invoice.invoiceCode.contains('-')) {
+      final parts = invoice.invoiceCode.split('-');
+      if (parts.length >= 2 && parts[1].length == 6) {
+        final year = parts[1].substring(0, 4);
+        final month = int.tryParse(parts[1].substring(4, 6)) ?? 1;
+        return "Tháng $month/$year";
+      }
+    }
+    return "Phòng ${invoice.roomCode}";
+  }
+
+  String _formatInvoiceDeadline(Invoice invoice) {
+    try {
+      final dateStr = invoice.issuedAt ?? invoice.createdAt;
+      if (dateStr != null) {
+        final date = DateTime.parse(dateStr);
+        return "Hạn: 15/${date.month.toString().padLeft(2, '0')}/${date.year}";
+      }
+    } catch (e) {}
+    return "Hạn: 15 Hàng tháng";
+  }
+
+  String _formatCurrency(num amount) {
+    final format = amount.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+    return "$format đ";
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +133,7 @@ class _TenantPageState extends State<TenantPage> {
       setState(() {});
     });
     _fetchTenants();
+    _fetchInvoices();
   }
 
   @override
@@ -980,224 +1045,30 @@ class _TenantPageState extends State<TenantPage> {
   }
 
   Widget _buildBillsTab() {
-    // Premium List of Invoices matching description & screenshot
-    final List<Map<String, dynamic>> billsHistory = [
-      {
-        "month": "Tháng 5/2025",
-        "deadline": "Hạn: 15/05/2025",
-        "amount": "5.320.000 đ",
-        "status": "Chờ TT",
-        "isPaid": false
-      },
-      {
-        "month": "Tháng 4/2025",
-        "deadline": "Hạn: 15/04/2025",
-        "amount": "5.140.000 đ",
-        "status": "Đã TT",
-        "isPaid": true
-      },
-      {
-        "month": "Tháng 3/2025",
-        "deadline": "Hạn: 15/03/2025",
-        "amount": "4.980.000 đ",
-        "status": "Đã TT",
-        "isPaid": true
-      },
-      {
-        "month": "Tháng 2/2025",
-        "deadline": "Hạn: 15/02/2025",
-        "amount": "5.060.000 đ",
-        "status": "Đã TT",
-        "isPaid": true
-      },
-    ];
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Quick Action Feature Cards (Top Menu)
-          // Card 1: Utility Input
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const UtilityInputPage(),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
+    return RefreshIndicator(
+      onRefresh: _fetchInvoices,
+      color: ManagerColors.primaryGreen,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Quick Action Feature Cards (Top Menu)
+            // Card 1: Utility Input
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UtilityInputPage(),
+                  ),
+                );
+              },
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: ManagerColors.cardShadow,
-                  blurRadius: 16,
-                  offset: Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: ManagerColors.primaryGreen.withOpacity(0.08),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: ManagerColors.bgMint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.bolt_outlined,
-                    color: ManagerColors.primaryGreen,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Nhập chỉ số điện - nước",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: ManagerColors.textCharcoal,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Kỳ tháng 5/2025 - 8 phòng chờ nhập",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ManagerColors.textGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: ManagerColors.textGrey,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-          ),
-
-          // Card 2: Create Bill
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const InvoiceConfirmPage(),
-                ),
-              );
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-            margin: const EdgeInsets.only(bottom: 24),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: ManagerColors.cardShadow,
-                  blurRadius: 16,
-                  offset: Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: ManagerColors.primaryGreen.withOpacity(0.08),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: ManagerColors.bgMint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_outlined,
-                    color: ManagerColors.primaryGreen,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Tạo hóa đơn",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: ManagerColors.textCharcoal,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Xác nhận & tạo hóa đơn tháng 5/2025",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ManagerColors.textGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: ManagerColors.textGrey,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-          ),
-
-          // 2. "LỊCH SỬ HÓA ĐƠN" Header Section
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text(
-              "LỊCH SỬ HÓA ĐƠN",
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: ManagerColors.textGrey,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-
-          // 3. Invoice History Cards List
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: billsHistory.length,
-            itemBuilder: (context, index) {
-              final bill = billsHistory[index];
-              final isPaid = bill["isPaid"] as bool;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(18),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -1208,26 +1079,42 @@ class _TenantPageState extends State<TenantPage> {
                       offset: Offset(0, 4),
                     ),
                   ],
+                  border: Border.all(
+                    color: ManagerColors.primaryGreen.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    // Billing month and deadline
-                    Expanded(
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: ManagerColors.bgMint,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.bolt_outlined,
+                        color: ManagerColors.primaryGreen,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            bill["month"],
-                            style: const TextStyle(
-                              fontSize: 16,
+                            "Nhập chỉ số điện - nước",
+                            style: TextStyle(
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: ManagerColors.textCharcoal,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
-                            bill["deadline"],
-                            style: const TextStyle(
+                            "Kỳ tháng 5/2026 - Nhập chỉ số phòng",
+                            style: TextStyle(
                               fontSize: 12,
                               color: ManagerColors.textGrey,
                             ),
@@ -1235,43 +1122,238 @@ class _TenantPageState extends State<TenantPage> {
                         ],
                       ),
                     ),
-
-                    // Amount Text
-                    Text(
-                      bill["amount"],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: ManagerColors.textCharcoal,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Status Badge Chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isPaid ? ManagerColors.bgMint : const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        bill["status"],
-                        style: TextStyle(
-                          color: isPaid ? ManagerColors.primaryGreen : const Color(0xFFE65100),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: ManagerColors.textGrey,
+                      size: 20,
                     ),
                   ],
                 ),
-              );
-            },
-          ),
-        ],
+              ),
+            ),
+
+            // Card 2: Create Bill
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InvoiceConfirmPage(),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: ManagerColors.cardShadow,
+                      blurRadius: 16,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: ManagerColors.primaryGreen.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: ManagerColors.bgMint,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.receipt_long_outlined,
+                        color: ManagerColors.primaryGreen,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Tạo hóa đơn",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: ManagerColors.textCharcoal,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "Xác nhận & tạo hóa đơn tháng 5/2026",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: ManagerColors.textGrey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: ManagerColors.textGrey,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 2. "LỊCH SỬ HÓA ĐƠN" Header Section
+            const Padding(
+              padding: EdgeInsets.only(top: 8, bottom: 8),
+              child: Text(
+                "LỊCH SỬ HÓA ĐƠN",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: ManagerColors.textGrey,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+
+            // 3. Dynamic invoice list
+            if (_isLoadingInvoices)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(ManagerColors.primaryGreen),
+                  ),
+                ),
+              )
+            else if (_allInvoices.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 64,
+                        color: ManagerColors.textGrey.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Không có hóa đơn nào",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: ManagerColors.textCharcoal,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Kéo xuống để tải lại",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: ManagerColors.textGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _allInvoices.length,
+                itemBuilder: (context, index) {
+                  final invoice = _allInvoices[index];
+                  final isPaid = invoice.isPaid;
+                  final statusText = isPaid ? "Đã TT" : "Chờ TT";
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: ManagerColors.cardShadow,
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Billing month and deadline
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _formatInvoiceMonth(invoice),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: ManagerColors.textCharcoal,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatInvoiceDeadline(invoice),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: ManagerColors.textGrey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Amount Text
+                        Text(
+                          _formatCurrency(invoice.totalAmount),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: ManagerColors.textCharcoal,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Status Badge Chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isPaid ? ManagerColors.bgMint : const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              color: isPaid ? ManagerColors.primaryGreen : const Color(0xFFE65100),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1546,6 +1628,9 @@ class _TenantPageState extends State<TenantPage> {
           }
           setState(() {
             _selectedIndex = index;
+            if (index == 2) {
+              _fetchInvoices();
+            }
           });
         },
         child: Stack(

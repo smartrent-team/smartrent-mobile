@@ -1,7 +1,19 @@
 import 'dart:math' as math;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/meter_comparison_service.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/domain/models/utility_analysis.dart';
+
+const _electricOrange = Color(0xFFFF9800);
+const _electricOrangeLight = Color(0xFFFFF3E0);
+const _electricOrangeDark = Color(0xFFE65100);
+
+const _waterBlue = Color(0xFF2196F3);
+const _waterBlueLight = Color(0xFFE3F2FD);
+const _waterBlueDark = Color(0xFF1565C0);
 
 class MeterComparisonPage extends StatefulWidget {
   const MeterComparisonPage({super.key});
@@ -12,70 +24,39 @@ class MeterComparisonPage extends StatefulWidget {
 
 class _MeterComparisonPageState extends State<MeterComparisonPage>
     with TickerProviderStateMixin {
+  final MeterComparisonService _analysisService = MeterComparisonService();
+  final TenantProfileService _profileService = TenantProfileService();
+
   late final AnimationController _barAnimCtrl;
   late final Animation<double> _barAnim;
+  AnimationController? _aiLoadingCtrl;
   bool _showNotificationPanel = false;
-  int _unreadCount = 2;
+  bool _isLoading = true;
+  String? _errorMessage;
+  UtilityAnalysis? _analysis;
+  String _roomLabel = '';
+  int _unreadCount = 0;
+  List<_MonthData> _electricData = [];
+  List<_MonthData> _waterData = [];
+  List<_NotifItem> _notifications = [];
 
-  // ── Dữ liệu điện (kWh) ─────────────────────────────────────────────────────
-  final List<_MonthData> _electricData = [
-    _MonthData('T12', 312, 312),
-    _MonthData('T1', 280, 280),
-    _MonthData('T2', 218, 218),
-    _MonthData('T3', 255, 255),
-    _MonthData('T4', 230, 230),
-    _MonthData('T5', 248, 248, isCurrent: true),
-  ];
+  AnimationController get _aiLoadingAnim {
+    _aiLoadingCtrl ??= AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    return _aiLoadingCtrl!;
+  }
 
-  // ── Dữ liệu nước (m³) ──────────────────────────────────────────────────────
-  final List<_MonthData> _waterData = [
-    _MonthData('T12', 8, 8),
-    _MonthData('T1', 7, 7),
-    _MonthData('T2', 5, 5),
-    _MonthData('T3', 6, 6),
-    _MonthData('T4', 5, 5),
-    _MonthData('T5', 6, 6, isCurrent: true),
-  ];
+  void _startAiLoadingAnim() {
+    if (!_aiLoadingAnim.isAnimating) {
+      _aiLoadingAnim.repeat();
+    }
+  }
 
-  // ── Notifications ───────────────────────────────────────────────────────────
-  final List<_NotifItem> _notifications = [
-    _NotifItem(
-      icon: Icons.warning_amber_rounded,
-      iconColor: Color(0xFFFFB300),
-      bg: Color(0xFFFFF8E1),
-      title: 'Nước tháng 5 tăng bất thường',
-      body: 'Tiêu thụ 6 m³ — tăng 67.2% so với trung bình. AI phát hiện nguy cơ rò rỉ.',
-      time: '2 giờ trước',
-      unread: true,
-    ),
-    _NotifItem(
-      icon: Icons.bolt_rounded,
-      iconColor: TenantColors.primaryGreen,
-      bg: TenantColors.bgMint,
-      title: 'Điện tháng 5 bình thường',
-      body: '248 kWh — trong ngưỡng dự đoán của AI. Không phát hiện bất thường.',
-      time: '2 giờ trước',
-      unread: true,
-    ),
-    _NotifItem(
-      icon: Icons.check_circle_outline,
-      iconColor: TenantColors.primaryGreen,
-      bg: TenantColors.bgMint,
-      title: 'Chỉ số tháng 4 đã xác nhận',
-      body: 'Điện 230 kWh · Nước 5 m³ — đã được chủ nhà xác nhận chính xác.',
-      time: '1 ngày trước',
-      unread: false,
-    ),
-    _NotifItem(
-      icon: Icons.analytics_outlined,
-      iconColor: Colors.indigo,
-      bg: Color(0xFFE8EAF6),
-      title: 'Báo cáo tháng 4 sẵn sàng',
-      body: 'AI đã tổng hợp phân tích tiêu thụ 6 tháng. Xem ngay để tối ưu chi phí.',
-      time: '3 ngày trước',
-      unread: false,
-    ),
-  ];
+  void _stopAiLoadingAnim() {
+    _aiLoadingCtrl?.stop();
+  }
 
   @override
   void initState() {
@@ -85,12 +66,159 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       duration: const Duration(milliseconds: 900),
     );
     _barAnim = CurvedAnimation(parent: _barAnimCtrl, curve: Curves.easeOutCubic);
-    _barAnimCtrl.forward();
+    _startAiLoadingAnim();
+    _loadAnalysis();
+  }
+
+  Future<void> _loadAnalysis() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    _startAiLoadingAnim();
+
+    try {
+      final profileRes = await _profileService.getMyProfile();
+      if (profileRes.statusCode != 200 || profileRes.data['success'] != true) {
+        throw Exception(profileRes.data['error'] ?? 'Không lấy được thông tin phòng');
+      }
+
+      final room = profileRes.data['data']?['room'] as Map<String, dynamic>?;
+      if (room == null || room['id'] == null) {
+        throw Exception('Tài khoản chưa được gán phòng thuê');
+      }
+
+      final roomId = room['id'] as int;
+      final roomCode = room['room_code'] as String? ?? '$roomId';
+
+      final analysisRes = await _analysisService.analyzeUtility(roomId);
+      final data = analysisRes.data;
+
+      if (data is Map && data['status'] == 'insufficient_data') {
+        throw Exception('Chưa đủ dữ liệu điện nước (cần ít nhất 2 tháng)');
+      }
+
+      if (analysisRes.statusCode != 200 || data is! Map<String, dynamic>) {
+        throw Exception('AI service trả về dữ liệu không hợp lệ');
+      }
+
+      final analysis = UtilityAnalysis.fromJson(data);
+
+      if (!mounted) return;
+      setState(() {
+        _analysis = analysis;
+        _roomLabel = 'Phòng $roomCode';
+        _electricData = _mapHistory(analysis.electric.history);
+        _waterData = _mapHistory(analysis.water.history);
+        _notifications = _buildNotifications(analysis);
+        _unreadCount = _notifications.where((n) => n.unread).length;
+        _isLoading = false;
+      });
+      _stopAiLoadingAnim();
+      _barAnimCtrl.forward(from: 0);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.response?.data?['detail']?.toString() ??
+            e.message ??
+            'Không kết nối được AI service (port 8000)';
+      });
+      _stopAiLoadingAnim();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+      _stopAiLoadingAnim();
+    }
+  }
+
+  List<_MonthData> _mapHistory(List<HistoryPoint> history) {
+    if (history.isEmpty) return [];
+    return history.asMap().entries.map((entry) {
+      final point = entry.value;
+      final isLast = entry.key == history.length - 1;
+      return _MonthData(
+        point.label,
+        point.usage.round(),
+        point.usage.round(),
+        isCurrent: isLast,
+      );
+    }).toList();
+  }
+
+  List<_NotifItem> _buildNotifications(UtilityAnalysis analysis) {
+    final items = <_NotifItem>[];
+
+    if (analysis.water.isWarning) {
+      items.add(_NotifItem(
+        icon: Icons.warning_amber_rounded,
+        iconColor: const Color(0xFFFFB300),
+        bg: const Color(0xFFFFF8E1),
+        title: 'Nước tháng ${analysis.month} tăng bất thường',
+        body:
+            'Tiêu thụ ${analysis.water.currentUsage} m³ — tăng ${analysis.water.changePercent}% so với tháng trước.',
+        time: 'Vừa xong',
+        unread: true,
+      ));
+    } else {
+      items.add(_NotifItem(
+        icon: Icons.water_drop_rounded,
+        iconColor: TenantColors.primaryGreen,
+        bg: TenantColors.bgMint,
+        title: 'Nước tháng ${analysis.month} bình thường',
+        body:
+            '${analysis.water.currentUsage} m³ — trong ngưỡng dự đoán của AI.',
+        time: 'Vừa xong',
+        unread: true,
+      ));
+    }
+
+    if (analysis.electric.isWarning) {
+      items.add(_NotifItem(
+        icon: Icons.warning_amber_rounded,
+        iconColor: const Color(0xFFFFB300),
+        bg: const Color(0xFFFFF8E1),
+        title: 'Điện tháng ${analysis.month} tăng bất thường',
+        body:
+            'Tiêu thụ ${analysis.electric.currentUsage} kWh — tăng ${analysis.electric.changePercent}%.',
+        time: 'Vừa xong',
+        unread: true,
+      ));
+    } else {
+      items.add(_NotifItem(
+        icon: Icons.bolt_rounded,
+        iconColor: TenantColors.primaryGreen,
+        bg: TenantColors.bgMint,
+        title: 'Điện tháng ${analysis.month} bình thường',
+        body:
+            '${analysis.electric.currentUsage} kWh — không phát hiện bất thường.',
+        time: 'Vừa xong',
+        unread: analysis.water.isWarning,
+      ));
+    }
+
+    for (final warning in analysis.warnings) {
+      items.add(_NotifItem(
+        icon: Icons.info_outline_rounded,
+        iconColor: Colors.indigo,
+        bg: const Color(0xFFE8EAF6),
+        title: 'Cảnh báo AI',
+        body: warning,
+        time: 'Vừa xong',
+        unread: false,
+      ));
+    }
+
+    return items;
   }
 
   @override
   void dispose() {
     _barAnimCtrl.dispose();
+    _aiLoadingCtrl?.dispose();
     super.dispose();
   }
 
@@ -104,58 +232,78 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
             children: [
               _buildHeader(),
               Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildAiBanner(),
-                      const SizedBox(height: 20),
-                      _buildMeterCard(
-                        type: 'Điện',
-                        unit: 'kWh',
-                        icon: Icons.bolt_rounded,
-                        iconBg: const Color(0xFFFFF3E0),
-                        iconColor: const Color(0xFFFFB300),
-                        accentColor: const Color(0xFFFFB300),
-                        prevValue: 1245,
-                        currValue: 1493,
-                        consumeValue: 248,
-                        prevConsume: 230,
-                        avgConsume: 224,
-                        changePercent: 12.5,
-                        isPositiveGood: false,
-                        status: 'BÌNH THƯỜNG',
-                        statusColor: TenantColors.primaryGreen,
-                        monthData: _electricData,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMeterCard(
-                        type: 'Nước',
-                        unit: 'm³',
-                        icon: Icons.water_drop_rounded,
-                        iconBg: const Color(0xFFE3F2FD),
-                        iconColor: const Color(0xFF29B6F6),
-                        accentColor: const Color(0xFF29B6F6),
-                        prevValue: 342,
-                        currValue: 348,
-                        consumeValue: 6,
-                        prevConsume: 5,
-                        avgConsume: 4,
-                        changePercent: 67.2,
-                        isPositiveGood: false,
-                        status: 'CẢNH BÁO',
-                        statusColor: const Color(0xFFFFB300),
-                        monthData: _waterData,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildInfoCard(),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
+                child: _isLoading
+                    ? _buildAiAnalyzingState()
+                    : _errorMessage != null
+                        ? _buildErrorState()
+                        : RefreshIndicator(
+                            onRefresh: _loadAnalysis,
+                            color: TenantColors.primaryGreen,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 16),
+                                  _buildAiBanner(),
+                                  if (_analysis?.aiAnalysis?.hasContent == true) ...[
+                                    const SizedBox(height: 12),
+                                    _buildAiInsightCard(_analysis!.aiAnalysis!),
+                                  ],
+                                  const SizedBox(height: 20),
+                                  _buildMeterCard(
+                                    type: 'Điện',
+                                    unit: 'kWh',
+                                    icon: Icons.bolt_rounded,
+                                    iconBg: _electricOrangeLight,
+                                    iconColor: _electricOrange,
+                                    accentColor: _electricOrange,
+                                    warningColor: _electricOrangeDark,
+                                    prevValue: _analysis!.electric.meterOld.round(),
+                                    currValue: _analysis!.electric.meterNew.round(),
+                                    consumeValue: _analysis!.electric.currentUsage.round(),
+                                    prevConsume: _analysis!.electric.previousUsage.round(),
+                                    avgConsume: _analysis!.electric.average6Months.round(),
+                                    changePercent: _analysis!.electric.changePercent,
+                                    isPositiveGood: false,
+                                    status: _analysis!.electric.statusLabel,
+                                    statusColor: _analysis!.electric.isWarning
+                                        ? _electricOrangeDark
+                                        : _electricOrange,
+                                    monthData: _electricData,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildMeterCard(
+                                    type: 'Nước',
+                                    unit: 'm³',
+                                    icon: Icons.water_drop_rounded,
+                                    iconBg: _waterBlueLight,
+                                    iconColor: _waterBlue,
+                                    accentColor: _waterBlue,
+                                    warningColor: _waterBlueDark,
+                                    prevValue: _analysis!.water.meterOld.round(),
+                                    currValue: _analysis!.water.meterNew.round(),
+                                    consumeValue: _analysis!.water.currentUsage.round(),
+                                    prevConsume: _analysis!.water.previousUsage.round(),
+                                    avgConsume: _analysis!.water.average6Months.round(),
+                                    changePercent: _analysis!.water.changePercent,
+                                    isPositiveGood: false,
+                                    status: _analysis!.water.statusLabel,
+                                    statusColor: _analysis!.water.isWarning
+                                        ? _waterBlueDark
+                                        : _waterBlue,
+                                    monthData: _waterData,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _buildInfoCard(),
+                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            ),
+                          ),
               ),
             ],
           ),
@@ -284,7 +432,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
             ],
           ),
           const SizedBox(height: 6),
-          Text('Phòng P203 · Tháng 5/2025',
+          Text('$_roomLabel · Tháng ${_analysis?.month ?? '--'}/${_analysis?.year ?? '--'}',
               style: GoogleFonts.outfit(
                   color: Colors.white60, fontSize: 13)),
           const SizedBox(height: 18),
@@ -301,24 +449,36 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFB300).withValues(alpha: 0.25),
+                    color: (_analysis?.warningCount ?? 0) > 0
+                        ? const Color(0xFFFFB300).withValues(alpha: 0.25)
+                        : TenantColors.primaryGreen.withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.warning_amber_rounded,
-                      color: Color(0xFFFFD54F), size: 18),
+                  child: Icon(
+                    (_analysis?.warningCount ?? 0) > 0
+                        ? Icons.warning_amber_rounded
+                        : Icons.check_circle_outline,
+                    color: (_analysis?.warningCount ?? 0) > 0
+                        ? const Color(0xFFFFD54F)
+                        : Colors.white,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Phát hiện bất thường',
+                      Text(
+                          (_analysis?.warningCount ?? 0) > 0
+                              ? 'Phát hiện bất thường'
+                              : 'Tiêu thụ bình thường',
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           )),
-                      Text('0 nghiêm trọng · 1 cảnh báo',
+                      Text('0 nghiêm trọng · ${_analysis?.warningCount ?? 0} cảnh báo',
                           style: GoogleFonts.outfit(
                               color: Colors.white70, fontSize: 12)),
                     ],
@@ -331,15 +491,15 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                   children: [
                     Row(children: [
                       const Icon(Icons.bolt_rounded,
-                          color: Color(0xFFFFD54F), size: 14),
+                          color: _electricOrange, size: 14),
                       const SizedBox(width: 4),
                       Text('Điện',
                           style: GoogleFonts.outfit(
                               color: Colors.white60, fontSize: 11)),
                     ]),
-                    Text('248 kWh',
+                    Text('${_analysis?.electric.currentUsage.round() ?? '--'} kWh',
                         style: GoogleFonts.outfit(
-                          color: Colors.white,
+                          color: _electricOrange,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         )),
@@ -351,15 +511,17 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                   children: [
                     Row(children: [
                       const Icon(Icons.water_drop_rounded,
-                          color: Color(0xFF81D4FA), size: 14),
+                          color: _waterBlue, size: 14),
                       const SizedBox(width: 4),
                       Text('Nước',
                           style: GoogleFonts.outfit(
                               color: Colors.white60, fontSize: 11)),
                     ]),
-                    Text('6 m³',
+                    Text('${_analysis?.water.currentUsage.round() ?? '--'} m³',
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFFFFD54F),
+                          color: (_analysis?.water.isWarning ?? false)
+                              ? _waterBlueDark
+                              : _waterBlue,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         )),
@@ -453,6 +615,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     required Color iconBg,
     required Color iconColor,
     required Color accentColor,
+    required Color warningColor,
     required int prevValue,
     required int currValue,
     required int consumeValue,
@@ -465,13 +628,14 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     required List<_MonthData> monthData,
   }) {
     final bool isWarning = status == 'CẢNH BÁO';
+    final activeColor = isWarning ? warningColor : accentColor;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: isWarning
-            ? Border.all(color: const Color(0xFFFFB300), width: 1.5)
-            : null,
+            ? Border.all(color: warningColor, width: 1.5)
+            : Border.all(color: accentColor.withValues(alpha: 0.15), width: 1),
         boxShadow: const [
           BoxShadow(
               color: TenantColors.cardShadow,
@@ -504,7 +668,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Colors.black87)),
-                      Text('Phòng P203',
+                      Text('$_roomLabel',
                           style: GoogleFonts.outfit(
                               color: TenantColors.textGrey, fontSize: 12)),
                     ],
@@ -586,9 +750,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                           TextSpan(
                             text: '$consumeValue ',
                             style: GoogleFonts.outfit(
-                              color: isWarning
-                                  ? const Color(0xFFFFB300)
-                                  : accentColor,
+                              color: activeColor,
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
@@ -596,9 +758,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                           TextSpan(
                             text: unit,
                             style: GoogleFonts.outfit(
-                              color: isWarning
-                                  ? const Color(0xFFFFB300)
-                                  : accentColor,
+                              color: activeColor,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -620,18 +780,14 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                       changePercent >= 0
                           ? Icons.trending_up_rounded
                           : Icons.trending_down_rounded,
-                      color: isWarning
-                          ? const Color(0xFFFFB300)
-                          : TenantColors.primaryGreen,
+                      color: activeColor,
                       size: 18,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(1)}%',
                       style: GoogleFonts.outfit(
-                        color: isWarning
-                            ? const Color(0xFFFFB300)
-                            : TenantColors.primaryGreen,
+                        color: activeColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -656,8 +812,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                     value: ratio,
                     minHeight: 8,
                     backgroundColor: const Color(0xFFF0F0F0),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        isWarning ? const Color(0xFFFFB300) : accentColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(activeColor),
                   ),
                 );
               },
@@ -677,7 +832,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
           // Bar chart
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _buildBarChart(monthData, accentColor, isWarning),
+            child: _buildBarChart(monthData, accentColor, warningColor, isWarning),
           ),
 
           // AI footnote
@@ -745,15 +900,22 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
   }
 
   Widget _buildBarChart(
-      List<_MonthData> data, Color color, bool isWarning) {
+      List<_MonthData> data, Color color, Color warningColor, bool isWarning) {
+    if (data.isEmpty) return const SizedBox.shrink();
+
     final maxVal =
         data.map((d) => d.value).reduce((a, b) => a > b ? a : b).toDouble();
+    final activeColor = isWarning ? warningColor : color;
+
+    const chartHeight = 100.0;
+    const barMaxHeight = 58.0;
+    const valueLabelHeight = 14.0;
 
     return AnimatedBuilder(
       animation: _barAnim,
       builder: (_, __) {
         return SizedBox(
-          height: 90,
+          height: chartHeight,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -762,48 +924,432 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                   ? 0.0
                   : (d.value / maxVal) * _barAnim.value;
               final barColor = d.isCurrent
-                  ? (isWarning ? const Color(0xFFFFB300) : color)
+                  ? activeColor
                   : color.withValues(alpha: 0.25);
 
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (d.isCurrent)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '${d.value}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isWarning
-                              ? const Color(0xFFFFB300)
-                              : color,
+              return Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SizedBox(
+                      height: valueLabelHeight,
+                      child: Center(
+                        child: d.isCurrent
+                            ? Text(
+                                '${d.value}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: activeColor,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 600),
+                      width: 28,
+                      height: math.max(6, barMaxHeight * ratio),
+                      decoration: BoxDecoration(
+                        color: barColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          topRight: Radius.circular(8),
                         ),
                       ),
                     ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 600),
-                    width: 32,
-                    height: math.max(8, 70 * ratio),
-                    decoration: BoxDecoration(
-                      color: barColor,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(d.month,
+                    const SizedBox(height: 2),
+                    Text(
+                      d.month,
                       style: GoogleFonts.outfit(
-                          fontSize: 11, color: TenantColors.textGrey)),
-                ],
+                        fontSize: 10,
+                        color: TenantColors.textGrey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               );
             }).toList(),
           ),
         );
       },
+    );
+  }
+
+  // ── AI ANALYZING STATE ─────────────────────────────────────────────────────
+  Widget _buildAiAnalyzingState() {
+    const steps = [
+      'Đang đọc chỉ số điện nước...',
+      'Đang so sánh 6 tháng gần đây...',
+      'AI đang phát hiện bất thường...',
+      'Đang tạo nhận xét thông minh...',
+    ];
+
+    return AnimatedBuilder(
+      animation: _aiLoadingAnim,
+      builder: (context, _) {
+        final t = _aiLoadingAnim.value;
+        final stepIndex = (t * steps.length).floor() % steps.length;
+
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _buildPulseRing(t, 0.0, 0.35),
+                      _buildPulseRing(t, 0.33, 0.25),
+                      _buildPulseRing(t, 0.66, 0.18),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF1B5E20),
+                              TenantColors.primaryGreen,
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: TenantColors.primaryGreen
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.psychology_rounded,
+                          color: Colors.white.withValues(
+                            alpha: 0.85 + 0.15 * math.sin(t * math.pi * 2),
+                          ),
+                          size: 32,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'AI đang phân tích',
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.15),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: Text(
+                    steps[stepIndex],
+                    key: ValueKey<int>(stepIndex),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: TenantColors.textGrey,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _buildAnalyzingDots(t),
+                const SizedBox(height: 32),
+                _buildAnalyzingSkeletonCard(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPulseRing(double t, double offset, double maxOpacity) {
+    final progress = (t + offset) % 1.0;
+    final scale = 0.55 + progress * 0.85;
+    final opacity = maxOpacity * (1 - progress);
+
+    return Transform.scale(
+      scale: scale,
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: TenantColors.primaryGreen.withValues(alpha: opacity),
+            width: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalyzingDots(double t) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        final delay = i * 0.2;
+        final wave = math.sin((t + delay) * math.pi * 2);
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: TenantColors.primaryGreen.withValues(
+              alpha: 0.35 + 0.65 * ((wave + 1) / 2),
+            ),
+            shape: BoxShape.circle,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildAnalyzingSkeletonCard() {
+    return AnimatedBuilder(
+      animation: _aiLoadingAnim,
+      builder: (_, __) {
+        final shimmer = 0.4 + 0.6 * ((math.sin(_aiLoadingAnim.value * math.pi * 2) + 1) / 2);
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: TenantColors.cardShadow,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: TenantColors.bgMint.withValues(alpha: shimmer),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200
+                                .withValues(alpha: shimmer),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 10,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100
+                                .withValues(alpha: shimmer),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 8,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100.withValues(alpha: shimmer),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 8,
+                width: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100.withValues(alpha: shimmer),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── ERROR STATE ────────────────────────────────────────────────────────────
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                size: 48, color: TenantColors.textGrey),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Không tải được dữ liệu',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: Colors.black87,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadAnalysis,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TenantColors.primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── AI INSIGHT CARD ────────────────────────────────────────────────────────
+  Widget _buildAiInsightCard(AiAnalysisInsight insight) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TenantColors.lightGreenBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  color: TenantColors.primaryGreen, size: 18),
+              const SizedBox(width: 8),
+              Text('Nhận xét AI',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.black87,
+                  )),
+            ],
+          ),
+          if (insight.summary.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              insight.summary,
+              style: GoogleFonts.outfit(
+                color: Colors.black87,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+          ],
+          if (insight.possibleCauses.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildAiSectionTitle(
+              icon: Icons.search_rounded,
+              title: 'Nguyên nhân có thể',
+            ),
+            const SizedBox(height: 6),
+            ...insight.possibleCauses.map(_buildAiBullet),
+          ],
+          if (insight.recommendations.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildAiSectionTitle(
+              icon: Icons.lightbulb_outline_rounded,
+              title: 'Khuyến nghị',
+            ),
+            const SizedBox(height: 6),
+            ...insight.recommendations.map(_buildAiBullet),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiSectionTitle({required IconData icon, required String title}) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: TenantColors.primaryGreen),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            color: TenantColors.primaryGreen,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAiBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, left: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.only(top: 6, right: 8),
+            decoration: const BoxDecoration(
+              color: TenantColors.primaryGreen,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.outfit(
+                color: TenantColors.textGrey,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -813,7 +1359,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       'AI so sánh chỉ số hiện tại với dữ liệu lịch sử',
       'Phát hiện biến động bất thường (>50% so với TB)',
       'Cảnh báo sớm rò rỉ hoặc sai lệch ghi số',
-      'Dữ liệu đồng bộ realtime từ Supabase',
+      'Dữ liệu đồng bộ realtime từ AI microservice',
     ];
     return Container(
       padding: const EdgeInsets.all(16),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/billing/data/utility_service.dart';
 
 class UtilityInputPage extends StatefulWidget {
   const UtilityInputPage({super.key});
@@ -10,11 +11,13 @@ class UtilityInputPage extends StatefulWidget {
 }
 
 class _RoomUtilityData {
+  final int roomId;
   final String roomName;
   final int prevElectric;
   final int prevWater;
 
   const _RoomUtilityData({
+    required this.roomId,
     required this.roomName,
     required this.prevElectric,
     required this.prevWater,
@@ -26,42 +29,101 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
   static const Color electricOrange = Color(0xFFFF9800);
   static const Color waterBlue = Color(0xFF2196F3);
 
-  static const List<_RoomUtilityData> _rooms = [
-    _RoomUtilityData(roomName: 'Phòng 101', prevElectric: 1240, prevWater: 42),
-    _RoomUtilityData(roomName: 'Phòng 102', prevElectric: 980, prevWater: 31),
-    _RoomUtilityData(roomName: 'Phòng 201', prevElectric: 1560, prevWater: 55),
-    _RoomUtilityData(roomName: 'Phòng 202', prevElectric: 1105, prevWater: 38),
-    _RoomUtilityData(roomName: 'Phòng 306', prevElectric: 870, prevWater: 27),
-    _RoomUtilityData(roomName: 'Phòng 401', prevElectric: 1320, prevWater: 44),
-    _RoomUtilityData(roomName: 'Phòng 402', prevElectric: 1050, prevWater: 36),
-    _RoomUtilityData(roomName: 'Phòng 305', prevElectric: 1180, prevWater: 40),
-  ];
+  final UtilityService _utilityService = UtilityService();
+  List<_RoomUtilityData> _rooms = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  late final List<TextEditingController> _electricControllers;
-  late final List<TextEditingController> _waterControllers;
+  List<TextEditingController> _electricControllers = [];
+  List<TextEditingController> _waterControllers = [];
+
+  final int _selectedMonth = DateTime.now().month;
+  final int _selectedYear = DateTime.now().year;
 
   int get _enteredCount {
     var count = 0;
     for (var i = 0; i < _rooms.length; i++) {
-      if (_electricControllers[i].text.trim().isNotEmpty &&
-          _waterControllers[i].text.trim().isNotEmpty) {
-        count++;
+      if (i < _electricControllers.length && i < _waterControllers.length) {
+        if (_electricControllers[i].text.trim().isNotEmpty &&
+            _waterControllers[i].text.trim().isNotEmpty) {
+          count++;
+        }
       }
     }
     return count;
   }
 
-  double get _progress => _enteredCount / _rooms.length;
+  double get _progress => _rooms.isEmpty ? 0.0 : _enteredCount / _rooms.length;
 
   @override
   void initState() {
     super.initState();
-    _electricControllers =
-        List.generate(_rooms.length, (_) => TextEditingController());
-    _waterControllers =
-        List.generate(_rooms.length, (_) => TextEditingController());
-    for (final c in [..._electricControllers, ..._waterControllers]) {
-      c.addListener(_onFieldChanged);
+    _fetchRoomsAndUtilities();
+  }
+
+  Future<void> _fetchRoomsAndUtilities() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _utilityService.getLatestUtilities();
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          final List<dynamic> docs = data['docs'] ?? [];
+          final tempRooms = docs.map((doc) => _RoomUtilityData(
+            roomId: doc['roomId'] ?? 0,
+            roomName: doc['roomName']?.toString() ?? 'Phòng N/A',
+            prevElectric: (doc['prevElectric'] as num?)?.toInt() ?? 0,
+            prevWater: (doc['prevWater'] as num?)?.toInt() ?? 0,
+          )).toList();
+
+          // Dispose old controllers
+          for (final c in [..._electricControllers, ..._waterControllers]) {
+            c.removeListener(_onFieldChanged);
+            c.dispose();
+          }
+
+          // Create new controllers
+          _electricControllers = List.generate(tempRooms.length, (_) => TextEditingController());
+          _waterControllers = List.generate(tempRooms.length, (_) => TextEditingController());
+          
+          for (final c in [..._electricControllers, ..._waterControllers]) {
+            c.addListener(_onFieldChanged);
+          }
+
+          if (mounted) {
+            setState(() {
+              _rooms = tempRooms;
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _errorMessage = data['message'] ?? 'Không thể lấy dữ liệu điện nước';
+              _isLoading = false;
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Lỗi máy chủ: ${response.statusCode}';
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Lỗi kết nối: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -86,67 +148,264 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
           _buildHeader(context),
           _buildLegendRow(),
           Expanded(
-            child: ListView.builder(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-              itemCount: _rooms.length + 1,
-              itemBuilder: (context, index) {
-                if (index == _rooms.length) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 8, bottom: 16),
-                    child: Center(
-                      child: Text(
-                        '© 2025 RMS · Phiên bản 2.4.1',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ManagerColors.textGrey,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return _buildRoomCard(index);
-              },
-            ),
+            child: _buildBody(),
           ),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Container(
-        width: double.infinity,
-        height: 54,
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Đã nhập $_enteredCount/${_rooms.length} phòng',
+      floatingActionButton: _isLoading || _rooms.isEmpty
+          ? null
+          : Container(
+              width: double.infinity,
+              height: 54,
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: ElevatedButton.icon(
+                onPressed: _submitIndices,
+                icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Xác nhận chỉ số',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                backgroundColor: ManagerColors.primaryGreen,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ManagerColors.primaryGreen,
+                  elevation: 8,
+                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(27),
+                  ),
+                ),
               ),
-            );
-          },
-          icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-          label: const Text(
-            'Xác nhận chỉ số',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
             ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ManagerColors.primaryGreen,
-            elevation: 8,
-            shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(27),
-            ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: ManagerColors.primaryGreen,
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 15, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchRoomsAndUtilities,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ManagerColors.primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
         ),
+      );
+    }
+
+    if (_rooms.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.meeting_room_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Không có phòng nào để chốt điện nước',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchRoomsAndUtilities,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ManagerColors.primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Tải lại', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      itemCount: _rooms.length + 1,
+      itemBuilder: (context, index) {
+        if (index == _rooms.length) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 8, bottom: 16),
+            child: Center(
+              child: Text(
+                '© 2026 RMS · Phiên bản 2.4.1',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: ManagerColors.textGrey,
+                ),
+              ),
+            ),
+          );
+        }
+        return _buildRoomCard(index);
+      },
+    );
+  }
+
+  Future<void> _submitIndices() async {
+    final List<Map<String, dynamic>> submitList = [];
+    for (var i = 0; i < _rooms.length; i++) {
+      if (i < _electricControllers.length && i < _waterControllers.length) {
+        final electricText = _electricControllers[i].text.trim();
+        final waterText = _waterControllers[i].text.trim();
+        if (electricText.isNotEmpty && waterText.isNotEmpty) {
+          final electricVal = double.tryParse(electricText);
+          final waterVal = double.tryParse(waterText);
+          if (electricVal != null && waterVal != null) {
+            submitList.add({
+              'roomId': _rooms[i].roomId,
+              'roomName': _rooms[i].roomName,
+              'currentElectricity': electricVal,
+              'currentWater': waterVal,
+            });
+          }
+        }
+      }
+    }
+
+    if (submitList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập đầy đủ chỉ số điện và nước cho ít nhất 1 phòng'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận chỉ số'),
+        content: Text('Bạn có chắc chắn muốn chốt chỉ số điện nước cho ${submitList.length} phòng trong Tháng $_selectedMonth/$_selectedYear?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+            child: const Text('Đồng ý', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(ManagerColors.primaryGreen)),
+      ),
+    );
+
+    var successCount = 0;
+    final List<String> failMessages = [];
+
+    for (final item in submitList) {
+      try {
+        final response = await _utilityService.submitUtility(
+          roomId: item['roomId'],
+          currentElectricity: item['currentElectricity'],
+          currentWater: item['currentWater'],
+          month: _selectedMonth,
+          year: _selectedYear,
+        );
+
+        if (response.statusCode == 200 && response.data['success'] == true) {
+          successCount++;
+        } else {
+          failMessages.add('${item['roomName']}: ${response.data['error'] ?? 'Lỗi chưa xác định'}');
+        }
+      } catch (e) {
+        failMessages.add('${item['roomName']}: Lỗi kết nối');
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context); // Pop loading indicator
+
+    if (failMessages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã cập nhật thành công chỉ số điện nước cho $successCount phòng!'),
+          backgroundColor: ManagerColors.primaryGreen,
+        ),
+      );
+      _fetchRoomsAndUtilities();
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Kết quả chốt chỉ số'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Đã cập nhật thành công $successCount phòng.'),
+                if (failMessages.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Lỗi xảy ra tại các phòng sau:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  ...failMessages.map((msg) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('• $msg', style: const TextStyle(fontSize: 13)),
+                  )),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _fetchRoomsAndUtilities();
+              },
+              child: const Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -218,9 +477,9 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
                               color: Colors.white.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text(
-                              'Tháng 5 - 2025',
-                              style: TextStyle(
+                            child: Text(
+                              'Tháng $_selectedMonth - $_selectedYear',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -272,6 +531,7 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
       ),
     );
   }
+
 
   Widget _buildLegendRow() {
     return Padding(

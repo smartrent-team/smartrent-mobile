@@ -1,30 +1,424 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
+import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
+import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
+import 'package:smartrent_mobile/manager/features/billing/data/utility_service.dart';
 
-class InvoiceConfirmPage extends StatelessWidget {
+class InvoiceConfirmPage extends StatefulWidget {
   const InvoiceConfirmPage({super.key});
 
+  @override
+  State<InvoiceConfirmPage> createState() => _InvoiceConfirmPageState();
+}
+
+class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   static const Color electricOrange = Color(0xFFE65100);
   static const Color electricTint = Color(0xFFFFF8E1);
   static const Color waterBlue = Color(0xFF1565C0);
   static const Color waterTint = Color(0xFFE3F2FD);
 
+  final RoomService _roomService = RoomService();
+  final UtilityService _utilityService = UtilityService();
+  final InvoiceService _invoiceService = InvoiceService();
+
+  List<dynamic> _occupiedRooms = [];
+  bool _isLoadingRooms = true;
+  String? _errorMessage;
+
+  dynamic _selectedRoom;
+  dynamic _latestUtility;
+  bool _isLoadingDetail = false;
+
+  // Pricing configuration
+  num _roomPrice = 0;
+  num _electricPrice = 3500;
+  num _waterPrice = 30000;
+
+  num _electricOld = 0;
+  num _electricNew = 0;
+  num _waterOld = 0;
+  num _waterNew = 0;
+
+  num _electricCost = 0;
+  num _waterCost = 0;
+  num _serviceCost = 0; // standard default is 0
+
+  num get _totalAmount => _roomPrice + _electricCost + _waterCost + _serviceCost;
+
+  int _selectedMonth = DateTime.now().month;
+  int _selectedYear = DateTime.now().year;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOccupiedRooms();
+  }
+
+  Future<void> _fetchOccupiedRooms() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingRooms = true;
+      _errorMessage = null;
+    });
+    try {
+      final response = await _roomService.getRooms(status: 'occupied');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final List<dynamic> rooms = response.data['docs'] ?? [];
+        if (mounted) {
+          setState(() {
+            _occupiedRooms = rooms;
+            _isLoadingRooms = false;
+            if (rooms.isNotEmpty) {
+              _selectedRoom = rooms.first;
+              _loadRoomDetailAndUtilities(_selectedRoom['id']);
+            }
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = response.data['message'] ?? 'Không thể lấy danh sách phòng';
+            _isLoadingRooms = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Lỗi kết nối: $e';
+          _isLoadingRooms = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadRoomDetailAndUtilities(int roomId) async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingDetail = true;
+    });
+
+    try {
+      // 1. Get room details for pricing configuration
+      final roomDetailRes = await _roomService.getRoomDetail(roomId);
+      if (roomDetailRes.statusCode == 200 && roomDetailRes.data['success'] == true) {
+        final roomData = roomDetailRes.data['data'];
+        _roomPrice = roomData['basePrice'] ?? 0;
+        _electricPrice = roomData['electricPrice'] ?? 3500;
+        _waterPrice = roomData['waterPrice'] ?? 30000;
+      }
+
+      // 2. Get latest utilities to find current month's utility log
+      final utilsRes = await _utilityService.getLatestUtilities();
+      if (utilsRes.statusCode == 200 && utilsRes.data['success'] == true) {
+        final List<dynamic> docs = utilsRes.data['docs'] ?? [];
+        final roomUtil = docs.firstWhere(
+          (doc) => doc['roomId'] == roomId,
+          orElse: () => null,
+        );
+
+        if (roomUtil != null) {
+          _latestUtility = roomUtil;
+          _electricOld = (roomUtil['electricOld'] as num?)?.toDouble() ?? 0.0;
+          _electricNew = (roomUtil['prevElectric'] as num?)?.toDouble() ?? 0.0; // prevElectric is electric_new on server
+          _waterOld = (roomUtil['waterOld'] as num?)?.toDouble() ?? 0.0;
+          _waterNew = (roomUtil['prevWater'] as num?)?.toDouble() ?? 0.0;       // prevWater is water_new on server
+          _selectedMonth = roomUtil['lastMonth'] ?? DateTime.now().month;
+          _selectedYear = roomUtil['lastYear'] ?? DateTime.now().year;
+
+          // Compute costs
+          _electricCost = (_electricNew - _electricOld) * _electricPrice;
+          if (_electricCost < 0) _electricCost = 0;
+
+          _waterCost = (_waterNew - _waterOld) * _waterPrice;
+          if (_waterCost < 0) _waterCost = 0;
+        } else {
+          _latestUtility = null;
+          _electricOld = 0;
+          _electricNew = 0;
+          _waterOld = 0;
+          _waterNew = 0;
+          _electricCost = 0;
+          _waterCost = 0;
+        }
+      }
+    } catch (e) {
+      print('DEBUG: Error loading room detail/utilities: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDetail = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _createInvoice() async {
+    if (_selectedRoom == null) return;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận tạo hóa đơn'),
+        content: Text('Bạn có chắc chắn muốn xuất hóa đơn cho ${_selectedRoom['roomCode']} - Tháng $_selectedMonth/$_selectedYear?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+            child: const Text('Tạo hóa đơn', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(ManagerColors.primaryGreen)),
+      ),
+    );
+
+    try {
+      final tenantId = _selectedRoom['tenant']?['id'];
+      final utilityLogId = _latestUtility?['utilityLogId'];
+
+      final response = await _invoiceService.createInvoice(
+        roomId: _selectedRoom['id'],
+        roomPrice: _roomPrice,
+        tenantId: tenantId,
+        utilityLogId: utilityLogId,
+        serviceCost: _serviceCost,
+        electricCost: _electricCost,
+        waterCost: _waterCost,
+        electricOld: _electricOld,
+        electricNew: _electricNew,
+        waterOld: _waterOld,
+        waterNew: _waterNew,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // Pop loading spinner
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hóa đơn đã được tạo thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+          ),
+        );
+        Navigator.pop(context, true); // Pop page
+      } else {
+        final errorMsg = response.data['error'] ?? 'Không thể tạo hóa đơn';
+        _showErrorDialog(errorMsg);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Pop loading spinner
+        _showErrorDialog('Lỗi kết nối hoặc xử lý từ máy chủ: $e');
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lỗi tạo hóa đơn', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCurrency(num amount) {
+    final format = amount.toInt().toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+    return "$format đ";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ManagerColors.bgLightGreen,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+      body: _buildBody(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _isLoadingRooms || _occupiedRooms.isEmpty || _isLoadingDetail
+          ? null
+          : Container(
+              width: double.infinity,
+              height: 54,
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: ElevatedButton.icon(
+                onPressed: _createInvoice,
+                icon: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+                label: const Text(
+                  'Xác nhận tạo hóa đơn',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ManagerColors.primaryGreen,
+                  elevation: 8,
+                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(27),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoadingRooms) {
+      return const Center(
+        child: CircularProgressIndicator(color: ManagerColors.primaryGreen),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildHeader(context),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text(_errorMessage!, style: const TextStyle(color: Colors.black54)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchOccupiedRooms,
+              style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+              child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_occupiedRooms.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.meeting_room_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Không có phòng nào đang thuê để xuất hóa đơn.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchOccupiedRooms,
+              style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+              child: const Text('Tải lại', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(context),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "CHỌN PHÒNG XUẤT HÓA ĐƠN",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: ManagerColors.textGrey,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: ManagerColors.cardShadow,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<dynamic>(
+                      value: _selectedRoom,
+                      isExpanded: true,
+                      icon: const Icon(Icons.arrow_drop_down, color: ManagerColors.primaryGreen),
+                      items: _occupiedRooms.map((room) {
+                        return DropdownMenuItem<dynamic>(
+                          value: room,
+                          child: Text(
+                            "Phòng ${room['roomCode']} - Tầng ${room['floor']}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: ManagerColors.textCharcoal,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedRoom = val;
+                          _loadRoomDetailAndUtilities(val['id']);
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                if (_isLoadingDetail)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: CircularProgressIndicator(color: ManagerColors.primaryGreen),
+                    ),
+                  )
+                else ...[
                   _buildSectionHeader(
                     Icons.home_outlined,
                     ManagerColors.primaryGreen,
@@ -50,67 +444,22 @@ class InvoiceConfirmPage extends StatelessWidget {
                   _buildWaterCard(),
                   const SizedBox(height: 20),
                   _buildGrandTotalCard(),
-                  const SizedBox(height: 16),
-                  const Center(
-                    child: Text(
-                      '© 2025 RMS · Phiên bản 2.4.1',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: ManagerColors.textGrey,
-                      ),
+                ],
+                const SizedBox(height: 24),
+                const Center(
+                  child: Text(
+                    '© 2026 RMS · Phiên bản 2.4.1',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: ManagerColors.textGrey,
                     ),
                   ),
-                  const SizedBox(height: 100),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Container(
-        width: double.infinity,
-        height: 54,
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã xác nhận tạo hóa đơn'),
-                backgroundColor: ManagerColors.primaryGreen,
-              ),
-            );
-          },
-          icon: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
-            ),
-            child: const Icon(
-              Icons.check,
-              color: Colors.white,
-              size: 14,
+                ),
+                const SizedBox(height: 100),
+              ],
             ),
           ),
-          label: const Text(
-            'Xác nhận tạo hóa đơn',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: ManagerColors.primaryGreen,
-            elevation: 8,
-            shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(27),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -174,9 +523,11 @@ class InvoiceConfirmPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _buildHeaderPill('Tháng 5/2025'),
-                    const SizedBox(width: 10),
-                    _buildHeaderPill('Phòng 305'),
+                    _buildHeaderPill('Tháng $_selectedMonth/$_selectedYear'),
+                    if (_selectedRoom != null) ...[
+                      const SizedBox(width: 10),
+                      _buildHeaderPill('Phòng ${_selectedRoom['roomCode']}'),
+                    ],
                   ],
                 ),
               ],
@@ -224,6 +575,8 @@ class InvoiceConfirmPage extends StatelessWidget {
   }
 
   Widget _buildRoomRentCard() {
+    final roomCode = _selectedRoom != null ? _selectedRoom['roomCode'] : 'Chưa chọn';
+    final floor = _selectedRoom != null ? _selectedRoom['floor'] : 0;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -253,20 +606,20 @@ class InvoiceConfirmPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Phòng 305 - Tầng 3',
-                  style: TextStyle(
+                  'Phòng $roomCode - Tầng $floor',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: ManagerColors.textCharcoal,
                   ),
                 ),
-                SizedBox(height: 2),
-                Text(
+                const SizedBox(height: 2),
+                const Text(
                   'Giá thuê cố định',
                   style: TextStyle(
                     fontSize: 12,
@@ -276,9 +629,9 @@ class InvoiceConfirmPage extends StatelessWidget {
               ],
             ),
           ),
-          const Text(
-            '4.500.000 đ',
-            style: TextStyle(
+          Text(
+            _formatCurrency(_roomPrice),
+            style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
               color: ManagerColors.textCharcoal,
@@ -291,16 +644,16 @@ class InvoiceConfirmPage extends StatelessWidget {
 
   Widget _buildElectricCard() {
     return _buildUtilityDetailCard(
-      rows: const [
-        _DetailRow(label: 'CHỈ SỐ CŨ', value: '1250 kWh'),
-        _DetailRow(label: 'CHỈ SỐ MỚI', value: '1398 kWh', highlight: true),
-        _DetailRow(label: 'MỨC TIÊU THỤ', value: '148 kWh', highlight: true),
-        _DetailRow(label: 'ĐƠN GIÁ', value: '3.800 đ/kWh'),
+      rows: [
+        _DetailRow(label: 'CHỈ SỐ CŨ', value: '${_electricOld.toInt()} kWh'),
+        _DetailRow(label: 'CHỈ SỐ MỚI', value: '${_electricNew.toInt()} kWh', highlight: true),
+        _DetailRow(label: 'MỨC TIÊU THỤ', value: '${(_electricNew - _electricOld).toInt()} kWh', highlight: true),
+        _DetailRow(label: 'ĐƠN GIÁ', value: '${_formatCurrency(_electricPrice)}/kWh'),
       ],
       subtotalIcon: Icons.bolt,
       subtotalIconColor: electricOrange,
       subtotalLabel: 'Thành tiền điện',
-      subtotalAmount: '562.400 đ',
+      subtotalAmount: _formatCurrency(_electricCost),
       subtotalTint: electricTint,
       subtotalTextColor: electricOrange,
     );
@@ -308,16 +661,16 @@ class InvoiceConfirmPage extends StatelessWidget {
 
   Widget _buildWaterCard() {
     return _buildUtilityDetailCard(
-      rows: const [
-        _DetailRow(label: 'CHỈ SỐ CŨ', value: '85 m³'),
-        _DetailRow(label: 'CHỈ SỐ MỚI', value: '97 m³', highlight: true),
-        _DetailRow(label: 'MỨC TIÊU THỤ', value: '12 m³', highlight: true),
-        _DetailRow(label: 'ĐƠN GIÁ', value: '15.000 đ/m³'),
+      rows: [
+        _DetailRow(label: 'CHỈ SỐ CŨ', value: '${_waterOld.toInt()} m³'),
+        _DetailRow(label: 'CHỈ SỐ MỚI', value: '${_waterNew.toInt()} m³', highlight: true),
+        _DetailRow(label: 'MỨC TIÊU THỤ', value: '${(_waterNew - _waterOld).toInt()} m³', highlight: true),
+        _DetailRow(label: 'ĐƠN GIÁ', value: '${_formatCurrency(_waterPrice)}/m³'),
       ],
       subtotalIcon: Icons.water_drop_outlined,
       subtotalIconColor: waterBlue,
       subtotalLabel: 'Thành tiền nước',
-      subtotalAmount: '180.000 đ',
+      subtotalAmount: _formatCurrency(_waterCost),
       subtotalTint: waterTint,
       subtotalTextColor: waterBlue,
     );
@@ -454,11 +807,11 @@ class InvoiceConfirmPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Tổng tiền phải trả',
                         style: TextStyle(
                           fontSize: 13,
@@ -466,10 +819,10 @@ class InvoiceConfirmPage extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Tháng 5/2025',
-                        style: TextStyle(
+                        'Tháng $_selectedMonth/$_selectedYear',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: ManagerColors.textGrey,
                         ),
@@ -477,9 +830,9 @@ class InvoiceConfirmPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Text(
-                  '5.242.400 đ',
-                  style: TextStyle(
+                Text(
+                  _formatCurrency(_totalAmount),
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: ManagerColors.primaryGreen,
@@ -489,11 +842,11 @@ class InvoiceConfirmPage extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          _buildBreakdownRow('Tiền phòng', '4.500.000 đ'),
+          _buildBreakdownRow('Tiền phòng', _formatCurrency(_roomPrice)),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          _buildBreakdownRow('Tiền điện (148 kWh)', '562.400 đ'),
+          _buildBreakdownRow('Tiền điện (${(_electricNew - _electricOld).toInt()} kWh)', _formatCurrency(_electricCost)),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          _buildBreakdownRow('Tiền nước (12 m³)', '180.000 đ'),
+          _buildBreakdownRow('Tiền nước (${(_waterNew - _waterOld).toInt()} m³)', _formatCurrency(_waterCost)),
         ],
       ),
     );
