@@ -6,29 +6,102 @@ import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/widgets/info_tile.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/tenant_change_password_page.dart';
 
-class ProfilePage extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
+import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
+import 'package:smartrent_mobile/tenant/features/profile/domain/models/tenant_profile.dart';
+import 'package:smartrent_mobile/tenant/features/profile/presentation/widgets/info_tile.dart';
+import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/tenant_change_password_page.dart';
+
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final ProfileService _profileService = ProfileService();
+  TenantProfile? _profile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    setState(() {
+      _isLoading = true;
+    });
+    final profile = await _profileService.getProfile();
+    if (mounted) {
+      setState(() {
+        _profile = profile;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: TenantColors.primaryGreen),
+        ),
+      );
+    }
+
+    if (_profile == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("Không thể tải thông tin hồ sơ"),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: TenantColors.primaryGreen,
+                ),
+                child: const Text("Thử lại", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: TenantColors.bgScreenLight,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 20),
-            _buildContactCard(),
-            const SizedBox(height: 16),
-            _buildRoomInfoCard(),
-            const SizedBox(height: 16),
-            _buildMenuActions(context),
-            const SizedBox(height: 16),
-            _buildLogoutButton(context),
-            const SizedBox(height: 40),
-            _buildFooter(),
-            const SizedBox(height: 40),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _fetchProfile,
+        color: TenantColors.primaryGreen,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 20),
+              _buildContactCard(),
+              const SizedBox(height: 16),
+              _buildRoomInfoCard(),
+              const SizedBox(height: 16),
+              _buildMenuActions(context),
+              const SizedBox(height: 16),
+              _buildLogoutButton(context),
+              const SizedBox(height: 40),
+              _buildFooter(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -104,7 +177,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            "Nguyễn Văn An",
+            _profile?.fullName ?? "N/A",
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -112,7 +185,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           Text(
-            "Cư dân phòng 203",
+            "Cư dân phòng ${_profile?.room?.roomCode ?? "N/A"}",
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: Colors.white70,
@@ -138,17 +211,17 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         children: [
           ProfileInfoTile(
             icon: Icons.phone_outlined,
             label: "Số điện thoại",
-            value: "0909 123 456",
+            value: _profile?.phone ?? "N/A",
           ),
           ProfileInfoTile(
             icon: Icons.mail_outline,
             label: "Email",
-            value: "nguyenvanan@email.com",
+            value: _profile?.email ?? "N/A",
             showDivider: false,
           ),
         ],
@@ -157,6 +230,9 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildRoomInfoCard() {
+    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -195,26 +271,26 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const ProfileInfoTile(
+          ProfileInfoTile(
             icon: Icons.tag,
             label: "Phòng",
-            value: "P203 - Tầng 2",
+            value: "${_profile?.room?.roomCode ?? "N/A"} - Tầng ${_profile?.room?.floor ?? "N/A"}",
           ),
-          const ProfileInfoTile(
+          ProfileInfoTile(
             icon: Icons.calendar_today_outlined,
             label: "Ngày bắt đầu thuê",
-            value: "01/01/2025",
+            value: _profile?.moveInDate != null ? dateFormat.format(_profile!.moveInDate) : "N/A",
           ),
-          const ProfileInfoTile(
+          ProfileInfoTile(
             icon: Icons.check_circle_outline,
-            iconColor: TenantColors.primaryGreen,
-            label: "Trạng thái hợp đồng",
-            value: "Đang hiệu lực",
+            iconColor: _profile?.status == 'active' ? TenantColors.primaryGreen : Colors.grey,
+            label: "Trạng thái",
+            value: _profile?.status == 'active' ? "Đang hoạt động" : "Ngừng hoạt động",
           ),
-          const ProfileInfoTile(
+          ProfileInfoTile(
             icon: Icons.payments_outlined,
-            label: "Tiền cọc",
-            value: "5.000.000 đ",
+            label: "Giá phòng cơ bản",
+            value: _profile?.room?.basePrice != null ? currencyFormat.format(_profile!.room!.basePrice) : "0 đ",
             showDivider: false,
           ),
         ],
@@ -241,7 +317,7 @@ class ProfilePage extends StatelessWidget {
             icon: Icons.call_outlined,
             color: Colors.blue,
             title: "Liên hệ quản lý",
-            subtitle: "Hotline: 0909 123 456",
+            subtitle: _profile?.room?.branchName != null ? "Chi nhánh: ${_profile!.room!.branchName}" : "Hotline liên hệ",
           ),
           MenuActionTile(
             icon: Icons.security_outlined,
@@ -322,3 +398,4 @@ class ProfilePage extends StatelessWidget {
     );
   }
 }
+
