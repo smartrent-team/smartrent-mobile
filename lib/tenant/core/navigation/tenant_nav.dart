@@ -5,6 +5,7 @@ import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_pa
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/profile_page.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/presentation/pages/meter_comparison_page.dart';
 
 class TenantNav extends StatefulWidget {
   const TenantNav({super.key});
@@ -26,7 +27,7 @@ class _TenantNavState extends State<TenantNav> {
       const TenantHomePage(showBottomNav: false),
       const TenantOrderPage(showBottomNav: false),
       const RepairPage(),
-      const Center(child: Text("Thông báo")), // Placeholder for now
+      const MeterComparisonPage(),
       const ProfilePage(),
     ];
   }
@@ -67,7 +68,7 @@ class _TenantNavState extends State<TenantNav> {
               _buildNavItem(0, 'Trang chủ', Icons.home_outlined, Icons.home),
               _buildNavItem(1, 'Hóa đơn', Icons.description_outlined, Icons.description),
               _buildNavItem(2, 'Sửa chữa', Icons.build_outlined, Icons.build),
-              _buildNavItem(3, 'Thông báo', Icons.notifications_none_outlined, Icons.notifications, hasBadge: true),
+              _buildNavItem(3, 'AI Đối chiếu', Icons.analytics_outlined, Icons.analytics, hasBadge: true),
               _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded, Icons.person),
             ],
           ),
