@@ -49,4 +49,22 @@ class AuthService {
       rethrow;
     }
   }
+
+  Future<Response> forgotPassword(String email) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/auth/forgot-password',
+        data: {
+          'email': email,
+        },
+        options: Options(
+          headers: {
+            'host': 'localhost:3000',
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
 }

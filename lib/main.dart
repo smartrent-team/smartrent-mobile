@@ -3,11 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
 import 'package:smartrent_mobile/manager/manager.dart';
 
+import 'package:smartrent_mobile/core/services/deep_link_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
+final deepLinkService = DeepLinkService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('vi_VN', null);
+  
+  // Initialize deep links
+  deepLinkService.initDeepLinks();
+  
   runApp(const MyApp());
 }
 
@@ -17,6 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'SmartRent Tenant',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

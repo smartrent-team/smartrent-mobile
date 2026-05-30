@@ -7,6 +7,7 @@ import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_shell_page.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   final Widget? targetNav;
@@ -313,7 +314,28 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordPage(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Quên mật khẩu?',
+                            style: TextStyle(
+                              color: ManagerColors.primaryGreen,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       // Continue Button
                       SizedBox(
                         width: double.infinity,
