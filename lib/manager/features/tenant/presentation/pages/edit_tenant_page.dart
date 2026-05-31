@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/contract_photo_upload.dart';
 import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant_detail.dart';
 
 class EditTenantPage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _EditTenantPageState extends State<EditTenantPage> {
   DateTime? _moveInDate;
 
   String _selectedStatus = 'Đang thuê';
-  final List<String> _contractImageUrls = [];
+  List<String> _contractImageUrls = [];
 
   @override
   void initState() {
@@ -201,19 +202,63 @@ class _EditTenantPageState extends State<EditTenantPage> {
     }
   }
 
-  void _addNewContractPhoto() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Upload ảnh từ app sẽ được bổ sung sau. Bạn có thể xóa ảnh hiện có.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _removeContractPhoto(int index) {
     setState(() {
       _contractImageUrls.removeAt(index);
     });
+  }
+
+  void _showContractImagePreview(String imageUrl, String label) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Center(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image_outlined,
+                      size: 48,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 72,
+              top: 16,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -749,19 +794,17 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     ),
                   )
                 else
-                  Row(
+                  Column(
                     children: List.generate(_contractImageUrls.length, (index) {
                       final url = _contractImageUrls[index];
-                      return Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: index == _contractImageUrls.length - 1 ? 0 : 12.0,
-                          ),
-                          child: _buildInteractiveContractImage(
-                            index,
-                            url,
-                            'Trang ${index + 1}',
-                          ),
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == _contractImageUrls.length - 1 ? 0 : 16,
+                        ),
+                        child: _buildInteractiveContractImage(
+                          index,
+                          url,
+                          'Trang ${index + 1}',
                         ),
                       );
                     }),
@@ -769,41 +812,13 @@ class _EditTenantPageState extends State<EditTenantPage> {
                 const SizedBox(height: 16),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 const SizedBox(height: 16),
-
-                // Outlined add photo button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: _addNewContractPhoto,
-                    icon: const Icon(Icons.add, color: ManagerColors.primaryGreen, size: 20),
-                    label: const Text(
-                      "Thêm ảnh hợp đồng",
-                      style: TextStyle(
-                        color: ManagerColors.primaryGreen,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: ManagerColors.primaryGreen.withOpacity(0.3), width: 1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Guide hint caption
-                const Text(
-                  "Chụp hoặc chọn ảnh từ thư viện. Mỗi trang hợp đồng thêm một ảnh riêng.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: ManagerColors.textGrey,
-                    fontSize: 11,
-                  ),
+                ContractPhotoUpload(
+                  imageUrls: _contractImageUrls,
+                  uploadFolder: 'contracts_${widget.tenantId}',
+                  enabled: !_isSaving,
+                  required: false,
+                  showPreview: false,
+                  onChanged: (urls) => setState(() => _contractImageUrls = urls),
                 ),
               ],
             ),
@@ -814,80 +829,80 @@ class _EditTenantPageState extends State<EditTenantPage> {
   }
 
   Widget _buildInteractiveContractImage(int index, String imageUrl, String label) {
-    return AspectRatio(
-      aspectRatio: 1.0,
+    return SizedBox(
+      width: double.infinity,
+      height: 320,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // The main rounded contract image placeholder
           Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image_not_supported_outlined,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Dark semi-transparent bottom strip with label and action
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.85),
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+            child: GestureDetector(
+              onTap: () => _showContractImagePreview(imageUrl, label),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      color: Colors.grey[100],
+                    ),
+                    Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey,
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              "Xóa ảnh",
-                              style: TextStyle(
+                        );
+                      },
+                    ),
+
+                    // Dark semi-transparent bottom strip with label and action
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.85),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              label,
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 8,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ],
+                            const Text(
+                              "Chạm để xem to",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

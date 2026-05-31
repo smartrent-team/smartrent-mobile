@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:smartrent_mobile/core/network/ai_cccd_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/contract_photo_upload.dart';
 import 'package:dio/dio.dart';
 
 class AddTenantPage extends StatefulWidget {
@@ -15,11 +19,14 @@ class AddTenantPage extends StatefulWidget {
 class _AddTenantPageState extends State<AddTenantPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _cccdController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final TokenService _tokenService = TokenService();
+  final AiCccdService _cccdService = AiCccdService();
+  final ImagePicker _imagePicker = ImagePicker();
   
   String? _managedBranchId;
 
@@ -27,7 +34,9 @@ class _AddTenantPageState extends State<AddTenantPage> {
   String? _selectedBranch;
   String? _selectedRoom;
   bool _isLoading = false;
+  bool _isScanningCccd = false;
   bool _isFormValid = false;
+  List<String> _contractImageUrls = [];
   bool _obscurePassword = true;
 
   final List<Map<String, String>> _roles = [
@@ -168,6 +177,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _cccdController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -176,17 +186,25 @@ class _AddTenantPageState extends State<AddTenantPage> {
 
   void _validateForm() {
     setState(() {
-      final bool isRoomValid = _selectedRole != 'tenant' || _selectedRoom != null;
-      final bool isEmailValid = _emailController.text.trim().isEmpty || 
-          RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim());
-      
-      _isFormValid = _nameController.text.trim().isNotEmpty &&
-          _phoneController.text.trim().isNotEmpty &&
-          _passwordController.text.trim().isNotEmpty &&
-          _selectedBranch != null &&
-          isRoomValid &&
-          isEmailValid;
+      _isFormValid = _canSubmit;
     });
+  }
+
+  bool get _canSubmit {
+    final isRoomValid = _selectedRole != 'tenant' || _selectedRoom != null;
+    final isEmailValid = _emailController.text.trim().isEmpty ||
+        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text.trim());
+
+    final needsContract = _selectedRole == 'tenant' && _selectedRoom != null;
+    final contractOk = !needsContract || _contractImageUrls.isNotEmpty;
+
+    return _nameController.text.trim().isNotEmpty &&
+        _phoneController.text.trim().isNotEmpty &&
+        _passwordController.text.trim().isNotEmpty &&
+        _selectedBranch != null &&
+        isRoomValid &&
+        isEmailValid &&
+        contractOk;
   }
 
   Future<void> _handleSubmit() async {
@@ -194,8 +212,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
 
     setState(() => _isLoading = true);
 
+    var tenantCreated = false;
+
     try {
-      await _tenantService.addTenant(
+      final response = await _tenantService.addTenant(
         phone: _phoneController.text.trim(),
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -203,9 +223,14 @@ class _AddTenantPageState extends State<AddTenantPage> {
         branch: _selectedBranch!,
         role: _selectedRole ?? 'tenant',
         roomId: _selectedRoom,
+        identityNumber: _cccdController.text.trim(),
+        contractImages: _contractImageUrls.isNotEmpty ? _contractImageUrls : null,
       );
 
-      if (mounted) {
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        tenantCreated = true;
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Thêm cư dân thành công!'),
@@ -213,24 +238,34 @@ class _AddTenantPageState extends State<AddTenantPage> {
           ),
         );
         Navigator.pop(context, {
-          "name": _nameController.text.trim(),
-          "phone": _phoneController.text.trim(),
-          "date": "22/05/2026",
+          'name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
         });
+        return;
       }
+
+      throw Exception(response.data['error'] ?? 'Không thể tạo cư dân');
     } catch (e) {
       String errMsg = e.toString();
       if (e is DioException && e.response != null) {
         final data = e.response?.data;
-        if (data is Map && data.containsKey('error')) {
-          errMsg = data['error'].toString();
+        if (data is Map) {
+          if (data.containsKey('error')) {
+            errMsg = data['error'].toString();
+          }
+          if (data['details'] != null) {
+            errMsg = '$errMsg (${data['details']})';
+          }
         }
       }
       if (mounted) {
+        final message = tenantCreated
+            ? 'Đã tạo cư dân nhưng không lưu được ảnh hợp đồng: $errMsg'
+            : 'Lỗi: $errMsg';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi: $errMsg'),
-            backgroundColor: Colors.red,
+            content: Text(message),
+            backgroundColor: tenantCreated ? Colors.orange : Colors.red,
           ),
         );
       }
@@ -238,6 +273,72 @@ class _AddTenantPageState extends State<AddTenantPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _scanCccd() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Chụp ảnh CCCD'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Chọn từ thư viện'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1920,
+      );
+      if (picked == null || !mounted) return;
+
+      setState(() => _isScanningCccd = true);
+
+      final bytes = await picked.readAsBytes();
+      final result = await _cccdService.scanFromBytes(bytes);
+
+      if (!mounted) return;
+      setState(() {
+        _nameController.text = result.fullName;
+        _cccdController.text = result.cccdNumber;
+        _isScanningCccd = false;
+      });
+      _validateForm();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã quét CCCD và điền thông tin'),
+          backgroundColor: ManagerColors.primaryGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isScanningCccd = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -283,15 +384,31 @@ class _AddTenantPageState extends State<AddTenantPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildFieldLabel("Họ và tên"),
+                    _buildFieldLabel('Quét CCCD tự động điền'),
+                    _buildScanCccdButton(),
+                    const SizedBox(height: 20),
+                    _buildFieldLabel('Họ và tên'),
                     _buildTextField(
                       controller: _nameController,
-                      hintText: "Nguyễn Văn A",
+                      hintText: 'Nguyễn Văn A',
                       icon: Icons.person_outline,
-                      enabled: !_isLoading,
+                      enabled: !_isLoading && !_isScanningCccd,
                     ),
                     const SizedBox(height: 20),
-                    _buildFieldLabel("Số điện thoại"),
+                    _buildFieldLabel('Số CCCD/CMND'),
+                    _buildTextField(
+                      controller: _cccdController,
+                      hintText: '079201012345',
+                      icon: Icons.badge_outlined,
+                      keyboardType: TextInputType.number,
+                      enabled: !_isLoading && !_isScanningCccd,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(12),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _buildFieldLabel('Số điện thoại'),
                     _buildTextField(
                       controller: _phoneController,
                       hintText: "0987654321",
@@ -378,6 +495,16 @@ class _AddTenantPageState extends State<AddTenantPage> {
                           _validateForm();
                         },
                       ),
+                      const SizedBox(height: 20),
+                      ContractPhotoUpload(
+                        imageUrls: _contractImageUrls,
+                        uploadFolder: 'contracts',
+                        enabled: !_isLoading && !_isScanningCccd,
+                        onChanged: (urls) {
+                          setState(() => _contractImageUrls = urls);
+                          _validateForm();
+                        },
+                      ),
                     ],
                     const SizedBox(height: 40),
                   ],
@@ -385,12 +512,27 @@ class _AddTenantPageState extends State<AddTenantPage> {
               ),
             ),
           ),
-          if (_isLoading)
+          if (_isLoading || _isScanningCccd)
             Container(
               color: Colors.black12,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: ManagerColors.primaryGreen,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: ManagerColors.primaryGreen,
+                    ),
+                    if (_isScanningCccd) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Đang quét CCCD...',
+                        style: TextStyle(
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -403,7 +545,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton.icon(
-              onPressed: _isFormValid && !_isLoading ? _handleSubmit : null,
+              onPressed: _canSubmit && !_isLoading ? _handleSubmit : null,
               icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 20),
               label: const Text(
                 "Tạo cư dân",
@@ -422,6 +564,39 @@ class _AddTenantPageState extends State<AddTenantPage> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanCccdButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: (_isLoading || _isScanningCccd) ? null : _scanCccd,
+        icon: Icon(
+          Icons.qr_code_scanner_rounded,
+          color: _isScanningCccd ? ManagerColors.textGrey : const Color(0xFF1976D2),
+        ),
+        label: Text(
+          _isScanningCccd ? 'Đang quét...' : 'Quét CCCD/CMND',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: _isScanningCccd ? ManagerColors.textGrey : const Color(0xFF1976D2),
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: const Color(0xFFE3F2FD),
+          side: BorderSide(
+            color: _isScanningCccd
+                ? ManagerColors.lightGreenBorder.withOpacity(0.3)
+                : const Color(0xFF90CAF9),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
@@ -450,12 +625,14 @@ class _AddTenantPageState extends State<AddTenantPage> {
     bool enabled = true,
     bool obscureText = false,
     Widget? suffixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       enabled: enabled,
       obscureText: obscureText,
+      inputFormatters: inputFormatters,
       style: const TextStyle(
         color: ManagerColors.textCharcoal,
         fontSize: 16,

@@ -10,8 +10,10 @@ class TenantService {
     required String password,
     required dynamic branch,
     String? email,
+    String? identityNumber,
     String role = 'tenant',
     dynamic roomId,
+    List<String>? contractImages,
   }) async {
     try {
       // For Postgres backends, IDs are often integers. 
@@ -40,6 +42,14 @@ class TenantService {
 
       if (finalRoomId != null) {
         requestData['room_id'] = finalRoomId;
+      }
+
+      if (identityNumber != null && identityNumber.trim().isNotEmpty) {
+        requestData['identity_number'] = identityNumber.replaceAll(RegExp(r'\D'), '');
+      }
+
+      if (contractImages != null && contractImages.isNotEmpty) {
+        requestData['contractImages'] = contractImages;
       }
 
       return await _apiClient.dio.post(
@@ -78,6 +88,24 @@ class TenantService {
   Future<Response> updateTenant(int tenantId, Map<String, dynamic> data) async {
     try {
       return await _apiClient.dio.patch('/api/tenants/$tenantId', data: data);
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> saveContractImages(
+    int tenantId,
+    List<String> imageUrls, {
+    int? roomId,
+  }) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/tenants/$tenantId/contract-images',
+        data: {
+          'contractImages': imageUrls,
+          if (roomId != null) 'roomId': roomId,
+        },
+      );
     } on DioException catch (e) {
       rethrow;
     }
