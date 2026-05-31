@@ -396,9 +396,11 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                 _buildDetailRow(
                   icon: Icons.assignment_ind_outlined,
                   label: 'CCCD / CMND',
-                  valueWidget: const Text(
-                    'Chưa cập nhật',
-                    style: TextStyle(
+                  valueWidget: Text(
+                    (detail.identityNumber != null && detail.identityNumber!.isNotEmpty)
+                        ? detail.identityNumber!
+                        : 'Chưa cập nhật',
+                    style: const TextStyle(
                       color: ManagerColors.textCharcoal,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

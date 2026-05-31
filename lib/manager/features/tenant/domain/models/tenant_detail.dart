@@ -16,6 +16,7 @@ class TenantDetail {
   final String roomLabel;
   final bool isActive;
   final String statusLabel;
+  final String? identityNumber;
   final List<String> contractImages;
 
   const TenantDetail({
@@ -36,6 +37,7 @@ class TenantDetail {
     required this.roomLabel,
     required this.isActive,
     required this.statusLabel,
+    this.identityNumber,
     required this.contractImages,
   });
 
@@ -59,6 +61,11 @@ class TenantDetail {
       roomLabel: json['roomLabel']?.toString() ?? 'Chưa có phòng',
       isActive: json['isActive'] != false,
       statusLabel: json['statusLabel']?.toString() ?? 'Đang thuê',
+      identityNumber: () {
+        final raw = json['identityNumber']?.toString();
+        if (raw == null || raw.isEmpty || raw == '000000000000') return null;
+        return raw;
+      }(),
       contractImages: images is List
           ? images.map((e) => e.toString()).where((u) => u.isNotEmpty).toList()
           : const [],
