@@ -237,6 +237,36 @@ class _IssuePageState extends State<IssuePage> {
     );
   }
 
+  Widget _buildLocationPill({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildIssueCard(TicketModel issue) {
     final statusText = _getStatusText(issue.status);
     final statusColor = _getStatusColor(issue.status);
@@ -258,22 +288,50 @@ class _IssuePageState extends State<IssuePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Row 1: Thông tin phòng + badge trạng thái
           Row(
             children: [
-              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: ManagerColors.primaryGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.home_work_outlined, color: ManagerColors.primaryGreen, size: 20)),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(issue.roomName ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Tầng ${issue.floor ?? 'N/A'}', style: const TextStyle(color: Colors.black38, fontSize: 12)),
-                ],
-              ),
-              const Spacer(),
+              // Icon phòng
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: ManagerColors.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.home_work_outlined, color: ManagerColors.primaryGreen, size: 20),
+              ),
+              const SizedBox(width: 10),
+              // Pill phòng + tầng
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _buildLocationPill(
+                      icon: Icons.meeting_room_outlined,
+                      label: issue.roomName ?? 'N/A',
+                      color: ManagerColors.primaryGreen,
+                    ),
+                    _buildLocationPill(
+                      icon: Icons.layers_outlined,
+                      label: 'Tầng ${issue.floor ?? 'N/A'}',
+                      color: Colors.blueGrey,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Badge trạng thái
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

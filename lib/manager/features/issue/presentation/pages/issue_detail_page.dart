@@ -197,6 +197,7 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
           ),
           const SizedBox(height: 24),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
@@ -204,28 +205,31 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
                 child: const Icon(Icons.home_work_outlined, color: Colors.white, size: 30),
               ),
               const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Vị trí sự cố', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                       Text(issue.roomName ?? 'N/A', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                       const SizedBox(width: 8),
-                       Padding(
-                         padding: const EdgeInsets.only(bottom: 4),
-                         child: Text('· Tầng ${issue.floor ?? 'N/A'}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                       ),
-                    ],
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Vị trí sự cố', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text(
+                      issue.roomName ?? 'N/A',
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Tầng ${issue.floor ?? 'N/A'}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.access_time, color: Colors.white, size: 16),
                     const SizedBox(width: 6),
