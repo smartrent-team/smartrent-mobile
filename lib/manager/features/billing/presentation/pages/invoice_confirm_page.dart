@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
@@ -210,25 +211,18 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       if (response.statusCode == 200 && response.data['success'] == true) {
         final payment = response.data['payment'];
         final paymentWarning = response.data['paymentWarning'] as String?;
-        final hasQr = payment != null && payment['qrPayload'] != null;
-        if (paymentWarning != null && paymentWarning.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(paymentWarning),
-              backgroundColor: Colors.orange.shade800,
-              duration: const Duration(seconds: 8),
-            ),
-          );
-        }
+        final hasPaymentLink = payment != null && payment['checkoutUrl'] != null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              hasQr
-                  ? 'Hóa đơn đã tạo! Mã QR thanh toán đã gửi sang app cư dân.'
-                  : 'Hóa đơn đã tạo nhưng CHƯA có QR — kiểm tra PayOS (.env) hoặc migration DB, sau đó cư dân bấm "Thanh toán QR".',
+              hasPaymentLink
+                  ? 'Hóa đơn đã tạo! Link thanh toán VNPay đã gửi sang app cư dân.'
+                  : paymentWarning != null && paymentWarning.isNotEmpty
+                      ? 'Hóa đơn đã tạo. Lưu ý: $paymentWarning'
+                      : 'Hóa đơn đã tạo thành công.',
             ),
-            backgroundColor: hasQr ? ManagerColors.primaryGreen : Colors.orange.shade800,
-            duration: Duration(seconds: hasQr ? 4 : 8),
+            backgroundColor: hasPaymentLink ? ManagerColors.primaryGreen : Colors.orange.shade800,
+            duration: Duration(seconds: hasPaymentLink ? 4 : 6),
           ),
         );
         Navigator.pop(context, true); // Pop page
@@ -239,7 +233,15 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Pop loading spinner
-        _showErrorDialog('Lỗi kết nối hoặc xử lý từ máy chủ: $e');
+        // Đọc message lỗi từ response body nếu có (DioException 4xx)
+        String errorMsg = 'Lỗi kết nối. Vui lòng thử lại.';
+        if (e is DioException && e.response?.data != null) {
+          final data = e.response!.data;
+          if (data is Map) {
+            errorMsg = data['error']?.toString() ?? data['message']?.toString() ?? errorMsg;
+          }
+        }
+        _showErrorDialog(errorMsg);
       }
     }
   }

@@ -1151,7 +1151,7 @@ class _TenantPageState extends State<TenantPage> {
                     ),
                     child: Row(
                       children: [
-                        // Billing month and deadline
+                        // Billing month, room code and deadline
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1164,7 +1164,26 @@ class _TenantPageState extends State<TenantPage> {
                                   color: ManagerColors.textCharcoal,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.meeting_room_outlined,
+                                    size: 12,
+                                    color: ManagerColors.primaryGreen,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Phòng ${invoice.roomCode}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: ManagerColors.primaryGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
                               Text(
                                 _formatInvoiceDeadline(invoice),
                                 style: const TextStyle(
