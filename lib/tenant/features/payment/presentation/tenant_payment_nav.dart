@@ -70,9 +70,9 @@ Future<void> openTenantPaymentQr(
     }
   }
 
-  if (!current.canPay) {
+  if (!current.hasLink || current.checkoutUrl == null || current.checkoutUrl!.trim().isEmpty) {
     if (!context.mounted) return;
-    showTenantPaymentSnackBar(context, TenantPaymentMessages.noQrYet);
+    showTenantPaymentSnackBar(context, TenantPaymentMessages.noLinkAvailable);
     return;
   }
 
@@ -82,6 +82,7 @@ Future<void> openTenantPaymentQr(
     MaterialPageRoute(
       builder: (_) => TenantPaymentQRPage(
         args: TenantPaymentArgs(
+          invoiceId: current.id,
           invoiceCode: current.invoiceCode,
           amount: current.totalAmount.round(),
           roomLabel: current.roomLabel,

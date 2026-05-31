@@ -1,4 +1,5 @@
 class TenantPaymentArgs {
+  final int invoiceId;
   final String invoiceCode;
   final int amount;
   final String roomLabel;
@@ -10,6 +11,7 @@ class TenantPaymentArgs {
   final String? transferDescription;
 
   const TenantPaymentArgs({
+    required this.invoiceId,
     required this.invoiceCode,
     required this.amount,
     required this.roomLabel,

@@ -5,15 +5,28 @@ abstract final class TenantPaymentMessages {
   static const String alreadyPaid = 'Hóa đơn này đã được thanh toán.';
 
   static const String noQrYet =
-      'Hóa đơn chưa có mã QR. Vui lòng liên hệ ban quản lý để được hỗ trợ thanh toán.';
+      'Hóa đơn chưa có mã thanh toán. Vui lòng liên hệ ban quản lý để được hỗ trợ thanh toán.';
 
   static const String unavailable =
-      'Không thể tạo mã QR lúc này. Vui lòng thử lại sau hoặc liên hệ ban quản lý.';
+      'Không thể khởi tạo thanh toán lúc này. Vui lòng thử lại sau hoặc liên hệ ban quản lý.';
 
   static const String serviceMaintenance =
-      'Thanh toán QR tạm thời chưa khả dụng. Vui lòng liên hệ ban quản lý.';
+      'Dịch vụ thanh toán tạm thời chưa khả dụng. Vui lòng liên hệ ban quản lý.';
 
-  static const String loadingQr = 'Đang tạo mã QR thanh toán...';
+  static const String loadingQr = 'Đang khởi tạo thanh toán...';
+
+  static const String paymentSuccess =
+      'Thanh toán thành công! Cảm ơn bạn đã thanh toán hóa đơn qua VNPay.';
+
+  static const String paymentFailed =
+      'Thanh toán không thành công hoặc đã bị hủy. Vui lòng thử lại.';
+
+  static const String paymentCancelled = 'Đã hủy thanh toán.';
+
+  static const String noLinkAvailable =
+      'Không tìm thấy đường link thanh toán. Vui lòng liên hệ ban quản lý.';
+
+  static const String openingPaymentGateway = 'Đang mở cổng thanh toán VNPay...';
 
   /// Luôn trả về câu phù hợp cư dân, bỏ qua nội dung kỹ thuật từ API.
   static String fromApi(String? raw) {

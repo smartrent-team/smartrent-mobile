@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
+import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 
 class TenantPaymentSuccessPage extends StatefulWidget {
-  const TenantPaymentSuccessPage({super.key});
+  final String? invoiceCode;
+  final int? amount;
+  final String? transactionId;
+  final String? paymentTime;
+
+  const TenantPaymentSuccessPage({
+    super.key,
+    this.invoiceCode,
+    this.amount,
+    this.transactionId,
+    this.paymentTime,
+  });
 
   @override
   State<TenantPaymentSuccessPage> createState() =>
@@ -49,6 +61,27 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
     super.dispose();
   }
 
+  String get _displayAmount {
+    if (widget.amount != null) {
+      final formatted = widget.amount!;
+      final str = formatted.toString();
+      final buffer = StringBuffer();
+      final len = str.length;
+      for (var i = 0; i < len; i++) {
+        if (i > 0 && (len - i) % 3 == 0) buffer.write('.');
+        buffer.write(str[i]);
+      }
+      return '$buffer đ';
+    }
+    return '— đ';
+  }
+
+  String get _displayTime {
+    if (widget.paymentTime != null) return widget.paymentTime!;
+    final now = DateTime.now();
+    return '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} · ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,7 +103,6 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
         ),
         child: Stack(
           children: [
-            // Glow effect
             Positioned(
               top: MediaQuery.of(context).size.height * 0.15,
               left: MediaQuery.of(context).size.width / 2 - 100,
@@ -110,7 +142,7 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
                       ),
                     ),
                   ),
-                  _buildBottomButton(context),
+                  _buildBottomButtons(context),
                 ],
               ),
             ),
@@ -166,27 +198,54 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
   Widget _buildSuccessText() {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: const Column(
+      child: Column(
         children: [
-          Text(
+          const Text(
             'Thanh toán thành công',
             style: TextStyle(
                 color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            '2.850.000 đ',
-            style: TextStyle(
+            _displayAmount,
+            style: const TextStyle(
                 color: Colors.white,
                 fontSize: 40,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -1),
           ),
-          SizedBox(height: 8),
-          Text(
-            'HD-2025-05-203',
-            style: TextStyle(
-                color: Colors.white54, fontSize: 14, letterSpacing: 1.0),
+          const SizedBox(height: 8),
+          if (widget.invoiceCode != null)
+            Text(
+              widget.invoiceCode!,
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 14, letterSpacing: 1.0),
+            ),
+          const SizedBox(height: 12),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: TenantColors.primaryGreen.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: TenantColors.primaryGreen.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified_user_rounded,
+                    color: TenantColors.primaryGreen, size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Thanh toán qua VNPay',
+                  style: TextStyle(
+                    color: TenantColors.primaryGreen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -194,13 +253,13 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
   }
 
   Widget _buildTransactionInfo() {
-    final items = [
-      {'label': 'Người nhận', 'value': 'TRAN VAN BINH'},
-      {'label': 'Ngân hàng', 'value': 'Vietcombank (VCB)'},
-      {'label': 'Số tài khoản', 'value': '0901234567890'},
-      {'label': 'Thời gian', 'value': '21/05/2025 · 14:32:07'},
-      {'label': 'Mã GD', 'value': 'VCB60821863'},
-    ];
+    final items = <Map<String, String>>[];
+    items.add({'label': 'Mã hóa đơn', 'value': widget.invoiceCode ?? '—'});
+    items.add({'label': 'Phương thức', 'value': 'VNPay'});
+    items.add({'label': 'Thời gian', 'value': _displayTime});
+    if (widget.transactionId != null) {
+      items.add({'label': 'Mã GD VNPay', 'value': widget.transactionId!});
+    }
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -252,40 +311,76 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
     );
   }
 
-  Widget _buildBottomButton(BuildContext context) {
+  Widget _buildBottomButtons(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-      child: SizedBox(
-        width: double.infinity,
-        height: 56,
-        child: ElevatedButton(
-          onPressed: () => Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const TenantHomePage()),
-            (route) => false,
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: TenantColors.primaryGreen,
-            elevation: 8,
-            shadowColor: TenantColors.primaryGreen.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18)),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.home_outlined, color: Colors.white),
-              SizedBox(width: 10),
-              Text(
-                'Về trang chủ',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const TenantOrderPage()),
+                (route) => false,
               ),
-            ],
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TenantColors.primaryGreen,
+                elevation: 8,
+                shadowColor: TenantColors.primaryGreen.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.description_outlined, color: Colors.white),
+                  SizedBox(width: 10),
+                  Text(
+                    'Xem hóa đơn',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const TenantHomePage()),
+                (route) => false,
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white30),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.home_outlined, color: Colors.white70),
+                  SizedBox(width: 10),
+                  Text(
+                    'Về trang chủ',
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

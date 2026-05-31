@@ -17,12 +17,12 @@ class TenantInvoice {
   final String? branchName;
   final String? qrPayload;
   final String? checkoutUrl;
+  final bool hasLink;
   final String? paymentAccountNumber;
   final String? paymentAccountName;
   final String? paymentBankBin;
   final String? paymentDescription;
   final bool isPaid;
-  final bool hasQr;
 
   const TenantInvoice({
     required this.id,
@@ -43,12 +43,12 @@ class TenantInvoice {
     this.branchName,
     this.qrPayload,
     this.checkoutUrl,
+    this.hasLink = false,
     this.paymentAccountNumber,
     this.paymentAccountName,
     this.paymentBankBin,
     this.paymentDescription,
     this.isPaid = false,
-    this.hasQr = false,
   });
 
   factory TenantInvoice.fromJson(Map<String, dynamic> json) {
@@ -71,13 +71,12 @@ class TenantInvoice {
       branchName: json['branchName'] as String?,
       qrPayload: json['qrPayload'] as String?,
       checkoutUrl: json['checkoutUrl'] as String?,
+      hasLink: json['hasLink'] as bool? ?? _hasNonEmpty(json['checkoutUrl'] as String?),
       paymentAccountNumber: json['paymentAccountNumber'] as String?,
       paymentAccountName: json['paymentAccountName'] as String?,
       paymentBankBin: json['paymentBankBin'] as String?,
       paymentDescription: json['paymentDescription'] as String?,
       isPaid: json['isPaid'] as bool? ?? (json['paymentStatus'] == 'paid' || json['payment_status'] == 'paid'),
-      hasQr: json['hasQr'] as bool? ??
-          _hasNonEmpty(json['qrPayload'] as String?),
     );
   }
 
@@ -91,8 +90,8 @@ class TenantInvoice {
 
   bool get canPay =>
       !isPaid &&
-      (hasQr ||
-          (checkoutUrl != null && checkoutUrl!.trim().isNotEmpty));
+      hasLink &&
+      (checkoutUrl != null && checkoutUrl!.trim().isNotEmpty);
 
   static bool _hasNonEmpty(String? value) =>
       value != null && value.trim().isNotEmpty;

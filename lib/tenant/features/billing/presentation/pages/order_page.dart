@@ -161,7 +161,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
               ? 'Hạn: ${deadline.day.toString().padLeft(2, '0')}/${deadline.month.toString().padLeft(2, '0')}/${deadline.year}'
               : 'Chờ thanh toán'),
       'paid': inv.isPaid,
-      'isNew': !inv.isPaid && inv.hasQr,
+      'isNew': !inv.isPaid && inv.hasLink,
       'color': color,
       'code': inv.invoiceCode,
       'items': items,
@@ -173,7 +173,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     final label = issued != null ? 'Tháng ${issued.month}/${issued.year}' : inv.invoiceCode;
     return {
       'label': label,
-      'method': 'PayOS / Chuyển khoản',
+      'method': 'VNPay',
       'date': issued != null
           ? '${issued.day.toString().padLeft(2, '0')}/${issued.month.toString().padLeft(2, '0')}/${issued.year}'
           : inv.invoiceCode,
@@ -869,9 +869,9 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
                     if (mounted) _reloadAfterPayment();
                   }
                 },
-                icon: const Icon(Icons.qr_code_scanner_outlined,
+                icon: const Icon(Icons.payment_outlined,
                     color: Colors.white, size: 18),
-                label: const Text('Thanh toán QR',
+                label: const Text('Thanh toán',
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold)),
