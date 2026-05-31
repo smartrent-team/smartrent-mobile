@@ -266,6 +266,64 @@ class _TenantHomePageState extends State<TenantHomePage> {
 
   // ── BILL CARD ────────────────────────────────────────────────────────────
   Widget _buildBillCard() {
+    if (_unpaidInvoice == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(
+              color: TenantColors.cardShadow,
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: TenantColors.bgMint,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_outline,
+                color: TenantColors.primaryGreen,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Tuyệt vời!',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bạn đã thanh toán tất cả hóa đơn.',
+              style: TextStyle(
+                fontSize: 14,
+                color: TenantColors.textGrey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final inv = _unpaidInvoice!;
+    final issued = DateTime.tryParse(inv.issuedAt ?? inv.createdAt ?? '');
+    final monthStr = issued != null ? '${issued.month}/${issued.year}' : '--/--';
+    final deadlineStr = issued != null 
+        ? '10/${issued.month + 1 > 12 ? 1 : issued.month + 1}/${issued.month + 1 > 12 ? issued.year + 1 : issued.year}' 
+        : '--/--/----';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -302,22 +360,22 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hóa đơn tháng 5/2025',
-                            style: TextStyle(
+                            'Hóa đơn tháng $monthStr',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Phòng P203 · Nhà trọ Phúc An',
-                            style: TextStyle(
+                            inv.roomLabel,
+                            style: const TextStyle(
                               fontSize: 12,
                               color: TenantColors.textGrey,
                             ),
@@ -358,9 +416,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   style: TextStyle(fontSize: 14, color: TenantColors.textGrey),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '2.850.000 đ',
-                  style: TextStyle(
+                Text(
+                  _currency.format(inv.totalAmount),
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -377,26 +435,28 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                   child: Column(
                     children: [
-                      _costRow(Icons.home_work_outlined,
-                          TenantColors.bgMint, TenantColors.primaryGreen,
-                          'Tiền phòng', '2.200.000 đ'),
-                      const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                      _costRow(Icons.bolt_outlined,
-                          const Color(0xFFFFF3E0), TenantColors.warningOrange,
-                          'Tiền điện', '312.000 đ'),
-                      const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                      _costRow(Icons.water_drop_outlined,
-                          const Color(0xFFE1F5FE), Colors.blue,
-                          'Tiền nước', '78.000 đ'),
-                      if (_isBillExpanded) ...[
+                      if (inv.roomPrice > 0) ...[
+                        _costRow(Icons.home_work_outlined,
+                            TenantColors.bgMint, TenantColors.primaryGreen,
+                            'Tiền phòng', _currency.format(inv.roomPrice)),
                         const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                        _costRow(Icons.wifi_outlined,
-                            const Color(0xFFF3E5F5), Colors.purple,
-                            'Internet', '120.000 đ'),
+                      ],
+                      if (inv.electricCost > 0) ...[
+                        _costRow(Icons.bolt_outlined,
+                            const Color(0xFFFFF3E0), TenantColors.warningOrange,
+                            'Tiền điện', _currency.format(inv.electricCost)),
+                        const Divider(height: 24, color: Color(0xFFEAF5EF)),
+                      ],
+                      if (inv.waterCost > 0) ...[
+                        _costRow(Icons.water_drop_outlined,
+                            const Color(0xFFE1F5FE), Colors.blue,
+                            'Tiền nước', _currency.format(inv.waterCost)),
+                      ],
+                      if (_isBillExpanded && inv.serviceCost > 0) ...[
                         const Divider(height: 24, color: Color(0xFFEAF5EF)),
                         _costRow(Icons.star_outline_rounded,
                             const Color(0xFFFCE4EC), Colors.pink,
-                            'Phí dịch vụ', '140.000 đ'),
+                            'Phí dịch vụ', _currency.format(inv.serviceCost)),
                       ],
                       const Divider(height: 24, color: Color(0xFFEAF5EF)),
                       GestureDetector(
@@ -409,7 +469,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                           child: Text(
                             _isBillExpanded
                                 ? 'Thu gọn ▲'
-                                : 'Xem thêm 2 khoản ▼',
+                                : 'Xem thêm ▼',
                             style: const TextStyle(
                               color: TenantColors.primaryGreen,
                               fontWeight: FontWeight.bold,
@@ -422,19 +482,19 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.error_outline_rounded,
+                    const Icon(Icons.error_outline_rounded,
                         color: TenantColors.errorRed, size: 18),
-                    SizedBox(width: 8),
-                    Text(
+                    const SizedBox(width: 8),
+                    const Text(
                       'Hạn thanh toán: ',
                       style: TextStyle(
                           fontSize: 13, color: TenantColors.textGrey),
                     ),
                     Text(
-                      '10/06/2025',
-                      style: TextStyle(
+                      deadlineStr,
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: TenantColors.errorRed,

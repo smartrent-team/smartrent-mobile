@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/payment/domain/tenant_payment_args.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_messages.dart';
@@ -80,7 +82,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
     }
   }
 
-  void _handleNavigation(String url) {
+  Future<void> _handleNavigation(String url) async {
     if (_hasNavigated) return;
 
     if (!url.contains('/api/webhooks/vnpay/return')) return;
@@ -89,6 +91,19 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
 
     final uri = Uri.parse(url);
     final responseCode = uri.queryParameters['vnp_ResponseCode'];
+
+    // Dùng Dio gọi ngầm 1 request tới Backend để kích hoạt update Database.
+    // Xử lý tự động đổi localhost thành 10.0.2.2 trên Android.
+    try {
+      final dio = Dio();
+      String finalUrl = url;
+      if (Platform.isAndroid && finalUrl.contains('localhost')) {
+        finalUrl = finalUrl.replaceFirst('localhost', '10.0.2.2');
+      }
+      await dio.get(finalUrl);
+    } catch (e) {
+      debugPrint('Error triggering webhook: $e');
+    }
 
     if (responseCode == '00') {
       _navigateToSuccess();
