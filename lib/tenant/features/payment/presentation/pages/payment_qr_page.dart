@@ -1,11 +1,15 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_success_page.dart';
 
 class TenantPaymentQRPage extends StatefulWidget {
-  const TenantPaymentQRPage({super.key});
+  final double? amount;
+  final String? invoiceCode;
+  final String? bankContent;
+  const TenantPaymentQRPage({super.key, this.amount, this.invoiceCode, this.bankContent});
 
   @override
   State<TenantPaymentQRPage> createState() => _TenantPaymentQRPageState();
@@ -177,14 +181,21 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage>
   }
 
   Widget _buildAmountSection() {
-    return const Column(
+    final String amountText = widget.amount != null
+        ? NumberFormat.currency(locale: 'vi_VN', symbol: 'đ')
+            .format(widget.amount)
+            .replaceAll('₫', 'đ')
+            .replaceAll(',00', '')
+        : '2.850.000 đ';
+
+    return Column(
       children: [
-        Text('Số tiền cần thanh toán',
+        const Text('Số tiền cần thanh toán',
             style: TextStyle(color: Colors.white54, fontSize: 13)),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(
-          '2.850.000 đ',
-          style: TextStyle(
+          amountText,
+          style: const TextStyle(
               color: Colors.white,
               fontSize: 36,
               fontWeight: FontWeight.w900,
@@ -242,9 +253,9 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage>
                 color: Colors.black87),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'HD-2025-05-203',
-            style: TextStyle(
+          Text(
+            widget.invoiceCode ?? 'HD-2025-05-203',
+            style: const TextStyle(
                 fontSize: 13,
                 color: TenantColors.textGrey,
                 letterSpacing: 0.5),
@@ -315,7 +326,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage>
       {'label': 'Ngân hàng', 'value': 'Vietcombank (VCB)'},
       {'label': 'Số tài khoản', 'value': '0901234567890'},
       {'label': 'Chủ tài khoản', 'value': 'TRAN VAN BINH'},
-      {'label': 'Nội dung CK', 'value': 'Thue phong P203 HD-2025-05-203'},
+      {'label': 'Nội dung CK', 'value': widget.bankContent ?? 'Thue phong P203 HD-2025-05-203'},
     ];
 
     return Container(
