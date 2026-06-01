@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:dio/dio.dart';
@@ -10,9 +9,22 @@ import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_pay
 import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_success_page.dart';
 
 class TenantPaymentQRPage extends StatefulWidget {
-  final TenantPaymentArgs args;
+  final TenantPaymentArgs? args;
+  final int? invoiceId;
+  final int? amount;
+  final String? invoiceCode;
+  final String? roomLabel;
+  final String? bankContent;
 
-  const TenantPaymentQRPage({super.key, required this.args});
+  const TenantPaymentQRPage({
+    super.key,
+    this.args,
+    this.invoiceId,
+    this.amount,
+    this.invoiceCode,
+    this.roomLabel,
+    this.bankContent,
+  });
 
   @override
   State<TenantPaymentQRPage> createState() => _TenantPaymentQRPageState();
@@ -20,13 +32,21 @@ class TenantPaymentQRPage extends StatefulWidget {
 
 class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
   late final WebViewController _controller;
-  final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
 
   bool _isLoading = true;
   String? _errorMessage;
   bool _hasNavigated = false;
 
-  TenantPaymentArgs get _args => widget.args;
+  TenantPaymentArgs get _args {
+    if (widget.args != null) return widget.args!;
+    return TenantPaymentArgs(
+      invoiceId: widget.invoiceId ?? 0,
+      amount: widget.amount ?? 0,
+      invoiceCode: widget.invoiceCode ?? '',
+      roomLabel: widget.roomLabel ?? '',
+      checkoutUrl: '', // Will handle error in initState
+    );
+  }
 
   @override
   void initState() {
@@ -92,8 +112,6 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
     final uri = Uri.parse(url);
     final responseCode = uri.queryParameters['vnp_ResponseCode'];
 
-    // Dùng Dio gọi ngầm 1 request tới Backend để kích hoạt update Database.
-    // Xử lý tự động đổi localhost thành 10.0.2.2 trên Android.
     try {
       final dio = Dio();
       String finalUrl = url;
@@ -180,17 +198,6 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
     );
   }
 
-  void _copyText(String label, String value) {
-    Clipboard.setData(ClipboardData(text: value));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã sao chép: $label'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
@@ -237,7 +244,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.white.withOpacity(0.8),
+      color: Colors.white.withValues(alpha: 0.8),
       child: const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -264,7 +271,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: TenantColors.errorRed.withOpacity(0.1),
+                color: TenantColors.errorRed.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.error_outline_rounded,

@@ -1,0 +1,10 @@
+﻿Analyzing payment_qr_page.dart...
+
+  error - payment_qr_page.dart:40:12 - The named parameter 'invoiceId' is required, but there's no corresponding argument. Try adding the required argument. - missing_required_argument
+  error - payment_qr_page.dart:40:12 - The named parameter 'roomLabel' is required, but there's no corresponding argument. Try adding the required argument. - missing_required_argument
+  error - payment_qr_page.dart:41:15 - The argument type 'num' can't be assigned to the parameter type 'int'.  - argument_type_not_assignable
+warning - payment_qr_page.dart:32:9 - The value of the field '_currency' isn't used. Try removing the field, or using it. - unused_field
+   info - payment_qr_page.dart:243:27 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - payment_qr_page.dart:270:46 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+6 issues found.
