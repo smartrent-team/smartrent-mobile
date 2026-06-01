@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/core/pages/splash_page.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
 import 'package:smartrent_mobile/manager/manager.dart';
 
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'SmartRent Tenant',
+      title: 'SmartRent',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: TenantColors.primaryGreen),
@@ -38,7 +39,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const LoginPage(),
+      home: const SplashPage(), // ← check session tự động
     );
   }
 }

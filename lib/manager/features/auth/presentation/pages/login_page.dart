@@ -59,25 +59,23 @@ class _LoginPageState extends State<LoginPage> {
         final data = response.data;
         if (data['success'] == true) {
           final token = data['access_token'];
-          final role = data['user']['role'];
-
-          if (token != null) {
-            await _tokenService.saveToken(token);
-          }
+          final refreshToken = data['refresh_token'];
+          final role = data['user']['role'] as String?;
 
           final user = data['user'] as Map<String, dynamic>?;
           final branchId = user?['branch_id'];
-          if (branchId != null) {
-            await _tokenService.saveBranchId(branchId.toString());
-          }
           final savedPhone = ManagerAppHeader.formatPhoneDisplay(
             user?['phone']?.toString() ?? identity,
           );
-          await _tokenService.saveUserProfile(
+
+          await _tokenService.saveSession(
+            accessToken: token ?? '',
+            refreshToken: refreshToken ?? '',
+            role: role ?? '',
+            branchId: branchId?.toString(),
             phone: savedPhone.isNotEmpty ? savedPhone : identity,
             fullName: user?['full_name']?.toString(),
           );
-
           if (!mounted) return;
 
           Widget target;

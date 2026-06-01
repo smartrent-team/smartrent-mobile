@@ -28,12 +28,11 @@ class _IssuePageState extends State<IssuePage> {
   @override
   void initState() {
     super.initState();
-    print('DEBUG: IssuePage initState called');
+
     _fetchTickets();
   }
 
   Future<void> _fetchTickets() async {
-    print('DEBUG: _fetchTickets started');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -309,13 +308,8 @@ class _IssuePageState extends State<IssuePage> {
                   children: [
                     _buildLocationPill(
                       icon: Icons.meeting_room_outlined,
-                      label: issue.roomName ?? 'N/A',
+                      label: issue.roomName ?? 'Chưa xác định',
                       color: ManagerColors.primaryGreen,
-                    ),
-                    _buildLocationPill(
-                      icon: Icons.layers_outlined,
-                      label: 'Tầng ${issue.floor ?? 'N/A'}',
-                      color: Colors.blueGrey,
                     ),
                   ],
                 ),

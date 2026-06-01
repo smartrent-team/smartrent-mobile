@@ -8,8 +8,8 @@ class ApiClient {
   ApiClient({String? baseUrl})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? 'http://10.0.2.2:3000',
-          connectTimeout: const Duration(seconds: 30), // Increased to 30s
-          receiveTimeout: const Duration(seconds: 30), // Increased to 30s
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
         )) {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -17,18 +17,30 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
-        // Log request for debugging
-        print('Request: ${options.method} ${options.uri}');
         return handler.next(options);
       },
       onResponse: (response, handler) {
-        print('Response: ${response.statusCode} ${response.data}');
         return handler.next(response);
       },
-      onError: (DioException e, handler) {
-        print('Error: ${e.type} - ${e.message}');
+      onError: (DioException e, handler) async {
+        // Tự động refresh token khi nhận 401
         if (e.response?.statusCode == 401) {
-          _tokenService.clearToken();
+          final refreshed = await _tryRefreshToken();
+          if (refreshed) {
+            // Retry request gốc với token mới
+            final token = await _tokenService.getToken();
+            final opts = e.requestOptions;
+            opts.headers['Authorization'] = 'Bearer $token';
+            try {
+              final retryResponse = await _dio.fetch(opts);
+              return handler.resolve(retryResponse);
+            } catch (_) {
+              // Retry thất bại → xoá session
+              await _tokenService.clearToken();
+            }
+          } else {
+            await _tokenService.clearToken();
+          }
         }
         return handler.next(e);
       },
@@ -36,4 +48,47 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  /// Public — dùng cho SplashPage khi cần refresh thủ công.
+  Future<bool> tryRefreshToken() => _tryRefreshToken();
+
+  /// Gọi /api/auth/refresh để lấy access token mới.
+  /// Trả về true nếu thành công.
+  Future<bool> _tryRefreshToken() async {
+    final refreshToken = await _tokenService.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return false;
+
+    try {
+      // Dùng Dio riêng để tránh vòng lặp interceptor
+      final plainDio = Dio(BaseOptions(
+        baseUrl: _dio.options.baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+      ));
+
+      final response = await plainDio.post(
+        '/api/auth/refresh',
+        data: {'refresh_token': refreshToken},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final newAccess  = response.data['access_token']  as String?;
+        final newRefresh = response.data['refresh_token'] as String?;
+        final user = response.data['user'] as Map<String, dynamic>?;
+
+        if (newAccess != null) {
+          await _tokenService.saveSession(
+            accessToken:  newAccess,
+            refreshToken: newRefresh ?? refreshToken,
+            role:         user?['role']?.toString() ?? '',
+            branchId:     user?['branch_id']?.toString(),
+            phone:        user?['phone']?.toString(),
+            fullName:     user?['full_name']?.toString(),
+          );
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
 }

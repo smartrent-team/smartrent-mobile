@@ -212,14 +212,10 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
                     const Text('Vị trí sự cố', style: TextStyle(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 2),
                     Text(
-                      issue.roomName ?? 'N/A',
+                      issue.roomName ?? 'Chưa xác định',
                       style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      'Tầng ${issue.floor ?? 'N/A'}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
                 ),

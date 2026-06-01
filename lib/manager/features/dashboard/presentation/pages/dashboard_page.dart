@@ -760,7 +760,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Row(
                     children: [
                       Text(
-                        ticket.roomName ?? 'N/A',
+                        ticket.roomName ?? 'Chưa xác định',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const SizedBox(width: 8),
@@ -828,7 +828,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ticket,
           '#T-${ticket.id}',
           displayTitle,
-          ticket.roomName ?? 'N/A',
+          ticket.roomName ?? 'Chưa xác định',
           _timeAgo(ticket.createdAt),
           statusLabel,
           statusColor,
