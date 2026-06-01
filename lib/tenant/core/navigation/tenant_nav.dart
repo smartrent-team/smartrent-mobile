@@ -26,7 +26,7 @@ class _TenantNavState extends State<TenantNav> {
     _screens = [
       const TenantHomePage(showBottomNav: false),
       const TenantOrderPage(showBottomNav: false),
-      const RepairPage(),
+      const RepairPage(showBottomNav: false),
       const MeterComparisonPage(),
       const ProfilePage(),
     ];
