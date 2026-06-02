@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/core/state/tenant_notification_state.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
@@ -16,6 +17,7 @@ class TenantNav extends StatefulWidget {
 
 class _TenantNavState extends State<TenantNav> {
   int _currentIndex = 0;
+  late final TenantNotificationNotifier _notificationNotifier;
 
   // Use IndexedStack to keep the state of each screen
   late final List<Widget> _screens;
@@ -23,6 +25,7 @@ class _TenantNavState extends State<TenantNav> {
   @override
   void initState() {
     super.initState();
+    _notificationNotifier = TenantNotificationNotifier();
     _screens = [
       const TenantHomePage(showBottomNav: false),
       const TenantOrderPage(showBottomNav: false),
@@ -33,66 +36,67 @@ class _TenantNavState extends State<TenantNav> {
   }
 
   @override
+  void dispose() {
+    _notificationNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final offset = Tween<Offset>(
-            begin: const Offset(0.03, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(position: offset, child: child),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: _screens[_currentIndex],
+    return TenantNotificationScope(
+      notifier: _notificationNotifier,
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
         ),
+        bottomNavigationBar: _buildBottomNav(),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
   Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, 'Trang chủ', Icons.home_outlined, Icons.home),
-              _buildNavItem(1, 'Hóa đơn', Icons.description_outlined, Icons.description),
-              _buildNavItem(2, 'Sửa chữa', Icons.build_outlined, Icons.build),
-              _buildNavItem(3, 'AI Đối chiếu', Icons.analytics_outlined, Icons.analytics, hasBadge: true),
-              _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded, Icons.person),
+    return ValueListenableBuilder<int>(
+      valueListenable: _notificationNotifier,
+      builder: (context, unreadCount, _) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
             ],
           ),
-        ),
-      ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, 'Trang chủ', Icons.home_outlined, Icons.home),
+                  _buildNavItem(1, 'Hóa đơn', Icons.description_outlined, Icons.description),
+                  _buildNavItem(2, 'Sửa chữa', Icons.build_outlined, Icons.build),
+                  _buildNavItem(3, 'AI Đối chiếu', Icons.analytics_outlined, Icons.analytics,
+                      badgeCount: unreadCount),
+                  _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded, Icons.person),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildNavItem(int index, String label, IconData icon, IconData activeIcon, {bool hasBadge = false}) {
+  Widget _buildNavItem(int index, String label, IconData icon, IconData activeIcon,
+      {int badgeCount = 0}) {
     final bool isActive = _currentIndex == index;
 
     return InkWell(
@@ -116,16 +120,25 @@ class _TenantNavState extends State<TenantNav> {
                   color: isActive ? TenantColors.primaryGreen : Colors.grey[400],
                   size: 24,
                 ),
-                if (hasBadge)
+                if (badgeCount > 0)
                   Positioned(
-                    right: -2,
-                    top: -2,
+                    right: -4,
+                    top: -4,
                     child: Container(
-                      width: 8,
-                      height: 8,
+                      padding: const EdgeInsets.all(2),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       decoration: const BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

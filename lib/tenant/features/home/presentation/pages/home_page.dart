@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
@@ -7,13 +8,14 @@ import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/orde
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/contract_page.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
-import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/profile_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/features/home/data/services/home_service.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class TenantHomePage extends StatefulWidget {
-  final bool showBottomNav;
-  const TenantHomePage({super.key, this.showBottomNav = true});
+  const TenantHomePage({super.key, bool showBottomNav = false});
 
   @override
   State<TenantHomePage> createState() => _TenantHomePageState();
@@ -22,8 +24,8 @@ class TenantHomePage extends StatefulWidget {
 class _TenantHomePageState extends State<TenantHomePage> {
   final TenantInvoiceService _invoiceService = TenantInvoiceService();
   final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+  final TokenService _tokenService = TokenService();
 
-  int _currentIndex = 0;
   bool _isBillExpanded = false;
   TenantInvoice? _unpaidInvoice;
 
@@ -52,6 +54,10 @@ class _TenantHomePageState extends State<TenantHomePage> {
           setState(() => _unpaidInvoice = unpaid.isNotEmpty ? unpaid.first : null);
         }
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+      }
     } catch (_) {}
   }
 
@@ -70,6 +76,15 @@ class _TenantHomePageState extends State<TenantHomePage> {
   bool _isLoading = true;
   Map<String, dynamic>? _profileData;
   String? _errorMessage;
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
 
   Future<void> _loadData() async {
     if (!mounted) return;
@@ -91,6 +106,16 @@ class _TenantHomePageState extends State<TenantHomePage> {
             _errorMessage = response.data?['error'] ?? 'Không thể tải dữ liệu';
           });
         }
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -195,7 +220,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                     ],
                   ),
       ),
-      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
+      bottomNavigationBar: null,
     );
   }
 
@@ -262,23 +287,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       ),
                     ],
                   ),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
+                  const TenantNotifBell(),
                 ],
               ),
               const SizedBox(height: 24),
@@ -1044,93 +1053,6 @@ class _TenantHomePageState extends State<TenantHomePage> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, -2))
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, 'Trang chủ', Icons.home_outlined),
-            _buildNavItem(1, 'Hóa đơn', Icons.description_outlined,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const TenantOrderPage()))),
-            _buildNavItem(2, 'Sửa chữa', Icons.build_outlined,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const RepairPage()))),
-            _buildNavItem(3, 'Thông báo',
-                Icons.notifications_none_outlined, hasBadge: true),
-            _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ProfilePage()))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, String label, IconData icon,
-      {bool hasBadge = false, VoidCallback? onTap}) {
-    final bool isActive = _currentIndex == index;
-    return InkWell(
-      onTap: onTap ??
-          () => setState(() => _currentIndex = index),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? TenantColors.bgMint : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon,
-                    color: isActive
-                        ? TenantColors.primaryGreen
-                        : Colors.grey[400],
-                    size: 24),
-                if (hasBadge)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: isActive ? TenantColors.primaryGreen : Colors.grey[400],
-                fontSize: 10,
-                fontWeight:
-                    isActive ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

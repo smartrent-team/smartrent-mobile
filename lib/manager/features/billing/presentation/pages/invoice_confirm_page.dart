@@ -120,10 +120,12 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
 
         if (roomUtil != null) {
           _latestUtility = roomUtil;
+          // electricOld = chỉ số đầu kỳ (electric_old trong log)
+          // prevElectric = chỉ số cuối kỳ (electric_new trong log) → dùng làm electricNew hóa đơn
           _electricOld = (roomUtil['electricOld'] as num?)?.toDouble() ?? 0.0;
-          _electricNew = (roomUtil['prevElectric'] as num?)?.toDouble() ?? 0.0; // prevElectric is electric_new on server
+          _electricNew = (roomUtil['prevElectric'] as num?)?.toDouble() ?? 0.0;
           _waterOld = (roomUtil['waterOld'] as num?)?.toDouble() ?? 0.0;
-          _waterNew = (roomUtil['prevWater'] as num?)?.toDouble() ?? 0.0;       // prevWater is water_new on server
+          _waterNew = (roomUtil['prevWater'] as num?)?.toDouble() ?? 0.0;
           _selectedMonth = roomUtil['lastMonth'] ?? DateTime.now().month;
           _selectedYear = roomUtil['lastYear'] ?? DateTime.now().year;
 

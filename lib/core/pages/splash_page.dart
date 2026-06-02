@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_shell_page.dart';
@@ -80,7 +81,7 @@ class _SplashPageState extends State<SplashPage>
     _slideController.forward();
 
     // Check session sau khi animation chạy xong
-    Future.delayed(const Duration(milliseconds: 1600), _checkSession);
+    Future.delayed(const Duration(milliseconds: 900), _checkSession);
   }
 
   @override
@@ -95,43 +96,34 @@ class _SplashPageState extends State<SplashPage>
   // ── Auth logic ─────────────────────────────────────────────────────────────
 
   Future<void> _checkSession() async {
-    final accessToken  = await _tokenService.getToken();
+    final accessToken = await _tokenService.getToken();
     final refreshToken = await _tokenService.getRefreshToken();
-    final savedRole    = await _tokenService.getRole();
 
-    if ((accessToken == null || accessToken.isEmpty) &&
-        (refreshToken == null || refreshToken.isEmpty)) {
+    final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+
+    if (!hasAccessToken && !hasRefreshToken) {
       _goLogin();
       return;
     }
 
-    if (savedRole != null && savedRole.isNotEmpty) {
-      _navigateByRole(savedRole);
-      _silentVerify();
-      return;
-    }
-
-    await _fetchRoleAndNavigate(accessToken, refreshToken);
-  }
-
-  Future<void> _silentVerify() async {
-    try {
-      final response = await _apiClient.dio.get('/api/auth/me');
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        final role = response.data['user']?['role'] as String?;
-        if (role != null) await _tokenService.saveRole(role);
-      }
-    } catch (_) {
-      final refresh = await _tokenService.getRefreshToken();
-      if (refresh == null || refresh.isEmpty) {
+    final accessNeedsRefresh = _tokenService.isTokenExpiringSoon(accessToken);
+    if (accessNeedsRefresh) {
+      final refreshExpired = _tokenService.isTokenExpired(refreshToken);
+      if (!hasRefreshToken || refreshExpired) {
         await _tokenService.clearToken();
         _goLogin();
+        return;
+      }
+
+      final refreshed = await _apiClient.tryRefreshToken();
+      if (!refreshed) {
+        await _tokenService.clearToken();
+        _goLogin();
+        return;
       }
     }
-  }
 
-  Future<void> _fetchRoleAndNavigate(
-      String? accessToken, String? refreshToken) async {
     try {
       final response = await _apiClient.dio.get('/api/auth/me');
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -140,13 +132,46 @@ class _SplashPageState extends State<SplashPage>
         _navigateByRole(role);
         return;
       }
-    } catch (_) {}
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        final canRefresh = hasRefreshToken && !_tokenService.isTokenExpired(refreshToken);
+        if (canRefresh) {
+          final refreshed = await _apiClient.tryRefreshToken();
+          if (refreshed) {
+            try {
+              final response = await _apiClient.dio.get('/api/auth/me');
+              if (response.statusCode == 200 && response.data['success'] == true) {
+                final role = response.data['user']?['role'] as String?;
+                if (role != null) await _tokenService.saveRole(role);
+                _navigateByRole(role);
+                return;
+              }
+            } on DioException catch (retryError) {
+              if (retryError.response?.statusCode != 401) {
+                final cachedRole = await _tokenService.getRole();
+                if (cachedRole != null && cachedRole.isNotEmpty) {
+                  _navigateByRole(cachedRole);
+                  return;
+                }
+              }
+            }
+          }
+        }
 
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      final refreshed = await _apiClient.tryRefreshToken();
-      if (refreshed) {
-        final role = await _tokenService.getRole();
-        _navigateByRole(role);
+        await _tokenService.clearToken();
+        _goLogin();
+        return;
+      }
+
+      final cachedRole = await _tokenService.getRole();
+      if (cachedRole != null && cachedRole.isNotEmpty) {
+        _navigateByRole(cachedRole);
+        return;
+      }
+    } catch (_) {
+      final cachedRole = await _tokenService.getRole();
+      if (cachedRole != null && cachedRole.isNotEmpty) {
+        _navigateByRole(cachedRole);
         return;
       }
     }

@@ -8,13 +8,11 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/rep
 import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_service.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/create_repair_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
-import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
-import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
-import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/profile_page.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 class RepairPage extends StatefulWidget {
-  final bool showBottomNav;
-  const RepairPage({super.key, this.showBottomNav = true});
+  const RepairPage({super.key, bool showBottomNav = false});
 
   @override
   State<RepairPage> createState() => _RepairPageState();
@@ -22,11 +20,14 @@ class RepairPage extends StatefulWidget {
 
 class _RepairPageState extends State<RepairPage> {
   final RepairService _repairService = RepairService();
+  final TenantProfileService _profileService = TenantProfileService();
   
   List<RepairRequest> _requests = [];
   bool _isLoading = true;
   int _roomId = 1;
   int _tenantId = 5;
+  String _roomLabel = '';
+  String _branchLabel = '';
 
   int activeFilterIndex = 0;
   final List<String> filters = ["Tất cả", "Tiếp nhận", "Đang sửa", "Hoàn thành"];
@@ -35,6 +36,24 @@ class _RepairPageState extends State<RepairPage> {
   void initState() {
     super.initState();
     _loadData();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final res = await _profileService.getMyProfile();
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        final data = res.data['data'];
+        final roomCode = data?['room']?['room_code']?.toString() ?? '';
+        final branchName = data?['room']?['branch_name']?.toString() ?? '';
+        if (mounted) {
+          setState(() {
+            if (roomCode.isNotEmpty) _roomLabel = 'Phòng $roomCode';
+            if (branchName.isNotEmpty) _branchLabel = branchName;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
@@ -62,6 +81,11 @@ class _RepairPageState extends State<RepairPage> {
           }
           if (firstTicket['tenants'] != null && firstTicket['tenants']['id'] != null) {
             _tenantId = firstTicket['tenants']['id'];
+          }
+          // Lấy room_code để hiển thị trên header
+          final roomCode = firstTicket['rooms']?['room_code']?.toString() ?? '';
+          if (roomCode.isNotEmpty) {
+            setState(() => _roomLabel = 'Phòng $roomCode');
           }
         } else {
           // If no tickets exist, fetch tenant profile details to discover correct tenantId
@@ -226,7 +250,7 @@ class _RepairPageState extends State<RepairPage> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
+      bottomNavigationBar: null,
     );
   }
 
@@ -263,7 +287,9 @@ class _RepairPageState extends State<RepairPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Phòng P203 · Nhà trọ Phúc An",
+                    [_roomLabel, _branchLabel]
+                        .where((s) => s.isNotEmpty)
+                        .join(' · '),
                     style: GoogleFonts.outfit(
                       color: Colors.white60,
                       fontSize: 14,
@@ -280,17 +306,9 @@ class _RepairPageState extends State<RepairPage> {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 24),
-              ),
+              const TenantNotifBell(),
             ],
           ),
-          const SizedBox(height: 30),
           Row(
             children: [
               Expanded(
@@ -448,97 +466,6 @@ class _RepairPageState extends State<RepairPage> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: filtered.map((req) => RepairCard(request: req)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, -2))
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, 'Trang chủ', Icons.home_outlined,
-                onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const TenantHomePage()))),
-            _buildNavItem(1, 'Hóa đơn', Icons.description_outlined,
-                onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const TenantOrderPage()))),
-            _buildNavItem(2, 'Sửa chữa', Icons.build_outlined),
-            _buildNavItem(3, 'Thông báo',
-                Icons.notifications_none_outlined, hasBadge: true),
-            _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded,
-                onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ProfilePage()))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, String label, IconData icon,
-      {bool hasBadge = false, VoidCallback? onTap}) {
-    final bool active = index == 2; // Sửa chữa is index 2
-    return InkWell(
-      onTap: onTap ?? () {},
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? TenantColors.bgMint : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon,
-                    color: active
-                        ? TenantColors.primaryGreen
-                        : Colors.grey[400],
-                    size: 24),
-                if (hasBadge)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: active ? TenantColors.primaryGreen : Colors.grey[400],
-                fontSize: 10,
-                fontWeight: active ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

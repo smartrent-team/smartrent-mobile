@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
@@ -6,6 +7,8 @@ import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class RoomListPage extends StatefulWidget {
   final bool embedInShell;
@@ -18,6 +21,7 @@ class RoomListPage extends StatefulWidget {
 
 class _RoomListPageState extends State<RoomListPage> {
   final RoomService _roomService = RoomService();
+  final TokenService _tokenService = TokenService();
   List<dynamic> _rooms = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -55,12 +59,30 @@ class _RoomListPageState extends State<RoomListPage> {
           _isLoading = false;
         });
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      setState(() {
+        _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   String _getStatusText(String status) {

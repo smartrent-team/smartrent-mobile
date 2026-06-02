@@ -8,6 +8,8 @@ import 'package:smartrent_mobile/core/lottie/lottie_assets.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/meter_comparison_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/domain/models/utility_analysis.dart';
+import 'package:smartrent_mobile/tenant/core/state/tenant_notification_state.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 const _electricOrange = Color(0xFFFF9800);
 const _electricOrangeLight = Color(0xFFFFF3E0);
@@ -32,15 +34,12 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
   late final AnimationController _barAnimCtrl;
   late final Animation<double> _barAnim;
   AnimationController? _aiLoadingCtrl;
-  bool _showNotificationPanel = false;
   bool _isLoading = true;
   String? _errorMessage;
   UtilityAnalysis? _analysis;
   String _roomLabel = '';
-  int _unreadCount = 0;
   List<_MonthData> _electricData = [];
   List<_MonthData> _waterData = [];
-  List<_NotifItem> _notifications = [];
 
   AnimationController get _aiLoadingAnim {
     _aiLoadingCtrl ??= AnimationController(
@@ -48,12 +47,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       duration: const Duration(milliseconds: 2400),
     );
     return _aiLoadingCtrl!;
-  }
-
-  void _startAiLoadingAnim() {
-    if (!_aiLoadingAnim.isAnimating) {
-      _aiLoadingAnim.repeat();
-    }
   }
 
   void _stopAiLoadingAnim() {
@@ -68,7 +61,11 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       duration: const Duration(milliseconds: 900),
     );
     _barAnim = CurvedAnimation(parent: _barAnimCtrl, curve: Curves.easeOutCubic);
-    _startAiLoadingAnim();
+    // Khởi tạo sớm để tránh null crash khi IndexedStack mount tất cả screens
+    _aiLoadingCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
     _loadAnalysis();
   }
 
@@ -77,7 +74,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       _isLoading = true;
       _errorMessage = null;
     });
-    _startAiLoadingAnim();
 
     try {
       final profileRes = await _profileService.getMyProfile();
@@ -107,13 +103,30 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       final analysis = UtilityAnalysis.fromJson(data);
 
       if (!mounted) return;
+      final notifItems = _buildNotifications(analysis);
+      final unread = notifItems.where((n) => n.unread).length;
+
+      // Lưu vào store dùng chung + cập nhật badge
+      TenantNotifStore.update(notifItems
+          .map((n) => TenantNotifItem(
+                icon: n.icon,
+                iconColor: n.iconColor,
+                bg: n.bg,
+                title: n.title,
+                body: n.body,
+                time: n.time,
+                unread: n.unread,
+              ))
+          .toList());
+      try {
+        TenantNotificationScope.of(context).value = unread;
+      } catch (_) {}
+
       setState(() {
         _analysis = analysis;
         _roomLabel = 'Phòng $roomCode';
         _electricData = _mapHistory(analysis.electric.history);
         _waterData = _mapHistory(analysis.water.history);
-        _notifications = _buildNotifications(analysis);
-        _unreadCount = _notifications.where((n) => n.unread).length;
         _isLoading = false;
       });
       _stopAiLoadingAnim();
@@ -309,22 +322,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
               ),
             ],
           ),
-
-          // Notification overlay
-          if (_showNotificationPanel) ...[
-            // backdrop
-            GestureDetector(
-              onTap: () => setState(() => _showNotificationPanel = false),
-              child: Container(color: Colors.black26),
-            ),
-            // panel
-            Positioned(
-              top: 80,
-              right: 12,
-              left: 40,
-              child: _buildNotificationPanel(),
-            ),
-          ],
         ],
       ),
     );
@@ -384,53 +381,8 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                   ],
                 ),
               ),
-              // Notification bell with badge
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showNotificationPanel = !_showNotificationPanel;
-                    if (_showNotificationPanel) _unreadCount = 0;
-                  });
-                },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const Icon(Icons.notifications_outlined,
-                          color: Colors.white, size: 22),
-                    ),
-                    if (_unreadCount > 0)
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$_unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              // Notification bell — dùng widget chung
+              const TenantNotifBell(),
             ],
           ),
           const SizedBox(height: 6),
@@ -1252,122 +1204,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     );
   }
 
-  // ── NOTIFICATION PANEL ─────────────────────────────────────────────────────
-  Widget _buildNotificationPanel() {
-    return Material(
-      elevation: 16,
-      borderRadius: BorderRadius.circular(20),
-      color: Colors.white,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              decoration: const BoxDecoration(
-                border:
-                    Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications_rounded,
-                      color: TenantColors.primaryGreen, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Thông báo',
-                      style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () =>
-                        setState(() => _showNotificationPanel = false),
-                    style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(40, 30)),
-                    child: Text('Đóng',
-                        style: GoogleFonts.outfit(
-                            color: TenantColors.primaryGreen,
-                            fontSize: 12)),
-                  ),
-                ],
-              ),
-            ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 340),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: _notifications
-                      .map((n) => _buildNotifTile(n))
-                      .toList(),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotifTile(_NotifItem n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5))),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration:
-                BoxDecoration(color: n.bg, shape: BoxShape.circle),
-            child: Icon(n.icon, color: n.iconColor, size: 16),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(n.title,
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    if (n.unread)
-                      Container(
-                        width: 7,
-                        height: 7,
-                        margin: const EdgeInsets.only(left: 6),
-                        decoration: const BoxDecoration(
-                            color: TenantColors.primaryGreen,
-                            shape: BoxShape.circle),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(n.body,
-                    style: GoogleFonts.outfit(
-                        color: TenantColors.textGrey, fontSize: 11),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(n.time,
-                    style: GoogleFonts.outfit(
-                        color: Colors.black26, fontSize: 10)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── DATA MODELS ────────────────────────────────────────────────────────────────

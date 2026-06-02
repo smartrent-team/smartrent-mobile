@@ -1,14 +1,14 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenService {
-  static const String _accessTokenKey  = 'auth_token';
+  static const String _accessTokenKey = 'auth_token';
   static const String _refreshTokenKey = 'refresh_token';
-  static const String _roleKey         = 'user_role';
-  static const String _branchIdKey     = 'managed_branch_id';
-  static const String _phoneKey        = 'user_phone';
-  static const String _fullNameKey     = 'user_full_name';
-
-  // ── Access token ──────────────────────────────────────────────────────────
+  static const String _roleKey = 'user_role';
+  static const String _branchIdKey = 'managed_branch_id';
+  static const String _phoneKey = 'user_phone';
+  static const String _fullNameKey = 'user_full_name';
 
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,8 +20,6 @@ class TokenService {
     return prefs.getString(_accessTokenKey);
   }
 
-  // ── Refresh token ─────────────────────────────────────────────────────────
-
   Future<void> saveRefreshToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_refreshTokenKey, token);
@@ -31,8 +29,6 @@ class TokenService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_refreshTokenKey);
   }
-
-  // ── Role ──────────────────────────────────────────────────────────────────
 
   Future<void> saveRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,8 +40,6 @@ class TokenService {
     return prefs.getString(_roleKey);
   }
 
-  // ── Branch ────────────────────────────────────────────────────────────────
-
   Future<void> saveBranchId(String branchId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_branchIdKey, branchId);
@@ -56,11 +50,9 @@ class TokenService {
     return prefs.getString(_branchIdKey);
   }
 
-  // ── User profile ──────────────────────────────────────────────────────────
-
   Future<void> saveUserProfile({String? phone, String? fullName}) async {
     final prefs = await SharedPreferences.getInstance();
-    if (phone != null)    await prefs.setString(_phoneKey, phone);
+    if (phone != null) await prefs.setString(_phoneKey, phone);
     if (fullName != null) await prefs.setString(_fullNameKey, fullName);
   }
 
@@ -74,7 +66,58 @@ class TokenService {
     return prefs.getString(_fullNameKey);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  DateTime? _getTokenExpiry(String? token) {
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      final remainder = payload.length % 4;
+      if (remainder != 0) {
+        payload = payload.padRight(payload.length + (4 - remainder), '=');
+      }
+
+      final decodedBytes = base64.decode(payload);
+      final decodedMap = json.decode(utf8.decode(decodedBytes));
+      final exp = decodedMap['exp'];
+
+      if (exp is int) {
+        return DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true)
+            .toLocal();
+      }
+
+      if (exp is String) {
+        final parsedExp = int.tryParse(exp);
+        if (parsedExp != null) {
+          return DateTime.fromMillisecondsSinceEpoch(parsedExp * 1000,
+                  isUtc: true)
+              .toLocal();
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  bool isTokenExpired(
+    String? token, {
+    Duration skew = const Duration(seconds: 30),
+  }) {
+    final expiry = _getTokenExpiry(token);
+    if (expiry == null) return true;
+    return DateTime.now().isAfter(expiry.subtract(skew));
+  }
+
+  bool isTokenExpiringSoon(
+    String? token, {
+    Duration threshold = const Duration(minutes: 1),
+  }) {
+    final expiry = _getTokenExpiry(token);
+    if (expiry == null) return true;
+    return DateTime.now().isAfter(expiry.subtract(threshold));
+  }
 
   /// Lưu toàn bộ session sau khi đăng nhập / refresh thành công.
   Future<void> saveSession({
@@ -105,9 +148,11 @@ class TokenService {
 
   /// Kiểm tra có session hợp lệ không (có cả access + refresh token).
   Future<bool> hasSession() async {
-    final access  = await getToken();
+    final access = await getToken();
     final refresh = await getRefreshToken();
-    return access != null && access.isNotEmpty &&
-           refresh != null && refresh.isNotEmpty;
+    return access != null &&
+        access.isNotEmpty &&
+        refresh != null &&
+        refresh.isNotEmpty;
   }
 }
