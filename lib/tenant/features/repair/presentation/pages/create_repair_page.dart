@@ -56,6 +56,21 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
 
+      // Nếu chưa có kết quả phân tích AI, thực hiện phân tích ngay trước khi gửi
+      if (_aiPriorityReason == null) {
+        try {
+          final result = await _aiService.analyzePriority(
+            title: title,
+            description: description,
+            imageBytes: _uploadedImageBytes,
+          );
+          _selectedPriority = result.priority;
+          _aiPriorityReason = result.reason;
+        } catch (e) {
+          debugPrint('Lỗi tự động phân tích ưu tiên trước khi gửi: $e');
+        }
+      }
+
       final List<String> images = _uploadedImageUrl != null ? [_uploadedImageUrl!] : [];
 
       final response = await _repairService.createTicket(
@@ -634,11 +649,18 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                     _imageActionButton(
                       icon: Icons.delete_outline,
                       tooltip: 'Xóa ảnh',
-                      onTap: () => setState(() {
-                        _uploadedImageUrl = null;
-                        _uploadedImageBytes = null;
-                        _aiPriorityReason = null;
-                      }),
+                      onTap: () {
+                        setState(() {
+                          _uploadedImageUrl = null;
+                          _uploadedImageBytes = null;
+                          _aiPriorityReason = null;
+                          _selectedPriority = 'medium';
+                        });
+                        if (_titleController.text.trim().isNotEmpty &&
+                            _descriptionController.text.trim().isNotEmpty) {
+                          _analyzePriority();
+                        }
+                      },
                       isDestructive: true,
                     ),
                   ],
@@ -740,6 +762,11 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
         _uploadedImageBytes = bytes;
         _isUploadingImage = false;
       });
+
+      if (_titleController.text.trim().isNotEmpty &&
+          _descriptionController.text.trim().isNotEmpty) {
+        _analyzePriority();
+      }
     } catch (e) {
       setState(() => _isUploadingImage = false);
       if (mounted) {

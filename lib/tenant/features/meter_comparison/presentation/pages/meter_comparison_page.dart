@@ -40,6 +40,7 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
   String _roomLabel = '';
   List<_MonthData> _electricData = [];
   List<_MonthData> _waterData = [];
+  bool _isTriggeringAi = false;
 
   AnimationController get _aiLoadingAnim {
     _aiLoadingCtrl ??= AnimationController(
@@ -267,6 +268,9 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                                   if (_analysis?.aiAnalysis?.hasContent == true) ...[
                                     const SizedBox(height: 12),
                                     _buildAiInsightCard(_analysis!.aiAnalysis!),
+                                  ] else if (_analysis != null && _analysis!.warningCount > 0) ...[
+                                    const SizedBox(height: 12),
+                                    _buildTriggerAiCard(),
                                   ],
                                   const SizedBox(height: 20),
                                   _buildMeterCard(
@@ -1091,6 +1095,124 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
         ],
       ),
     );
+  }
+
+  Widget _buildTriggerAiCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: TenantColors.bgMint.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TenantColors.lightGreenBorder.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  color: TenantColors.primaryGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Phát hiện lượng dùng tăng cao. Bạn có muốn dùng AI để phân tích nguyên nhân và nhận khuyến nghị không?',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: TenantColors.textCharcoal,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: ElevatedButton.icon(
+              onPressed: _isTriggeringAi ? null : _triggerAiAnalysis,
+              icon: _isTriggeringAi
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.psychology_rounded, size: 18),
+              label: Text(
+                _isTriggeringAi ? 'AI đang phân tích...' : 'Phân tích bằng AI',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TenantColors.primaryGreen,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _triggerAiAnalysis() async {
+    if (_analysis == null) return;
+    
+    setState(() {
+      _isTriggeringAi = true;
+    });
+
+    try {
+      final profileRes = await _profileService.getMyProfile();
+      if (profileRes.statusCode != 200 || profileRes.data['success'] != true) {
+        throw Exception(profileRes.data['error'] ?? 'Không lấy được thông tin phòng');
+      }
+
+      final room = profileRes.data['data']?['room'] as Map<String, dynamic>?;
+      if (room == null || room['id'] == null) {
+        throw Exception('Tài khoản chưa được gán phòng thuê');
+      }
+
+      final roomId = room['id'] as int;
+      
+      final response = await _analysisService.triggerAiAnalysis(roomId);
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        await _loadAnalysis();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('AI đã hoàn tất phân tích chỉ số!', style: GoogleFonts.outfit()),
+              backgroundColor: TenantColors.primaryGreen,
+            ),
+          );
+        }
+      } else {
+        throw Exception(response.data['error'] ?? 'Lỗi khi gọi AI phân tích');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi phân tích AI: ${e.toString().replaceFirst('Exception: ', '')}', style: GoogleFonts.outfit()),
+            backgroundColor: TenantColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTriggeringAi = false;
+        });
+      }
+    }
   }
 
   Widget _buildAiSectionTitle({required IconData icon, required String title}) {

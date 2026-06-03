@@ -7,4 +7,8 @@ class MeterComparisonService {
   Future<Response> analyzeUtility(int roomId) async {
     return _aiClient.dio.get('/utility/analyze/$roomId');
   }
+
+  Future<Response> triggerAiAnalysis(int roomId) async {
+    return _aiClient.dio.post('/utility/analyze/$roomId/trigger');
+  }
 }
