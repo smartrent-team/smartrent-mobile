@@ -12,3 +12,4 @@ export 'features/repair/domain/models/repair_request.dart';
 export 'features/repair/presentation/pages/repair_page.dart';
 export 'features/profile/presentation/pages/profile_page.dart';
 export 'features/meter_comparison/presentation/pages/meter_comparison_page.dart';
+export 'features/notification/presentation/pages/tenant_notification_page.dart';

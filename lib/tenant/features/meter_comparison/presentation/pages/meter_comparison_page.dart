@@ -130,6 +130,22 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
         _waterData = _mapHistory(analysis.water.history);
         _isLoading = false;
       });
+      final analysisTitle = analysis.warnings.isNotEmpty
+          ? 'AI phát hiện bất thường ở $roomCode'
+          : 'AI đã phân tích chỉ số phòng $roomCode';
+      final analysisBody = analysis.aiAnalysis?.summary.isNotEmpty == true
+          ? analysis.aiAnalysis!.summary
+          : (analysis.warnings.isNotEmpty
+              ? analysis.warnings.take(2).join(' · ')
+              : 'Kết quả phân tích điện nước tháng ${analysis.month}/${analysis.year} hiện ổn định.');
+
+      try {
+        await _analysisService.saveAnalysisNotification(
+          title: analysisTitle,
+          body: analysisBody,
+        );
+      } catch (_) {}
+
       _stopAiLoadingAnim();
       _barAnimCtrl.forward(from: 0);
     } on DioException catch (e) {

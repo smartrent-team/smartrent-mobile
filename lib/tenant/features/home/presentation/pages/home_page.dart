@@ -11,6 +11,7 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repai
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/features/home/data/services/home_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
+import 'package:smartrent_mobile/tenant/features/notification/presentation/pages/tenant_notification_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
@@ -343,18 +344,24 @@ class _TenantHomePageState extends State<TenantHomePage> {
 
   // ── CONTRACT CARD ────────────────────────────────────────────────────────
   Widget _buildContractCard() {
-    final activeContract = _profileData?['active_contract'];
+    final activeContract = _profileData?['active_contract'] as Map<String, dynamic>?;
+    final contracts = (_profileData?['contracts'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const [];
+    final contractForDisplay = activeContract ?? (contracts.isNotEmpty ? contracts.first : null);
     String remainingDays = '-- ngày';
-    if (activeContract != null && activeContract['end_date'] != null) {
+    if (contractForDisplay != null && contractForDisplay['end_date'] != null) {
       try {
-        final endDate = DateTime.parse(activeContract['end_date']);
+        final endDate = DateTime.parse(contractForDisplay['end_date'].toString());
         final now = DateTime.now();
-        final difference = endDate.difference(now).inDays;
+        final diffMs = endDate.difference(now).inMilliseconds;
+        final difference = diffMs > 0 ? (diffMs / (1000 * 60 * 60 * 24)).ceil() : 0;
         remainingDays = difference > 0 ? '$difference ngày' : 'Hết hạn';
       } catch (e) {
         remainingDays = 'Lỗi ngày';
       }
-    } else if (activeContract != null) {
+    } else if (contractForDisplay != null) {
       remainingDays = 'Vô thời hạn';
     }
 
@@ -957,7 +964,14 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   color: Colors.black87),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TenantNotificationPage(),
+                  ),
+                );
+              },
               child: const Text(
                 'Tất cả >',
                 style: TextStyle(
