@@ -1,6 +1,5 @@
 import 'dart:convert';
-
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenService {
   static const String _accessTokenKey = 'auth_token';
@@ -10,60 +9,51 @@ class TokenService {
   static const String _phoneKey = 'user_phone';
   static const String _fullNameKey = 'user_full_name';
 
+  final _storage = const FlutterSecureStorage();
+
   Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_accessTokenKey, token);
+    await _storage.write(key: _accessTokenKey, value: token);
   }
 
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_accessTokenKey);
+    return await _storage.read(key: _accessTokenKey);
   }
 
   Future<void> saveRefreshToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_refreshTokenKey, token);
+    await _storage.write(key: _refreshTokenKey, value: token);
   }
 
   Future<String?> getRefreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_refreshTokenKey);
+    return await _storage.read(key: _refreshTokenKey);
   }
 
   Future<void> saveRole(String role) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_roleKey, role);
+    await _storage.write(key: _roleKey, value: role);
   }
 
   Future<String?> getRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_roleKey);
+    return await _storage.read(key: _roleKey);
   }
 
   Future<void> saveBranchId(String branchId) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_branchIdKey, branchId);
+    await _storage.write(key: _branchIdKey, value: branchId);
   }
 
   Future<String?> getBranchId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_branchIdKey);
+    return await _storage.read(key: _branchIdKey);
   }
 
   Future<void> saveUserProfile({String? phone, String? fullName}) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (phone != null) await prefs.setString(_phoneKey, phone);
-    if (fullName != null) await prefs.setString(_fullNameKey, fullName);
+    if (phone != null) await _storage.write(key: _phoneKey, value: phone);
+    if (fullName != null) await _storage.write(key: _fullNameKey, value: fullName);
   }
 
   Future<String?> getPhone() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_phoneKey);
+    return await _storage.read(key: _phoneKey);
   }
 
   Future<String?> getFullName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_fullNameKey);
+    return await _storage.read(key: _fullNameKey);
   }
 
   DateTime? _getTokenExpiry(String? token) {
@@ -137,13 +127,12 @@ class TokenService {
 
   /// Xoá toàn bộ session (logout).
   Future<void> clearToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
-    await prefs.remove(_roleKey);
-    await prefs.remove(_branchIdKey);
-    await prefs.remove(_phoneKey);
-    await prefs.remove(_fullNameKey);
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _roleKey);
+    await _storage.delete(key: _branchIdKey);
+    await _storage.delete(key: _phoneKey);
+    await _storage.delete(key: _fullNameKey);
   }
 
   /// Kiểm tra có session hợp lệ không (có cả access + refresh token).
