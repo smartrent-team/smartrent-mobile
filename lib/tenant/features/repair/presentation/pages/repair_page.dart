@@ -230,6 +230,8 @@ class _RepairPageState extends State<RepairPage> {
               builder: (context) => CreateRepairPage(
                 roomId: _roomId,
                 tenantId: _tenantId,
+                roomCode: _roomLabel,
+                branchName: _branchLabel,
               ),
             ),
           );

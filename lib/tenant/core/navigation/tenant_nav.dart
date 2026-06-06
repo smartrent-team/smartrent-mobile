@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/core/state/tenant_notification_state.dart';
+import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
@@ -26,6 +27,11 @@ class _TenantNavState extends State<TenantNav> {
   void initState() {
     super.initState();
     _notificationNotifier = TenantNotificationNotifier();
+    Future.microtask(() {
+      TenantNotificationService.instance.bootstrap(
+        notifier: _notificationNotifier,
+      );
+    });
     _screens = [
       const TenantHomePage(showBottomNav: false),
       const TenantOrderPage(showBottomNav: false),

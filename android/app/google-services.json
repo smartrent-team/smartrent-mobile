@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "869684477540",
+    "project_id": "smartrent-7af23",
+    "storage_bucket": "smartrent-7af23.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:869684477540:android:497d032616756595da6971",
+        "android_client_info": {
+          "package_name": "com.example.smartrent_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3WzG49z5cRAPASaBB9D-4gS1exiiIweo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

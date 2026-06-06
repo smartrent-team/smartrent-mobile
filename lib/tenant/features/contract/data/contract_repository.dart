@@ -24,21 +24,25 @@ class ContractRepository {
   Future<ContractModel?> fetchContractByTenantId(int tenantId) async {
     try {
       final response = await _contractService.getContractByTenantId(tenantId);
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        final data = response.data['data'];
-        if (data is Map<String, dynamic>) {
-          return ContractModel.fromJson(data);
+      final data = response.data;
+      if (response.statusCode == 200 && data is Map && data['success'] == true) {
+        final payload = data['data'];
+        if (payload is Map<String, dynamic>) {
+          return ContractModel.fromJson(payload);
         }
         return null;
       }
-      final message = response.data?['error']?.toString() ??
-          response.data?['message']?.toString() ??
-          'Không thể tải hợp đồng';
+      final message = data is Map
+          ? data['error']?.toString() ?? data['message']?.toString() ?? 'Không thể tải hợp đồng'
+          : data?.toString() ?? 'Không thể tải hợp đồng';
       throw ContractRepositoryException(message);
     } on DioException catch (e) {
-      final message = e.response?.data?['error']?.toString() ??
-          e.response?.data?['message']?.toString() ??
-          'Lỗi kết nối: ${e.message}';
+      final errorData = e.response?.data;
+      final message = errorData is Map
+          ? errorData['error']?.toString() ??
+              errorData['message']?.toString() ??
+              'Lỗi kết nối: ${e.message}'
+          : errorData?.toString() ?? 'Lỗi kết nối: ${e.message}';
       throw ContractRepositoryException(message);
     }
   }

@@ -8,3 +8,4 @@ export 'core/widgets/manager_app_header.dart';
 export 'features/auth/presentation/pages/login_page.dart';
 export 'features/auth/presentation/pages/otp_page.dart';
 export 'features/dashboard/presentation/pages/dashboard_page.dart';
+export 'features/notification/presentation/pages/manager_notification_page.dart';

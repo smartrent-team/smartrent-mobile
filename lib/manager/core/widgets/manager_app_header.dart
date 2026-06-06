@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
+import 'package:smartrent_mobile/manager/features/notification/presentation/pages/manager_notification_page.dart';
 
-/// Định dạng ngày hiển thị trên header manager (tiếng Việt).
 class ManagerHeaderDate {
   static String format([DateTime? date]) {
     return DateFormat('EEEE, d MMMM, yyyy', 'vi_VN').format(date ?? DateTime.now());
   }
 }
 
-/// Header xanh dùng chung: SĐT đăng nhập + ngày giờ thực.
 class ManagerAppHeader extends StatefulWidget {
   final bool showNotificationDot;
+  final int unreadNotificationCount;
 
   const ManagerAppHeader({
     super.key,
     this.showNotificationDot = true,
+    this.unreadNotificationCount = 0,
   });
 
-  /// Chuẩn hóa SĐT lưu/hiển thị (vd. +84979... → 0979...).
   static String formatPhoneDisplay(String? phone) {
     if (phone == null || phone.isEmpty) return '';
     final p = phone.trim();
@@ -63,8 +63,13 @@ class _ManagerAppHeaderState extends State<ManagerAppHeader> {
   @override
   Widget build(BuildContext context) {
     final greeting = _displayPhone.isNotEmpty
-        ? 'Chào, $_displayPhone 👋'
-        : 'Chào, Quản lý 👋';
+        ? 'Chào, $_displayPhone'
+        : 'Chào, Quản lý';
+    final hasNotificationCount = widget.showNotificationDot && widget.unreadNotificationCount > 0;
+    final showSimpleDot = widget.showNotificationDot && widget.unreadNotificationCount == 0;
+    final badgeText = widget.unreadNotificationCount > 99
+        ? '99+'
+        : widget.unreadNotificationCount.toString();
 
     return Container(
       width: double.infinity,
@@ -137,10 +142,41 @@ class _ManagerAppHeaderState extends State<ManagerAppHeader> {
                                 color: Colors.white,
                                 size: 22,
                               ),
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  AppPageRoutes.slide(
+                                    const ManagerNotificationPage(),
+                                    name: 'manager_notifications',
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                          if (widget.showNotificationDot)
+                          if (hasNotificationCount)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: ManagerColors.primaryGreen,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (showSimpleDot)
                             Positioned(
                               top: 10,
                               right: 10,

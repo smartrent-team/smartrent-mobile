@@ -9,11 +9,15 @@ import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_ser
 class CreateRepairPage extends StatefulWidget {
   final int roomId;
   final int tenantId;
+  final String roomCode;
+  final String branchName;
 
   const CreateRepairPage({
     super.key,
     required this.roomId,
     required this.tenantId,
+    this.roomCode = '',
+    this.branchName = '',
   });
 
   @override
@@ -323,7 +327,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Thông tin phòng P203',
+                  'Thông tin phòng ${widget.roomCode.isNotEmpty ? widget.roomCode : '---'}',
                   style: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold,
                     color: TenantColors.textCharcoal,
@@ -332,7 +336,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Yêu cầu sẽ được tự động gửi tới quản lý nhà trọ Phúc An để kịp thời sửa chữa.',
+                  'Yêu cầu sẽ được tự động gửi tới quản lý ${widget.branchName.isNotEmpty ? widget.branchName : 'nhà trọ'} để kịp thời sửa chữa.',
                   style: GoogleFonts.outfit(
                     color: TenantColors.textGrey,
                     fontSize: 12,

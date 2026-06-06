@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 /// Holds the unread notification count for the whole tenant shell.
 /// Placed at TenantNav level so every screen can read/update it.

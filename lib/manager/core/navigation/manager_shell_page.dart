@@ -3,6 +3,7 @@ import 'package:smartrent_mobile/manager/core/navigation/manager_shell_scope.dar
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
+import 'package:smartrent_mobile/manager/features/notification/data/services/manager_notification_service.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_list_page.dart';
@@ -21,11 +22,23 @@ class ManagerShellPage extends StatefulWidget {
 class _ManagerShellPageState extends State<ManagerShellPage> {
   late int _currentTab;
   int _openTickets = 0;
+  final ValueNotifier<int> _notificationUnreadCount = ValueNotifier<int>(0);
 
   @override
   void initState() {
     super.initState();
     _currentTab = widget.initialTab;
+    Future.microtask(() {
+      ManagerNotificationService.instance.bootstrap(
+        notifier: _notificationUnreadCount,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationUnreadCount.dispose();
+    super.dispose();
   }
 
   void _goToTab(int index) {
@@ -47,7 +60,15 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
         backgroundColor: ManagerColors.bgLightGreen,
         body: Column(
           children: [
-            ManagerAppHeader(showNotificationDot: _openTickets > 0),
+            ValueListenableBuilder<int>(
+              valueListenable: _notificationUnreadCount,
+              builder: (context, count, child) {
+                return ManagerAppHeader(
+                  showNotificationDot: count > 0,
+                  unreadNotificationCount: count,
+                );
+              },
+            ),
             Expanded(
               child: IndexedStack(
                 index: _currentTab,
