@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/core/network/ai_contract_service.dart';
 import 'package:smartrent_mobile/core/network/ai_cccd_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
@@ -25,8 +27,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
   final _passwordController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final TokenService _tokenService = TokenService();
+  final AiContractService _contractAiService = AiContractService();
   final AiCccdService _cccdService = AiCccdService();
   final ImagePicker _imagePicker = ImagePicker();
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
   
   String? _managedBranchId;
 
@@ -35,8 +39,11 @@ class _AddTenantPageState extends State<AddTenantPage> {
   String? _selectedRoom;
   bool _isLoading = false;
   bool _isScanningCccd = false;
+  bool _isScanningContract = false;
   bool _isFormValid = false;
   List<String> _contractImageUrls = [];
+  DateTime? _contractEndDate;
+  final _contractEndDateController = TextEditingController();
   bool _obscurePassword = true;
 
   final List<Map<String, String>> _roles = [
@@ -181,6 +188,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _contractEndDateController.dispose();
     super.dispose();
   }
 
@@ -225,6 +233,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
         roomId: _selectedRoom,
         identityNumber: _cccdController.text.trim(),
         contractImages: _contractImageUrls.isNotEmpty ? _contractImageUrls : null,
+        contractEndDate: _contractEndDate?.toIso8601String(),
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -340,6 +349,66 @@ class _AddTenantPageState extends State<AddTenantPage> {
         ),
       );
     }
+  }
+
+  Future<void> _scanContractExpiryBatch(
+    List<List<int>> imageBytesList,
+    List<String> _,
+  ) async {
+    if (!mounted) return;
+
+    setState(() => _isScanningContract = true);
+
+    try {
+      final result = await _contractAiService.scanFromBytesBatch(imageBytesList);
+      final parsedDate = result.parsedDate;
+
+      if (!mounted) return;
+
+      if (parsedDate != null) {
+        setState(() {
+          _contractEndDate = parsedDate;
+          _contractEndDateController.text =
+              _dateFormat.format(parsedDate.toLocal());
+        });
+        return;
+      }
+
+      throw Exception('Không đọc được ngày hết hạn từ ảnh hợp đồng');
+    } catch (e) {
+      if (!mounted) return;
+      if (_contractEndDate != null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isScanningContract = false);
+      }
+    }
+  }
+
+  Future<void> _pickContractEndDate() async {
+    final initialDate =
+        _contractEndDate?.toLocal() ?? DateTime.now().add(const Duration(days: 365));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      helpText: 'Chọn ngày hết hạn hợp đồng',
+    );
+
+    if (picked == null || !mounted) return;
+
+    final normalized = DateTime.utc(picked.year, picked.month, picked.day);
+    setState(() {
+      _contractEndDate = normalized;
+      _contractEndDateController.text = _dateFormat.format(normalized.toLocal());
+    });
   }
 
   @override
@@ -499,12 +568,54 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       ContractPhotoUpload(
                         imageUrls: _contractImageUrls,
                         uploadFolder: 'contracts',
-                        enabled: !_isLoading && !_isScanningCccd,
+                        enabled: !_isLoading && !_isScanningCccd && !_isScanningContract,
                         onChanged: (urls) {
-                          setState(() => _contractImageUrls = urls);
+                          setState(() {
+                            _contractImageUrls = urls;
+                            if (urls.isEmpty) {
+                              _contractEndDate = null;
+                              _contractEndDateController.clear();
+                            }
+                          });
                           _validateForm();
                         },
+                        onUploadedBatch: _scanContractExpiryBatch,
                       ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel('Ngày hết hạn hợp đồng'),
+                      _buildTextField(
+                        controller: _contractEndDateController,
+                        hintText: 'AI sẽ tự nhận diện từ ảnh hợp đồng',
+                        icon: Icons.event_outlined,
+                        enabled: !_isLoading && !_isScanningCccd && !_isScanningContract,
+                        readOnly: true,
+                        onTap: _pickContractEndDate,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_month_outlined),
+                          color: ManagerColors.textGrey,
+                          onPressed: _pickContractEndDate,
+                        ),
+                      ),
+                      if (_isScanningContract) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Đang quét ảnh hợp đồng để lấy ngày hết hạn...',
+                          style: TextStyle(
+                            color: ManagerColors.textGrey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ] else if (_contractEndDate != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          'AI phát hiện: ${_dateFormat.format(_contractEndDate!.toLocal())}',
+                          style: const TextStyle(
+                            color: ManagerColors.primaryGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                     const SizedBox(height: 40),
                   ],
@@ -512,7 +623,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
               ),
             ),
           ),
-          if (_isLoading || _isScanningCccd)
+          if (_isLoading || _isScanningCccd || _isScanningContract)
             Container(
               color: Colors.black12,
               child: Center(
@@ -526,6 +637,15 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       const SizedBox(height: 16),
                       Text(
                         'Đang quét CCCD...',
+                        style: TextStyle(
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ] else if (_isScanningContract) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Đang quét hợp đồng...',
                         style: TextStyle(
                           color: Colors.grey[800],
                           fontWeight: FontWeight.w500,
@@ -545,7 +665,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
             width: double.infinity,
             height: 54,
             child: ElevatedButton.icon(
-              onPressed: _canSubmit && !_isLoading ? _handleSubmit : null,
+              onPressed:
+                  _canSubmit && !_isLoading && !_isScanningCccd && !_isScanningContract
+                      ? _handleSubmit
+                      : null,
               icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 20),
               label: const Text(
                 "Tạo cư dân",
@@ -624,6 +747,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
     TextInputType keyboardType = TextInputType.text,
     bool enabled = true,
     bool obscureText = false,
+    bool readOnly = false,
+    VoidCallback? onTap,
     Widget? suffixIcon,
     List<TextInputFormatter>? inputFormatters,
   }) {
@@ -631,8 +756,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
       controller: controller,
       keyboardType: keyboardType,
       enabled: enabled,
+      readOnly: readOnly,
       obscureText: obscureText,
       inputFormatters: inputFormatters,
+      onTap: onTap,
       style: const TextStyle(
         color: ManagerColors.textCharcoal,
         fontSize: 16,

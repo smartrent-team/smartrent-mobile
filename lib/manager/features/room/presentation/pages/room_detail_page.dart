@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class RoomDetailPage extends StatefulWidget {
   final int roomId;
@@ -13,6 +16,7 @@ class RoomDetailPage extends StatefulWidget {
 
 class _RoomDetailPageState extends State<RoomDetailPage> {
   final RoomService _roomService = RoomService();
+  final TokenService _tokenService = TokenService();
   Map<String, dynamic>? _room;
   bool _isLoading = true;
   String? _errorMessage;
@@ -50,12 +54,30 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           _isLoading = false;
         });
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      setState(() {
+        _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   String _formatDate(String? dateStr) {

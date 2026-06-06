@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
@@ -7,6 +8,8 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:intl/intl.dart';
 
 class IssuePage extends StatefulWidget {
@@ -20,6 +23,7 @@ class IssuePage extends StatefulWidget {
 
 class _IssuePageState extends State<IssuePage> {
   final TicketService _ticketService = TicketService();
+  final TokenService _tokenService = TokenService();
   String selectedFilter = 'Tất cả';
   List<TicketModel> _allTickets = [];
   bool _isLoading = true;
@@ -28,12 +32,11 @@ class _IssuePageState extends State<IssuePage> {
   @override
   void initState() {
     super.initState();
-    print('DEBUG: IssuePage initState called');
+
     _fetchTickets();
   }
 
   Future<void> _fetchTickets() async {
-    print('DEBUG: _fetchTickets started');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -61,12 +64,30 @@ class _IssuePageState extends State<IssuePage> {
           _isLoading = false;
         });
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      setState(() {
+        _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   List<TicketModel> get filteredIssues {
@@ -309,13 +330,8 @@ class _IssuePageState extends State<IssuePage> {
                   children: [
                     _buildLocationPill(
                       icon: Icons.meeting_room_outlined,
-                      label: issue.roomName ?? 'N/A',
+                      label: issue.roomName ?? 'Chưa xác định',
                       color: ManagerColors.primaryGreen,
-                    ),
-                    _buildLocationPill(
-                      icon: Icons.layers_outlined,
-                      label: 'Tầng ${issue.floor ?? 'N/A'}',
-                      color: Colors.blueGrey,
                     ),
                   ],
                 ),

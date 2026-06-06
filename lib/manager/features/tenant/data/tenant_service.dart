@@ -14,6 +14,7 @@ class TenantService {
     String role = 'tenant',
     dynamic roomId,
     List<String>? contractImages,
+    String? contractEndDate,
   }) async {
     try {
       // For Postgres backends, IDs are often integers. 
@@ -50,6 +51,10 @@ class TenantService {
 
       if (contractImages != null && contractImages.isNotEmpty) {
         requestData['contractImages'] = contractImages;
+      }
+
+      if (contractEndDate != null && contractEndDate.isNotEmpty) {
+        requestData['contractEndDate'] = contractEndDate;
       }
 
       return await _apiClient.dio.post(

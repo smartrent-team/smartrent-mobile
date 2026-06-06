@@ -3,14 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
 import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_invoice.dart';
-import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
-import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
+import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TenantOrderPage extends StatefulWidget {
-  final bool showBottomNav;
-  const TenantOrderPage({super.key, this.showBottomNav = true});
+  const TenantOrderPage({super.key, bool showBottomNav = false});
 
   @override
   State<TenantOrderPage> createState() => _TenantOrderPageState();
@@ -21,7 +20,6 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
   final ProfileService _profileService = ProfileService();
   final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
 
-  int _currentNav = 1;
   int _selectedTab = 0;
   int? _expandedIndex;
   bool _isLoadingInvoices = true;
@@ -299,7 +297,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
           ),
         ],
       ),
-      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
+      bottomNavigationBar: null,
     );
   }
 
@@ -345,17 +343,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
                   ],
                 ),
               ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Icon(Icons.filter_list_rounded,
-                    color: Colors.white, size: 20),
-              ),
+              const TenantNotifBell(),
             ],
           ),
           const SizedBox(height: 20),
@@ -908,86 +896,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 10,
-              offset: Offset(0, -2))
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _navItem(0, 'Trang chủ', Icons.home_outlined,
-                onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const TenantHomePage()))),
-            _navItem(1, 'Hóa đơn', Icons.description_outlined),
-            _navItem(2, 'Sửa chữa', Icons.build_outlined),
-            _navItem(3, 'Thông báo',
-                Icons.notifications_none_outlined,
-                hasBadge: true),
-            _navItem(4, 'Tài khoản', Icons.person_outline_rounded),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(int index, String label, IconData icon,
-      {bool hasBadge = false, VoidCallback? onTap}) {
-    final bool active = _currentNav == index;
-    return InkWell(
-      onTap: onTap ?? () => setState(() => _currentNav = index),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? TenantColors.bgMint : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Stack(clipBehavior: Clip.none, children: [
-            Icon(icon,
-                color: active
-                    ? TenantColors.primaryGreen
-                    : Colors.grey[400],
-                size: 24),
-            if (hasBadge)
-              Positioned(
-                right: -2,
-                top: -2,
-                child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                        color: Colors.red, shape: BoxShape.circle)),
-              ),
-          ]),
-          const SizedBox(height: 4),
-          Text(label,
-              style: GoogleFonts.outfit(
-                  color: active
-                      ? TenantColors.primaryGreen
-                      : Colors.grey[400],
-                  fontSize: 10,
-                  fontWeight: active
-                      ? FontWeight.bold
-                      : FontWeight.w500)),
-        ]),
-      ),
-    );
-  }
+  Widget _buildBottomNav() => const SizedBox.shrink();
 }
 
 // ── HELPERS ─────────────────────────────────────────────────────────────────

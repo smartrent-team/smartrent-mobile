@@ -8,9 +8,11 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/rep
 import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_service.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/create_repair_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 class RepairPage extends StatefulWidget {
-  const RepairPage({super.key});
+  const RepairPage({super.key, bool showBottomNav = false});
 
   @override
   State<RepairPage> createState() => _RepairPageState();
@@ -18,11 +20,14 @@ class RepairPage extends StatefulWidget {
 
 class _RepairPageState extends State<RepairPage> {
   final RepairService _repairService = RepairService();
+  final TenantProfileService _profileService = TenantProfileService();
   
   List<RepairRequest> _requests = [];
   bool _isLoading = true;
   int _roomId = 1;
   int _tenantId = 5;
+  String _roomLabel = '';
+  String _branchLabel = '';
 
   int activeFilterIndex = 0;
   final List<String> filters = ["Tất cả", "Tiếp nhận", "Đang sửa", "Hoàn thành"];
@@ -31,6 +36,24 @@ class _RepairPageState extends State<RepairPage> {
   void initState() {
     super.initState();
     _loadData();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final res = await _profileService.getMyProfile();
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        final data = res.data['data'];
+        final roomCode = data?['room']?['room_code']?.toString() ?? '';
+        final branchName = data?['room']?['branch_name']?.toString() ?? '';
+        if (mounted) {
+          setState(() {
+            if (roomCode.isNotEmpty) _roomLabel = 'Phòng $roomCode';
+            if (branchName.isNotEmpty) _branchLabel = branchName;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
@@ -58,6 +81,11 @@ class _RepairPageState extends State<RepairPage> {
           }
           if (firstTicket['tenants'] != null && firstTicket['tenants']['id'] != null) {
             _tenantId = firstTicket['tenants']['id'];
+          }
+          // Lấy room_code để hiển thị trên header
+          final roomCode = firstTicket['rooms']?['room_code']?.toString() ?? '';
+          if (roomCode.isNotEmpty) {
+            setState(() => _roomLabel = 'Phòng $roomCode');
           }
         } else {
           // If no tickets exist, fetch tenant profile details to discover correct tenantId
@@ -202,6 +230,8 @@ class _RepairPageState extends State<RepairPage> {
               builder: (context) => CreateRepairPage(
                 roomId: _roomId,
                 tenantId: _tenantId,
+                roomCode: _roomLabel,
+                branchName: _branchLabel,
               ),
             ),
           );
@@ -222,6 +252,7 @@ class _RepairPageState extends State<RepairPage> {
           ),
         ),
       ),
+      bottomNavigationBar: null,
     );
   }
 
@@ -258,7 +289,9 @@ class _RepairPageState extends State<RepairPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Phòng P203 · Nhà trọ Phúc An",
+                    [_roomLabel, _branchLabel]
+                        .where((s) => s.isNotEmpty)
+                        .join(' · '),
                     style: GoogleFonts.outfit(
                       color: Colors.white60,
                       fontSize: 14,
@@ -275,17 +308,9 @@ class _RepairPageState extends State<RepairPage> {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 24),
-              ),
+              const TenantNotifBell(),
             ],
           ),
-          const SizedBox(height: 30),
           Row(
             children: [
               Expanded(

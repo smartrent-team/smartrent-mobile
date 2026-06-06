@@ -8,6 +8,8 @@ import 'package:smartrent_mobile/core/lottie/lottie_assets.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/meter_comparison_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/domain/models/utility_analysis.dart';
+import 'package:smartrent_mobile/tenant/core/state/tenant_notification_state.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 const _electricOrange = Color(0xFFFF9800);
 const _electricOrangeLight = Color(0xFFFFF3E0);
@@ -32,15 +34,13 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
   late final AnimationController _barAnimCtrl;
   late final Animation<double> _barAnim;
   AnimationController? _aiLoadingCtrl;
-  bool _showNotificationPanel = false;
   bool _isLoading = true;
   String? _errorMessage;
   UtilityAnalysis? _analysis;
   String _roomLabel = '';
-  int _unreadCount = 0;
   List<_MonthData> _electricData = [];
   List<_MonthData> _waterData = [];
-  List<_NotifItem> _notifications = [];
+  bool _isTriggeringAi = false;
 
   AnimationController get _aiLoadingAnim {
     _aiLoadingCtrl ??= AnimationController(
@@ -48,12 +48,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       duration: const Duration(milliseconds: 2400),
     );
     return _aiLoadingCtrl!;
-  }
-
-  void _startAiLoadingAnim() {
-    if (!_aiLoadingAnim.isAnimating) {
-      _aiLoadingAnim.repeat();
-    }
   }
 
   void _stopAiLoadingAnim() {
@@ -68,7 +62,11 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       duration: const Duration(milliseconds: 900),
     );
     _barAnim = CurvedAnimation(parent: _barAnimCtrl, curve: Curves.easeOutCubic);
-    _startAiLoadingAnim();
+    // Khởi tạo sớm để tránh null crash khi IndexedStack mount tất cả screens
+    _aiLoadingCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
     _loadAnalysis();
   }
 
@@ -77,7 +75,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       _isLoading = true;
       _errorMessage = null;
     });
-    _startAiLoadingAnim();
 
     try {
       final profileRes = await _profileService.getMyProfile();
@@ -107,15 +104,48 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
       final analysis = UtilityAnalysis.fromJson(data);
 
       if (!mounted) return;
+      final notifItems = _buildNotifications(analysis);
+      final unread = notifItems.where((n) => n.unread).length;
+
+      // Lưu vào store dùng chung + cập nhật badge
+      TenantNotifStore.update(notifItems
+          .map((n) => TenantNotifItem(
+                icon: n.icon,
+                iconColor: n.iconColor,
+                bg: n.bg,
+                title: n.title,
+                body: n.body,
+                time: n.time,
+                unread: n.unread,
+              ))
+          .toList());
+      try {
+        TenantNotificationScope.of(context).value = unread;
+      } catch (_) {}
+
       setState(() {
         _analysis = analysis;
         _roomLabel = 'Phòng $roomCode';
         _electricData = _mapHistory(analysis.electric.history);
         _waterData = _mapHistory(analysis.water.history);
-        _notifications = _buildNotifications(analysis);
-        _unreadCount = _notifications.where((n) => n.unread).length;
         _isLoading = false;
       });
+      final analysisTitle = analysis.warnings.isNotEmpty
+          ? 'AI phát hiện bất thường ở $roomCode'
+          : 'AI đã phân tích chỉ số phòng $roomCode';
+      final analysisBody = analysis.aiAnalysis?.summary.isNotEmpty == true
+          ? analysis.aiAnalysis!.summary
+          : (analysis.warnings.isNotEmpty
+              ? analysis.warnings.take(2).join(' · ')
+              : 'Kết quả phân tích điện nước tháng ${analysis.month}/${analysis.year} hiện ổn định.');
+
+      try {
+        await _analysisService.saveAnalysisNotification(
+          title: analysisTitle,
+          body: analysisBody,
+        );
+      } catch (_) {}
+
       _stopAiLoadingAnim();
       _barAnimCtrl.forward(from: 0);
     } on DioException catch (e) {
@@ -254,6 +284,9 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                                   if (_analysis?.aiAnalysis?.hasContent == true) ...[
                                     const SizedBox(height: 12),
                                     _buildAiInsightCard(_analysis!.aiAnalysis!),
+                                  ] else if (_analysis != null && _analysis!.warningCount > 0) ...[
+                                    const SizedBox(height: 12),
+                                    _buildTriggerAiCard(),
                                   ],
                                   const SizedBox(height: 20),
                                   _buildMeterCard(
@@ -309,22 +342,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
               ),
             ],
           ),
-
-          // Notification overlay
-          if (_showNotificationPanel) ...[
-            // backdrop
-            GestureDetector(
-              onTap: () => setState(() => _showNotificationPanel = false),
-              child: Container(color: Colors.black26),
-            ),
-            // panel
-            Positioned(
-              top: 80,
-              right: 12,
-              left: 40,
-              child: _buildNotificationPanel(),
-            ),
-          ],
         ],
       ),
     );
@@ -384,53 +401,8 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
                   ],
                 ),
               ),
-              // Notification bell with badge
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showNotificationPanel = !_showNotificationPanel;
-                    if (_showNotificationPanel) _unreadCount = 0;
-                  });
-                },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const Icon(Icons.notifications_outlined,
-                          color: Colors.white, size: 22),
-                    ),
-                    if (_unreadCount > 0)
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '$_unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              // Notification bell — dùng widget chung
+              const TenantNotifBell(),
             ],
           ),
           const SizedBox(height: 6),
@@ -1141,6 +1113,124 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     );
   }
 
+  Widget _buildTriggerAiCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: TenantColors.bgMint.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TenantColors.lightGreenBorder.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  color: TenantColors.primaryGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Phát hiện lượng dùng tăng cao. Bạn có muốn dùng AI để phân tích nguyên nhân và nhận khuyến nghị không?',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: TenantColors.textCharcoal,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: ElevatedButton.icon(
+              onPressed: _isTriggeringAi ? null : _triggerAiAnalysis,
+              icon: _isTriggeringAi
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.psychology_rounded, size: 18),
+              label: Text(
+                _isTriggeringAi ? 'AI đang phân tích...' : 'Phân tích bằng AI',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TenantColors.primaryGreen,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _triggerAiAnalysis() async {
+    if (_analysis == null) return;
+    
+    setState(() {
+      _isTriggeringAi = true;
+    });
+
+    try {
+      final profileRes = await _profileService.getMyProfile();
+      if (profileRes.statusCode != 200 || profileRes.data['success'] != true) {
+        throw Exception(profileRes.data['error'] ?? 'Không lấy được thông tin phòng');
+      }
+
+      final room = profileRes.data['data']?['room'] as Map<String, dynamic>?;
+      if (room == null || room['id'] == null) {
+        throw Exception('Tài khoản chưa được gán phòng thuê');
+      }
+
+      final roomId = room['id'] as int;
+      
+      final response = await _analysisService.triggerAiAnalysis(roomId);
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        await _loadAnalysis();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('AI đã hoàn tất phân tích chỉ số!', style: GoogleFonts.outfit()),
+              backgroundColor: TenantColors.primaryGreen,
+            ),
+          );
+        }
+      } else {
+        throw Exception(response.data['error'] ?? 'Lỗi khi gọi AI phân tích');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi phân tích AI: ${e.toString().replaceFirst('Exception: ', '')}', style: GoogleFonts.outfit()),
+            backgroundColor: TenantColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTriggeringAi = false;
+        });
+      }
+    }
+  }
+
   Widget _buildAiSectionTitle({required IconData icon, required String title}) {
     return Row(
       children: [
@@ -1252,122 +1342,6 @@ class _MeterComparisonPageState extends State<MeterComparisonPage>
     );
   }
 
-  // ── NOTIFICATION PANEL ─────────────────────────────────────────────────────
-  Widget _buildNotificationPanel() {
-    return Material(
-      elevation: 16,
-      borderRadius: BorderRadius.circular(20),
-      color: Colors.white,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              decoration: const BoxDecoration(
-                border:
-                    Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications_rounded,
-                      color: TenantColors.primaryGreen, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Thông báo',
-                      style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () =>
-                        setState(() => _showNotificationPanel = false),
-                    style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(40, 30)),
-                    child: Text('Đóng',
-                        style: GoogleFonts.outfit(
-                            color: TenantColors.primaryGreen,
-                            fontSize: 12)),
-                  ),
-                ],
-              ),
-            ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 340),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: _notifications
-                      .map((n) => _buildNotifTile(n))
-                      .toList(),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotifTile(_NotifItem n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5))),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration:
-                BoxDecoration(color: n.bg, shape: BoxShape.circle),
-            child: Icon(n.icon, color: n.iconColor, size: 16),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(n.title,
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    if (n.unread)
-                      Container(
-                        width: 7,
-                        height: 7,
-                        margin: const EdgeInsets.only(left: 6),
-                        decoration: const BoxDecoration(
-                            color: TenantColors.primaryGreen,
-                            shape: BoxShape.circle),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(n.body,
-                    style: GoogleFonts.outfit(
-                        color: TenantColors.textGrey, fontSize: 11),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(n.time,
-                    style: GoogleFonts.outfit(
-                        color: Colors.black26, fontSize: 10)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── DATA MODELS ────────────────────────────────────────────────────────────────

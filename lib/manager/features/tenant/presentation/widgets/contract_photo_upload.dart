@@ -3,10 +3,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:smartrent_mobile/core/network/cloudinary_upload_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 
+enum _ContractPickMode {
+  camera,
+  singleGallery,
+  multiGallery,
+}
+
 /// Khối chụp/chọn ảnh hợp đồng — upload Cloudinary, trả danh sách URL.
 class ContractPhotoUpload extends StatefulWidget {
   final List<String> imageUrls;
   final ValueChanged<List<String>> onChanged;
+  final Future<void> Function(List<int> imageBytes, String imageUrl)? onUploaded;
+  final Future<void> Function(List<List<int>> imageBytes, List<String> imageUrls)? onUploadedBatch;
   final String uploadFolder;
   final bool enabled;
   final bool required;
@@ -18,6 +26,8 @@ class ContractPhotoUpload extends StatefulWidget {
     super.key,
     required this.imageUrls,
     required this.onChanged,
+    this.onUploaded,
+    this.onUploadedBatch,
     this.uploadFolder = 'contracts',
     this.enabled = true,
     this.required = true,
@@ -76,7 +86,7 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
   Future<void> _pickAndUpload() async {
     if (!widget.enabled || _isUploading) return;
 
-    final source = await showModalBottomSheet<ImageSource>(
+    final mode = await showModalBottomSheet<_ContractPickMode>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -88,41 +98,77 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Chụp ảnh hợp đồng'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              onTap: () => Navigator.pop(ctx, _ContractPickMode.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Chọn từ thư viện'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              title: const Text('Chọn 1 ảnh từ thư viện'),
+              onTap: () => Navigator.pop(ctx, _ContractPickMode.singleGallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.collections_outlined),
+              title: const Text('Chọn nhiều ảnh từ thư viện'),
+              onTap: () => Navigator.pop(ctx, _ContractPickMode.multiGallery),
             ),
           ],
         ),
       ),
     );
 
-    if (source == null || !mounted) return;
+    if (mode == null || !mounted) return;
 
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: 85,
-        maxWidth: 2048,
-      );
-      if (picked == null || !mounted) return;
+      final List<XFile> pickedFiles;
+      if (mode == _ContractPickMode.multiGallery) {
+        pickedFiles = await _picker.pickMultiImage(
+          imageQuality: 85,
+          maxWidth: 2048,
+        );
+      } else {
+        final picked = await _picker.pickImage(
+          source: mode == _ContractPickMode.camera ? ImageSource.camera : ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 2048,
+        );
+        pickedFiles = picked == null ? [] : [picked];
+      }
+
+      if (pickedFiles.isEmpty || !mounted) return;
 
       setState(() => _isUploading = true);
 
-      final bytes = await picked.readAsBytes();
-      final url = await _uploadService.uploadImageBytes(
-        bytes,
-        folder: widget.uploadFolder,
-        filename: picked.name,
-      );
+      final uploadedBytes = <List<int>>[];
+      final uploadedUrls = <String>[];
+      var updated = [...widget.imageUrls];
 
-      if (!mounted) return;
-      final updated = [...widget.imageUrls, url];
-      widget.onChanged(updated);
-      setState(() => _isUploading = false);
+      for (final picked in pickedFiles) {
+        final bytes = await picked.readAsBytes();
+        final url = await _uploadService.uploadImageBytes(
+          bytes,
+          folder: widget.uploadFolder,
+          filename: picked.name,
+        );
+        uploadedBytes.add(bytes);
+        uploadedUrls.add(url);
+        updated = [...updated, url];
+        widget.onChanged(updated);
+      }
+
+      try {
+        if (widget.onUploadedBatch != null) {
+          await widget.onUploadedBatch!(uploadedBytes, uploadedUrls);
+        } else if (widget.onUploaded != null) {
+          for (var i = 0; i < uploadedBytes.length; i++) {
+            await widget.onUploaded!(uploadedBytes[i], uploadedUrls[i]);
+          }
+        }
+      } catch (_) {
+        // Callback tự xử lý lỗi; upload vẫn được xem là thành công.
+      } finally {
+        if (mounted) {
+          setState(() => _isUploading = false);
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

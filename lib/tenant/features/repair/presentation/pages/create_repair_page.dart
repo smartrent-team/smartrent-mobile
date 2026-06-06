@@ -9,11 +9,15 @@ import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_ser
 class CreateRepairPage extends StatefulWidget {
   final int roomId;
   final int tenantId;
+  final String roomCode;
+  final String branchName;
 
   const CreateRepairPage({
     super.key,
     required this.roomId,
     required this.tenantId,
+    this.roomCode = '',
+    this.branchName = '',
   });
 
   @override
@@ -55,6 +59,21 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
     try {
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
+
+      // Nếu chưa có kết quả phân tích AI, thực hiện phân tích ngay trước khi gửi
+      if (_aiPriorityReason == null) {
+        try {
+          final result = await _aiService.analyzePriority(
+            title: title,
+            description: description,
+            imageBytes: _uploadedImageBytes,
+          );
+          _selectedPriority = result.priority;
+          _aiPriorityReason = result.reason;
+        } catch (e) {
+          debugPrint('Lỗi tự động phân tích ưu tiên trước khi gửi: $e');
+        }
+      }
 
       final List<String> images = _uploadedImageUrl != null ? [_uploadedImageUrl!] : [];
 
@@ -308,7 +327,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Thông tin phòng P203',
+                  'Thông tin phòng ${widget.roomCode.isNotEmpty ? widget.roomCode : '---'}',
                   style: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold,
                     color: TenantColors.textCharcoal,
@@ -317,7 +336,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Yêu cầu sẽ được tự động gửi tới quản lý nhà trọ Phúc An để kịp thời sửa chữa.',
+                  'Yêu cầu sẽ được tự động gửi tới quản lý ${widget.branchName.isNotEmpty ? widget.branchName : 'nhà trọ'} để kịp thời sửa chữa.',
                   style: GoogleFonts.outfit(
                     color: TenantColors.textGrey,
                     fontSize: 12,
@@ -634,11 +653,18 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                     _imageActionButton(
                       icon: Icons.delete_outline,
                       tooltip: 'Xóa ảnh',
-                      onTap: () => setState(() {
-                        _uploadedImageUrl = null;
-                        _uploadedImageBytes = null;
-                        _aiPriorityReason = null;
-                      }),
+                      onTap: () {
+                        setState(() {
+                          _uploadedImageUrl = null;
+                          _uploadedImageBytes = null;
+                          _aiPriorityReason = null;
+                          _selectedPriority = 'medium';
+                        });
+                        if (_titleController.text.trim().isNotEmpty &&
+                            _descriptionController.text.trim().isNotEmpty) {
+                          _analyzePriority();
+                        }
+                      },
                       isDestructive: true,
                     ),
                   ],
@@ -740,6 +766,11 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
         _uploadedImageBytes = bytes;
         _isUploadingImage = false;
       });
+
+      if (_titleController.text.trim().isNotEmpty &&
+          _descriptionController.text.trim().isNotEmpty) {
+        _analyzePriority();
+      }
     } catch (e) {
       setState(() => _isUploadingImage = false);
       if (mounted) {

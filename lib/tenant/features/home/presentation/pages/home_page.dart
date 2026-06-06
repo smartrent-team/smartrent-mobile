@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
@@ -6,11 +7,16 @@ import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_in
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/contract_page.dart';
+import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smartrent_mobile/tenant/features/home/data/services/home_service.dart';
+import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
+import 'package:smartrent_mobile/tenant/features/notification/presentation/pages/tenant_notification_page.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class TenantHomePage extends StatefulWidget {
-  final bool showBottomNav;
-  const TenantHomePage({super.key, this.showBottomNav = true});
+  const TenantHomePage({super.key, bool showBottomNav = false});
 
   @override
   State<TenantHomePage> createState() => _TenantHomePageState();
@@ -19,15 +25,22 @@ class TenantHomePage extends StatefulWidget {
 class _TenantHomePageState extends State<TenantHomePage> {
   final TenantInvoiceService _invoiceService = TenantInvoiceService();
   final _currency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+  final TokenService _tokenService = TokenService();
 
-  int _currentIndex = 0;
   bool _isBillExpanded = false;
   TenantInvoice? _unpaidInvoice;
 
   @override
   void initState() {
     super.initState();
-    _loadUnpaidInvoice();
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    await Future.wait([
+      _loadUnpaidInvoice(),
+      _loadData(),
+    ]);
   }
 
   Future<void> _loadUnpaidInvoice() async {
@@ -41,6 +54,10 @@ class _TenantHomePageState extends State<TenantHomePage> {
         if (mounted) {
           setState(() => _unpaidInvoice = unpaid.isNotEmpty ? unpaid.first : null);
         }
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
       }
     } catch (_) {}
   }
@@ -56,44 +73,165 @@ class _TenantHomePageState extends State<TenantHomePage> {
     }
   }
 
+  final HomeService _homeService = HomeService();
+  bool _isLoading = true;
+  Map<String, dynamic>? _profileData;
+  String? _errorMessage;
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final response = await _homeService.getTenantProfile();
+      if (response.data != null && response.data['success'] == true) {
+        if (mounted) {
+          setState(() {
+            _profileData = response.data['data'];
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = response.data?['error'] ?? 'Không thể tải dữ liệu';
+          });
+        }
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _formatMoney(dynamic amount) {
+    if (amount == null) return '0 đ';
+    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    if (amount is String) {
+      amount = double.tryParse(amount) ?? 0;
+    }
+    return formatter.format(amount).replaceAll('₫', 'đ').replaceAll(',00', '');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: TenantColors.bgLightGreen,
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildBillCard(),
-                        const SizedBox(height: 24),
-                        _buildQuickServices(),
-                        const SizedBox(height: 24),
-                        _buildNotifications(),
-                        const SizedBox(height: 24),
-                      ],
+      body: RefreshIndicator(
+        color: TenantColors.primaryGreen,
+        onRefresh: _loadAllData,
+        child: _isLoading && _profileData == null
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: TenantColors.primaryGreen,
+                ),
+              )
+            : _errorMessage != null && _profileData == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: TenantColors.errorRed,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              color: TenantColors.textGrey,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: _loadAllData,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: TenantColors.primaryGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
                     ),
+                  )
+                : Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _buildHeader(),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    _buildBillCard(),
+                                    const SizedBox(height: 24),
+                                    _buildQuickServices(),
+                                    const SizedBox(height: 24),
+                                    _buildNotifications(),
+                                    const SizedBox(height: 24),
+                                  ],
+                                ),
+                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
-      bottomNavigationBar: widget.showBottomNav ? _buildBottomNav() : null,
+      bottomNavigationBar: null,
     );
   }
 
   // ── HEADER ──────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final String fullName = _profileData?['full_name'] ?? 'Khách thuê';
+    final room = _profileData?['room'];
+    final String roomCode = room != null ? 'Phòng ${room['room_code']}' : 'Chưa có phòng';
+    final String floor = room != null ? 'Tầng ${room['floor']}' : 'Tầng --';
+
     return Stack(
       children: [
         Container(
@@ -132,9 +270,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Nguyễn Văn A',
-                        style: TextStyle(
+                      Text(
+                        fullName,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
@@ -143,30 +281,14 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          _buildHeaderChip('Phòng P203'),
+                          _buildHeaderChip(roomCode),
                           const SizedBox(width: 8),
-                          _buildHeaderChip('Tầng 2'),
+                          _buildHeaderChip(floor),
                         ],
                       ),
                     ],
                   ),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
+                  const TenantNotifBell(),
                 ],
               ),
               const SizedBox(height: 24),
@@ -222,6 +344,32 @@ class _TenantHomePageState extends State<TenantHomePage> {
 
   // ── CONTRACT CARD ────────────────────────────────────────────────────────
   Widget _buildContractCard() {
+    final activeContract = _profileData?['active_contract'] as Map<String, dynamic>?;
+    final contracts = (_profileData?['contracts'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const [];
+    final contractForDisplay = activeContract ?? (contracts.isNotEmpty ? contracts.first : null);
+    String remainingDays = '-- ngày';
+    if (contractForDisplay != null && contractForDisplay['end_date'] != null) {
+      try {
+        final endDate = DateTime.parse(contractForDisplay['end_date'].toString());
+        final now = DateTime.now();
+        final diffMs = endDate.difference(now).inMilliseconds;
+        final difference = diffMs > 0 ? (diffMs / (1000 * 60 * 60 * 24)).ceil() : 0;
+        remainingDays = difference > 0 ? '$difference ngày' : 'Hết hạn';
+      } catch (e) {
+        remainingDays = 'Lỗi ngày';
+      }
+    } else if (contractForDisplay != null) {
+      remainingDays = 'Vô thời hạn';
+    }
+
+    final now = DateTime.now();
+    final String currentMonth = 'T${now.month}/${now.year}';
+    final room = _profileData?['room'];
+    final String status = room != null ? 'Hoạt động' : 'Trống';
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
@@ -234,11 +382,11 @@ class _TenantHomePageState extends State<TenantHomePage> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildContractCol('Hợp đồng còn', '102 ngày')),
+          Expanded(child: _buildContractCol('Hợp đồng còn', remainingDays)),
           Container(width: 1, height: 28, color: Colors.white24),
-          Expanded(child: _buildContractCol('Tháng hiện tại', 'T5/2025')),
+          Expanded(child: _buildContractCol('Tháng hiện tại', currentMonth)),
           Container(width: 1, height: 28, color: Colors.white24),
-          Expanded(child: _buildContractCol('Phòng', 'Hoạt động')),
+          Expanded(child: _buildContractCol('Phòng', status)),
         ],
       ),
     );
@@ -285,21 +433,21 @@ class _TenantHomePageState extends State<TenantHomePage> {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: TenantColors.bgMint,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.check_circle_outline,
+                Icons.check_circle_outline_rounded,
                 color: TenantColors.primaryGreen,
                 size: 40,
               ),
             ),
             const SizedBox(height: 16),
             const Text(
-              'Tuyệt vời!',
+              'Tất cả đã thanh toán',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
@@ -307,8 +455,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
             const SizedBox(height: 8),
             const Text(
               'Bạn đã thanh toán tất cả hóa đơn.',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: TenantColors.textGrey,
               ),
             ),
@@ -318,11 +467,23 @@ class _TenantHomePageState extends State<TenantHomePage> {
     }
 
     final inv = _unpaidInvoice!;
+    final isPaid = inv.isPaid;
+    final total = inv.totalAmount.toDouble();
+    
     final issued = DateTime.tryParse(inv.issuedAt ?? inv.createdAt ?? '');
     final monthStr = issued != null ? '${issued.month}/${issued.year}' : '--/--';
-    final deadlineStr = issued != null 
+    final dueDateStr = issued != null 
         ? '10/${issued.month + 1 > 12 ? 1 : issued.month + 1}/${issued.month + 1 > 12 ? issued.year + 1 : issued.year}' 
         : '--/--/----';
+
+    final roomCode = inv.roomCode ?? '--';
+    final branchName = inv.branchName ?? 'Nhà trọ';
+
+    final double roomPrice = inv.roomPrice.toDouble();
+    final double electricCost = inv.electricCost.toDouble();
+    final double waterCost = inv.waterCost.toDouble();
+    final double serviceCost = inv.serviceCost.toDouble();
+    const double internetCost = 0;
 
     return Container(
       width: double.infinity,
@@ -374,7 +535,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            inv.roomLabel,
+                            'Phòng $roomCode · $branchName',
                             style: const TextStyle(
                               fontSize: 12,
                               color: TenantColors.textGrey,
@@ -388,19 +549,22 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3E0),
+                        color: isPaid ? TenantColors.bgMint : const Color(0xFFFFF3E0),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.access_time,
-                              color: Color(0xFFE65100), size: 14),
-                          SizedBox(width: 4),
+                          Icon(
+                            isPaid ? Icons.check_circle_outline_rounded : Icons.access_time,
+                            color: isPaid ? TenantColors.primaryGreen : const Color(0xFFE65100),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
-                            'Chờ thanh toán',
+                            isPaid ? 'Đã thanh toán' : 'Chờ thanh toán',
                             style: TextStyle(
-                              color: Color(0xFFE65100),
+                              color: isPaid ? TenantColors.primaryGreen : const Color(0xFFE65100),
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -417,7 +581,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _currency.format(inv.totalAmount),
+                  _currency.format(total),
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -425,7 +589,6 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Cost list
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -435,28 +598,30 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                   child: Column(
                     children: [
-                      if (inv.roomPrice > 0) ...[
-                        _costRow(Icons.home_work_outlined,
-                            TenantColors.bgMint, TenantColors.primaryGreen,
-                            'Tiền phòng', _currency.format(inv.roomPrice)),
-                        const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                      ],
-                      if (inv.electricCost > 0) ...[
-                        _costRow(Icons.bolt_outlined,
-                            const Color(0xFFFFF3E0), TenantColors.warningOrange,
-                            'Tiền điện', _currency.format(inv.electricCost)),
-                        const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                      ],
-                      if (inv.waterCost > 0) ...[
-                        _costRow(Icons.water_drop_outlined,
-                            const Color(0xFFE1F5FE), Colors.blue,
-                            'Tiền nước', _currency.format(inv.waterCost)),
-                      ],
-                      if (_isBillExpanded && inv.serviceCost > 0) ...[
-                        const Divider(height: 24, color: Color(0xFFEAF5EF)),
-                        _costRow(Icons.star_outline_rounded,
-                            const Color(0xFFFCE4EC), Colors.pink,
-                            'Phí dịch vụ', _currency.format(inv.serviceCost)),
+                      _costRow(Icons.home_work_outlined,
+                          TenantColors.bgMint, TenantColors.primaryGreen,
+                          'Tiền phòng', _currency.format(roomPrice)),
+                      const Divider(height: 24, color: Color(0xFFEAF5EF)),
+                      _costRow(Icons.bolt_outlined,
+                          const Color(0xFFFFF3E0), TenantColors.warningOrange,
+                          'Tiền điện', _currency.format(electricCost)),
+                      const Divider(height: 24, color: Color(0xFFEAF5EF)),
+                      _costRow(Icons.water_drop_outlined,
+                          const Color(0xFFE1F5FE), Colors.blue,
+                          'Tiền nước', _currency.format(waterCost)),
+                      if (_isBillExpanded) ...[
+                        if (internetCost > 0) ...[
+                          const Divider(height: 24, color: Color(0xFFEAF5EF)),
+                          _costRow(Icons.wifi_outlined,
+                              const Color(0xFFF3E5F5), Colors.purple,
+                              'Internet', _currency.format(internetCost)),
+                        ],
+                        if (serviceCost > 0) ...[
+                          const Divider(height: 24, color: Color(0xFFEAF5EF)),
+                          _costRow(Icons.star_outline_rounded,
+                              const Color(0xFFFCE4EC), Colors.pink,
+                              'Phí dịch vụ', _currency.format(serviceCost)),
+                        ],
                       ],
                       const Divider(height: 24, color: Color(0xFFEAF5EF)),
                       GestureDetector(
@@ -484,53 +649,57 @@ class _TenantHomePageState extends State<TenantHomePage> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: TenantColors.errorRed, size: 18),
+                    Icon(
+                      isPaid ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
+                      color: isPaid ? TenantColors.primaryGreen : TenantColors.errorRed,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'Hạn thanh toán: ',
-                      style: TextStyle(
+                    Text(
+                      isPaid ? 'Đã đóng tiền ngày: ' : 'Hạn thanh toán: ',
+                      style: const TextStyle(
                           fontSize: 13, color: TenantColors.textGrey),
                     ),
                     Text(
-                      deadlineStr,
-                      style: const TextStyle(
+                      dueDateStr,
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: TenantColors.errorRed,
+                        color: isPaid ? TenantColors.primaryGreen : TenantColors.errorRed,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton.icon(
-                    onPressed: _openPayment,
-                    icon: const Icon(Icons.qr_code_scanner_outlined,
-                        color: Colors.white),
-                    label: const Text(
-                      'Thanh toán ngay',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: TenantColors.primaryGreen,
-                      elevation: 4,
-                      shadowColor:
-                          TenantColors.primaryGreen.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                if (!isPaid) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton.icon(
+                      onPressed: _openPayment,
+                      icon: const Icon(Icons.qr_code_scanner_outlined,
+                          color: Colors.white),
+                      label: const Text(
+                        'Thanh toán ngay',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TenantColors.primaryGreen,
+                        elevation: 4,
+                        shadowColor:
+                            TenantColors.primaryGreen.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
-          // Decorative water bubble
           Positioned(
             right: 0,
             top: 140,
@@ -583,7 +752,6 @@ class _TenantHomePageState extends State<TenantHomePage> {
     );
   }
 
-  // ── QUICK SERVICES ───────────────────────────────────────────────────────
   Widget _buildQuickServices() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,7 +782,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
             Expanded(
               child: _buildServiceItem(
                   'Báo hỏng', Icons.build_outlined,
-                  TenantColors.warningAmber),
+                  TenantColors.warningAmber,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const RepairPage()))),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -668,46 +838,117 @@ class _TenantHomePageState extends State<TenantHomePage> {
     );
   }
 
-  // ── NOTIFICATIONS ────────────────────────────────────────────────────────
   Widget _buildNotifications() {
-    final List<Map<String, dynamic>> items = [
-      {
-        'title': 'Hóa đơn tháng 5 đã sẵn sàng',
-        'sub': 'Vui lòng thanh toán trước ngày 10/06/2025',
-        'time': '2 giờ trước',
-        'icon': Icons.notifications_none_outlined,
-        'iconColor': TenantColors.primaryGreen,
-        'bgColor': TenantColors.bgMint,
-        'unread': true,
-      },
-      {
-        'title': 'Báo hỏng đã được tiếp nhận',
-        'sub': 'Sự cố điện phòng 203 đang được xử lý',
-        'time': '1 ngày trước',
+    final List tickets = _profileData?['maintenance_tickets'] ?? [];
+    final List invoices = _profileData?['recent_invoices'] ?? [];
+
+    final List<Map<String, dynamic>> items = [];
+
+    for (final inv in invoices) {
+      final isPaid = inv['payment_status'] == 'paid';
+      String timeLabel = 'Gần đây';
+      if (inv['issued_at'] != null) {
+        try {
+          final date = DateTime.parse(inv['issued_at']);
+          final diff = DateTime.now().difference(date).inDays;
+          if (diff == 0) {
+            timeLabel = 'Hôm nay';
+          } else if (diff == 1) {
+            timeLabel = '1 ngày trước';
+          } else {
+            timeLabel = '$diff ngày trước';
+          }
+        } catch (e) {}
+      }
+
+      if (!isPaid) {
+        items.add({
+          'title': 'Hóa đơn chưa thanh toán',
+          'sub': 'Mã ${inv['invoice_code']} — Số tiền: ${_formatMoney(inv['total_amount'])}',
+          'time': timeLabel,
+          'icon': Icons.notifications_none_outlined,
+          'iconColor': TenantColors.primaryGreen,
+          'bgColor': TenantColors.bgMint,
+          'unread': true,
+        });
+      } else {
+        items.add({
+          'title': 'Thanh toán thành công',
+          'sub': 'Mã ${inv['invoice_code']} — Số tiền: ${_formatMoney(inv['total_amount'])}',
+          'time': timeLabel,
+          'icon': Icons.check_circle_outline,
+          'iconColor': TenantColors.primaryGreen,
+          'bgColor': TenantColors.bgMint,
+          'unread': false,
+        });
+      }
+    }
+
+    for (final ticket in tickets) {
+      String timeLabel = 'Gần đây';
+      if (ticket['created_at'] != null) {
+        try {
+          final date = DateTime.parse(ticket['created_at']);
+          final diff = DateTime.now().difference(date).inDays;
+          if (diff == 0) {
+            timeLabel = 'Hôm nay';
+          } else if (diff == 1) {
+            timeLabel = '1 ngày trước';
+          } else {
+            timeLabel = '$diff ngày trước';
+          }
+        } catch (e) {}
+      }
+
+      final String status = ticket['status'] ?? 'pending';
+      String statusText = 'Tiếp nhận';
+      Color color = TenantColors.primaryGreen;
+      Color bgColor = TenantColors.bgMint;
+      if (status == 'in-progress') {
+        statusText = 'Đang xử lý';
+        color = TenantColors.warningOrange;
+        bgColor = const Color(0xFFFFF3E0);
+      } else if (status == 'resolved') {
+        statusText = 'Đã hoàn thành';
+        color = Colors.blue;
+        bgColor = const Color(0xFFE1F5FE);
+      }
+
+      items.add({
+        'title': 'Sự cố: ${ticket['title']}',
+        'sub': 'Trạng thái: $statusText (Mức ưu tiên: ${ticket['priority']})',
+        'time': timeLabel,
         'icon': Icons.build_outlined,
-        'iconColor': TenantColors.warningOrange,
-        'bgColor': const Color(0xFFFFF3E0),
-        'unread': true,
-      },
-      {
-        'title': 'Thanh toán thành công',
-        'sub': 'Hóa đơn tháng 4/2025 — 2.850.000 đ',
-        'time': '3 ngày trước',
-        'icon': Icons.check_circle_outline,
-        'iconColor': TenantColors.primaryGreen,
-        'bgColor': TenantColors.bgMint,
-        'unread': false,
-      },
-      {
-        'title': 'Hợp đồng sắp hết hạn',
-        'sub': 'Hợp đồng phòng P203 hết hạn 30/08/2025',
-        'time': '5 ngày trước',
-        'icon': Icons.assignment_outlined,
-        'iconColor': Colors.indigo,
-        'bgColor': const Color(0xFFE8EAF6),
-        'unread': false,
-      },
-    ];
+        'iconColor': color,
+        'bgColor': bgColor,
+        'unread': status == 'pending',
+      });
+    }
+
+    if (items.isEmpty) {
+      items.addAll([
+        {
+          'title': 'Chào mừng thành viên mới',
+          'sub': 'Chào mừng bạn đến với hệ thống quản lý nhà trọ SmartRent!',
+          'time': 'Vừa xong',
+          'icon': Icons.celebration_outlined,
+          'iconColor': TenantColors.primaryGreen,
+          'bgColor': TenantColors.bgMint,
+          'unread': true,
+        },
+        {
+          'title': 'Thông tin hệ thống',
+          'sub': 'Liên hệ quản lý nếu bạn cần hỗ trợ các dịch vụ lưu trú.',
+          'time': '1 ngày trước',
+          'icon': Icons.info_outline_rounded,
+          'iconColor': Colors.indigo,
+          'bgColor': const Color(0xFFE8EAF6),
+          'unread': false,
+        }
+      ]);
+    }
+
+    final displayItems = items.take(4).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,7 +964,14 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   color: Colors.black87),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TenantNotificationPage(),
+                  ),
+                );
+              },
               child: const Text(
                 'Tất cả >',
                 style: TextStyle(
@@ -738,9 +986,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
+          itemCount: displayItems.length,
           itemBuilder: (context, index) {
-            final item = items[index];
+            final item = displayItems[index];
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
@@ -760,7 +1008,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: item['bgColor'],
+                      color: item['bgColor'] ?? Colors.transparent,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(item['icon'],
@@ -775,7 +1023,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                           children: [
                             Expanded(
                               child: Text(
-                                item['title'],
+                                item['title'] ?? '',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -799,7 +1047,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item['sub'],
+                          item['sub'] ?? '',
                           style: const TextStyle(
                               fontSize: 12, color: TenantColors.textGrey),
                           maxLines: 2,
@@ -810,7 +1058,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    item['time'],
+                    item['time'] ?? '',
                     style: const TextStyle(fontSize: 11, color: Colors.black26),
                   ),
                 ],
@@ -819,90 +1067,6 @@ class _TenantHomePageState extends State<TenantHomePage> {
           },
         ),
       ],
-    );
-  }
-
-  // ── BOTTOM NAV ───────────────────────────────────────────────────────────
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, -2))
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, 'Trang chủ', Icons.home_outlined),
-            _buildNavItem(1, 'Hóa đơn', Icons.description_outlined,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const TenantOrderPage()))),
-            _buildNavItem(2, 'Sửa chữa', Icons.build_outlined),
-            _buildNavItem(3, 'Thông báo',
-                Icons.notifications_none_outlined, hasBadge: true),
-            _buildNavItem(4, 'Tài khoản', Icons.person_outline_rounded),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, String label, IconData icon,
-      {bool hasBadge = false, VoidCallback? onTap}) {
-    final bool isActive = _currentIndex == index;
-    return InkWell(
-      onTap: onTap ??
-          () => setState(() => _currentIndex = index),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? TenantColors.bgMint : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon,
-                    color: isActive
-                        ? TenantColors.primaryGreen
-                        : Colors.grey[400],
-                    size: 24),
-                if (hasBadge)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: isActive ? TenantColors.primaryGreen : Colors.grey[400],
-                fontSize: 10,
-                fontWeight:
-                    isActive ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

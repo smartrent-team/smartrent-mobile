@@ -1,5 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
+import 'package:smartrent_mobile/tenant/features/contract/data/contract_repository.dart';
+import 'package:smartrent_mobile/tenant/features/contract/domain/models/contract_model.dart';
 
 class TenantContractPage extends StatefulWidget {
   const TenantContractPage({super.key});
@@ -14,19 +20,19 @@ class _TenantContractPageState extends State<TenantContractPage>
   late Animation<double> _fadeAnimation;
   int _activeImageIndex = 0;
 
-  final List<String> _contractImages = [
-    'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=600',
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400',
-    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=400',
-    'https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?auto=format&fit=crop&q=80&w=400',
-  ];
+  final ContractRepository _contractRepository = ContractRepository();
+  final TokenService _tokenService = TokenService();
+  final _currency =
+      NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+  final _dateFormat = DateFormat('dd/MM/yyyy');
 
-  final List<String> _contractCaptions = [
-    'Trang 1 — Thông tin chung',
-    'Trang 2 — Quyền lợi & Nghĩa vụ',
-    'Trang 3 — Điều khoản đặt cọc',
-    'Trang 4 — Chữ ký hai bên',
-  ];
+  bool _isLoading = true;
+  String? _errorMessage;
+  ContractModel? _contract;
+
+  List<String> get _contractImages => _contract?.contractImages ?? [];
+
+  String _captionAt(int index) => 'Trang ${index + 1} — Hợp đồng gốc';
 
   @override
   void initState() {
@@ -40,7 +46,65 @@ class _TenantContractPageState extends State<TenantContractPage>
       curve: Curves.easeIn,
     );
     _fadeController.forward();
+    _loadContract();
   }
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _loadContract() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final contract = await _contractRepository.fetchContractForCurrentTenant();
+      if (!mounted) return;
+      setState(() {
+        _contract = contract;
+        _activeImageIndex = 0;
+      });
+      if (contract == null && mounted) {
+        setState(() {
+          _errorMessage = 'Không tìm thấy hợp đồng';
+        });
+      }
+    } on ContractRepositoryException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.message);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.response?.data?['error']?.toString() ??
+            'Lỗi kết nối: ${e.message}';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = 'Lỗi kết nối: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '—';
+    return _dateFormat.format(date);
+  }
+
+  String _formatDeposit(int amount) => _currency.format(amount);
 
   @override
   void dispose() {
@@ -48,8 +112,68 @@ class _TenantContractPageState extends State<TenantContractPage>
     super.dispose();
   }
 
+  Widget _buildFallback() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                size: 48, color: TenantColors.textGrey),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Không tải được hợp đồng',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadContract,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TenantColors.primaryGreenAlt,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: TenantColors.bgLightGreen,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: TenantColors.primaryGreenAlt,
+          ),
+        ),
+      );
+    }
+
+    if (_errorMessage != null || _contract == null) {
+      return Scaffold(
+        backgroundColor: TenantColors.bgLightGreen,
+        appBar: AppBar(
+          backgroundColor: TenantColors.bgLightGreen,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: _buildFallback(),
+      );
+    }
+
     return Scaffold(
       backgroundColor: TenantColors.bgLightGreen,
       body: FadeTransition(
@@ -113,17 +237,17 @@ class _TenantContractPageState extends State<TenantContractPage>
                   child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 ),
               ),
-              const Column(
+              Column(
                 children: [
                   Text(
-                    'Phòng P203 · Tầng 2',
-                    style: TextStyle(
+                    'Phòng ${_contract!.roomName} · ${_contract!.building}',
+                    style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
                         fontWeight: FontWeight.w500),
                   ),
-                  SizedBox(height: 4),
-                  Text(
+                  const SizedBox(height: 4),
+                  const Text(
                     'Hợp đồng thuê phòng',
                     style: TextStyle(
                         color: Colors.white,
@@ -176,9 +300,9 @@ class _TenantContractPageState extends State<TenantContractPage>
                               color: Colors.white, shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          'Đang hiệu lực',
-                          style: TextStyle(
+                        Text(
+                          _contract!.statusLabel,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 14),
@@ -192,9 +316,9 @@ class _TenantContractPageState extends State<TenantContractPage>
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Còn 102 ngày',
-                        style: TextStyle(
+                      child: Text(
+                        'Còn ${_contract!.remainingDays} ngày',
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold),
@@ -205,22 +329,24 @@ class _TenantContractPageState extends State<TenantContractPage>
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: const LinearProgressIndicator(
-                    value: 0.72,
+                  child: LinearProgressIndicator(
+                    value: _contract!.validityProgress ?? 0,
                     backgroundColor: Colors.white30,
                     valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.white),
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
                     minHeight: 6,
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('01/09/2024',
-                        style: TextStyle(color: Colors.white70, fontSize: 11)),
-                    Text('31/08/2025',
-                        style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(_formatDate(_contract!.startDate),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11)),
+                    Text(_formatDate(_contract!.endDate),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11)),
                   ],
                 ),
               ],
@@ -299,15 +425,15 @@ class _TenantContractPageState extends State<TenantContractPage>
                 color: Colors.white, size: 28),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tiền cọc đã đặt',
+                const Text('Tiền cọc đã đặt',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
-                SizedBox(height: 4),
-                Text('4.400.000 đ',
-                    style: TextStyle(
+                const SizedBox(height: 4),
+                Text(_formatDeposit(_contract!.deposit),
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold)),
@@ -333,6 +459,41 @@ class _TenantContractPageState extends State<TenantContractPage>
 
   // ── ORIGINAL IMAGES ──────────────────────────────────────────────────────
   Widget _buildOriginalImagesSection(BuildContext context) {
+    final images = _contractImages;
+    final imageCount = images.length;
+
+    if (imageCount == 0) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ảnh hợp đồng gốc',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Text(
+              'Chưa có ảnh hợp đồng',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: TenantColors.textGrey),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final safeIndex =
+        _activeImageIndex.clamp(0, imageCount - 1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -352,8 +513,8 @@ class _TenantContractPageState extends State<TenantContractPage>
               decoration: BoxDecoration(
                   color: TenantColors.bgMint,
                   borderRadius: BorderRadius.circular(20)),
-              child: const Text('4 trang',
-                  style: TextStyle(
+              child: Text('$imageCount trang',
+                  style: const TextStyle(
                       color: TenantColors.primaryGreenAlt,
                       fontSize: 11,
                       fontWeight: FontWeight.bold)),
@@ -382,7 +543,7 @@ class _TenantContractPageState extends State<TenantContractPage>
               fit: StackFit.expand,
               children: [
                 Image.network(
-                  _contractImages[_activeImageIndex],
+                  images[safeIndex],
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
@@ -416,7 +577,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                   bottom: 16,
                   left: 16,
                   child: Text(
-                    _contractCaptions[_activeImageIndex],
+                    _captionAt(safeIndex),
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -431,13 +592,14 @@ class _TenantContractPageState extends State<TenantContractPage>
         // Thumbnails row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(4, (index) {
-            final isActive = _activeImageIndex == index;
+          children: List.generate(imageCount, (index) {
+            final isActive = safeIndex == index;
             return GestureDetector(
               onTap: () => setState(() => _activeImageIndex = index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: (MediaQuery.of(context).size.width - 32 - 36) / 4,
+                width: (MediaQuery.of(context).size.width - 32 - 36) /
+                    imageCount.clamp(1, 4),
                 height: 64,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
@@ -456,7 +618,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Image.network(
-                  _contractImages[index],
+                  images[index],
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: Colors.grey.shade200,
@@ -494,21 +656,22 @@ class _TenantContractPageState extends State<TenantContractPage>
                 color: Color(0xFFFBC02D), size: 24),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Hợp đồng sắp hết hạn',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                       color: Colors.black87),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Còn 102 ngày — liên hệ gia hạn sớm',
-                  style: TextStyle(color: TenantColors.textGrey, fontSize: 11),
+                  'Còn ${_contract!.remainingDays} ngày — liên hệ gia hạn sớm',
+                  style: const TextStyle(
+                      color: TenantColors.textGrey, fontSize: 11),
                 ),
               ],
             ),

@@ -22,13 +22,24 @@ class TicketModel {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    final roomCode = json['rooms']?['room_code'];
+    // Supabase có thể trả về rooms là object hoặc array (khi có nhiều bản ghi)
+    final roomsRaw = json['rooms'] ?? json['room'];
+    Map<dynamic, dynamic>? rooms;
+    if (roomsRaw is Map) {
+      rooms = roomsRaw;
+    } else if (roomsRaw is List && roomsRaw.isNotEmpty) {
+      rooms = roomsRaw.first is Map ? roomsRaw.first as Map : null;
+    }
+
+    final roomCode = rooms?['room_code'] ?? rooms?['roomCode'] ?? json['roomName'] ?? json['room_name'];
+    final floorRaw = rooms?['floor'] ?? json['floor'];
+
     return TicketModel(
       id: json['id'],
       title: json['title']?.toString(),
-      roomName: roomCode != null ? 'P.$roomCode' : 'N/A',
-      floor: json['rooms']?['floor']?.toString() ?? 'N/A',
-      status: json['status'],
+      roomName: roomCode?.toString(),
+      floor: floorRaw?.toString(),
+      status: json['status']?.toString(),
       priority: json['priority']?.toString(),
       description: json['description']?.toString(),
       createdAt: json['created_at']?.toString(),

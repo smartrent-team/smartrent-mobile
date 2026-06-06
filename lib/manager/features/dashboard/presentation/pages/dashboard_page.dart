@@ -16,6 +16,7 @@ import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_ser
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
+import 'package:smartrent_mobile/manager/features/marketplace/presentation/pages/marketplace_page.dart';
 
 class _UtilityAlertData {
   final String room;
@@ -441,7 +442,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Spacer(),
+                              Expanded(
+                                child: _buildActionCard(
+                                  'Chợ đồ cũ',
+                                  'Duyệt bài đăng cư dân',
+                                  Icons.storefront_outlined,
+                                  const Color(0xFFE3F2FD),
+                                  Colors.blue,
+                                  onTap: () => context.pushSlide(const MarketplacePage()),
+                                ),
+                              ),
                             ],
                           ),
                           if (_utilityAlerts.isNotEmpty) ...[
@@ -760,7 +770,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Row(
                     children: [
                       Text(
-                        ticket.roomName ?? 'N/A',
+                        ticket.roomName ?? 'Chưa xác định',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const SizedBox(width: 8),
@@ -828,7 +838,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ticket,
           '#T-${ticket.id}',
           displayTitle,
-          ticket.roomName ?? 'N/A',
+          ticket.roomName ?? 'Chưa xác định',
           _timeAgo(ticket.createdAt),
           statusLabel,
           statusColor,

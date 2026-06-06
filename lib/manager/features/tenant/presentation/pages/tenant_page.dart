@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
@@ -17,6 +18,8 @@ import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dar
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dart';
+import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class TenantPage extends StatefulWidget {
   final int initialIndex;
@@ -37,6 +40,7 @@ class _TenantPageState extends State<TenantPage> {
   final TextEditingController _searchController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final InvoiceService _invoiceService = InvoiceService();
+  final TokenService _tokenService = TokenService();
 
   List<Tenant> _allTenants = [];
   bool _isLoading = false;
@@ -61,6 +65,17 @@ class _TenantPageState extends State<TenantPage> {
             initial: doc['initial']?.toString() ?? 'C',
           )).toList();
         });
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      print('DEBUG: Fetch tenants error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
+        );
       }
     } catch (e) {
       print('DEBUG: Fetch tenants error: $e');
@@ -87,6 +102,12 @@ class _TenantPageState extends State<TenantPage> {
           _allInvoices = docs.map((doc) => Invoice.fromJson(doc)).toList();
         });
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _handleSessionExpired();
+        return;
+      }
+      print('DEBUG: Fetch invoices error: $e');
     } catch (e) {
       print('DEBUG: Fetch invoices error: $e');
     } finally {
@@ -94,6 +115,15 @@ class _TenantPageState extends State<TenantPage> {
         setState(() => _isLoadingInvoices = false);
       }
     }
+  }
+
+  Future<void> _handleSessionExpired() async {
+    await _tokenService.clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   String _formatInvoiceMonth(Invoice invoice) {
