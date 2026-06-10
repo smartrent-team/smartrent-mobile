@@ -284,6 +284,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     final tenant = _room!['tenant'];
     final List<dynamic> invoices = _room!['invoices'] ?? [];
     final List<dynamic> tickets = _room!['tickets'] ?? [];
+    final List<dynamic> fixtures = _room!['fixtures'] ?? [];
 
     return RefreshIndicator(
       onRefresh: _fetchRoomDetail,
@@ -303,6 +304,9 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
               _buildDetailRow('Diện tích', '$area m²'),
               _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng', isLast: true),
             ]),
+            const SizedBox(height: 20),
+
+            _buildFixturesList(fixtures),
             const SizedBox(height: 20),
 
             _buildSection('Đơn giá điện - nước', Icons.bolt_outlined, [
@@ -792,6 +796,120 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                 Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFixturesList(List<dynamic> fixtures) {
+    if (fixtures.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.chair_outlined, color: ManagerColors.primaryGreen, size: 20),
+                SizedBox(width: 8),
+                Text('Đồ cố định trong phòng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const Divider(height: 24),
+            const Center(
+              child: Text(
+                'Không có đồ cố định nào',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4))],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: const [
+                Icon(Icons.chair_outlined, color: ManagerColors.primaryGreen, size: 20),
+                SizedBox(width: 8),
+                Text('Đồ cố định trong phòng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          ...fixtures.map((fix) {
+            final name = fix['name'] ?? 'Thiết bị';
+            final quantity = fix['quantity'] ?? 1;
+            final status = fix['status'] ?? 'good';
+            final description = fix['description'];
+
+            return Column(
+              children: [
+                _buildFixtureItem(name, quantity, status, description),
+                if (fix != fixtures.last)
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFixtureItem(String name, int quantity, String status, String? description) {
+    String statusText = 'Tốt';
+    Color statusColor = Colors.green;
+    if (status == 'broken') {
+      statusText = 'Hỏng';
+      statusColor = Colors.red;
+    } else if (status == 'maintenance') {
+      statusText = 'Bảo trì';
+      statusColor = Colors.orange;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (description != null && description.isNotEmpty)
+                  Text(description, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('SL: $quantity', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ],
       ),

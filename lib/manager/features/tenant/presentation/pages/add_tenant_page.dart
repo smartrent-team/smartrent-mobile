@@ -45,6 +45,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
   DateTime? _contractEndDate;
   final _contractEndDateController = TextEditingController();
   bool _obscurePassword = true;
+  bool _aiDetectedDate = false;
+  bool _aiScanFailed = false;
 
   final List<Map<String, String>> _roles = [
     {'label': 'Cư dân', 'id': 'tenant'},
@@ -357,7 +359,10 @@ class _AddTenantPageState extends State<AddTenantPage> {
   ) async {
     if (!mounted) return;
 
-    setState(() => _isScanningContract = true);
+    setState(() {
+      _isScanningContract = true;
+      _aiScanFailed = false;
+    });
 
     try {
       final result = await _contractAiService.scanFromBytesBatch(imageBytesList);
@@ -370,6 +375,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
           _contractEndDate = parsedDate;
           _contractEndDateController.text =
               _dateFormat.format(parsedDate.toLocal());
+          _aiDetectedDate = true;
+          _aiScanFailed = false;
         });
         return;
       }
@@ -377,10 +384,13 @@ class _AddTenantPageState extends State<AddTenantPage> {
       throw Exception('Không đọc được ngày hết hạn từ ảnh hợp đồng');
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _aiScanFailed = true;
+      });
       if (_contractEndDate != null) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        const SnackBar(
+          content: Text('AI không nhận diện được ngày hết hạn. Vui lòng chọn thủ công.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -575,6 +585,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
                             if (urls.isEmpty) {
                               _contractEndDate = null;
                               _contractEndDateController.clear();
+                              _aiDetectedDate = false;
+                              _aiScanFailed = false;
                             }
                           });
                           _validateForm();
@@ -585,7 +597,9 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       _buildFieldLabel('Ngày hết hạn hợp đồng'),
                       _buildTextField(
                         controller: _contractEndDateController,
-                        hintText: 'AI sẽ tự nhận diện từ ảnh hợp đồng',
+                        hintText: _aiScanFailed
+                            ? 'AI thất bại — Bấm để chọn ngày'
+                            : 'AI tự nhận diện hoặc bấm để chọn',
                         icon: Icons.event_outlined,
                         enabled: !_isLoading && !_isScanningCccd && !_isScanningContract,
                         readOnly: true,
@@ -593,27 +607,78 @@ class _AddTenantPageState extends State<AddTenantPage> {
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_month_outlined),
                           color: ManagerColors.textGrey,
-                          onPressed: _pickContractEndDate,
+                          onPressed: (!_isLoading && !_isScanningContract)
+                              ? _pickContractEndDate
+                              : null,
                         ),
                       ),
                       if (_isScanningContract) ...[
                         const SizedBox(height: 10),
-                        const Text(
-                          'Đang quét ảnh hợp đồng để lấy ngày hết hạn...',
-                          style: TextStyle(
-                            color: ManagerColors.textGrey,
-                            fontSize: 12,
-                          ),
+                        Row(
+                          children: const [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: ManagerColors.primaryGreen,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Đang quét ảnh hợp đồng để lấy ngày hết hạn...',
+                              style: TextStyle(
+                                color: ManagerColors.textGrey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if (_aiScanFailed && _contractEndDate == null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: const [
+                            Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'AI không nhận diện được. Vui lòng bấm vào ô trên để chọn ngày thủ công.',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ] else if (_contractEndDate != null) ...[
                         const SizedBox(height: 10),
-                        Text(
-                          'AI phát hiện: ${_dateFormat.format(_contractEndDate!.toLocal())}',
-                          style: const TextStyle(
-                            color: ManagerColors.primaryGreen,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              _aiDetectedDate
+                                  ? Icons.auto_awesome
+                                  : Icons.edit_calendar_outlined,
+                              size: 14,
+                              color: _aiDetectedDate
+                                  ? ManagerColors.primaryGreen
+                                  : ManagerColors.textGrey,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _aiDetectedDate
+                                  ? 'AI đã nhận diện — bạn có thể bấm vào ô trên để sửa'
+                                  : 'Đã chọn thủ công',
+                              style: TextStyle(
+                                color: _aiDetectedDate
+                                    ? ManagerColors.primaryGreen
+                                    : ManagerColors.textGrey,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
