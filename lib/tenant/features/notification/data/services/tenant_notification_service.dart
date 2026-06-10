@@ -27,6 +27,54 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       return;
     }
   }
+
+  final localNotifications = FlutterLocalNotificationsPlugin();
+
+  const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
+  const iosSettings = DarwinInitializationSettings();
+
+  await localNotifications.initialize(
+    settings: const InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+      macOS: iosSettings,
+    ),
+  );
+
+  const androidChannel = AndroidNotificationChannel(
+    _notificationChannelId,
+    _notificationChannelName,
+    description: _notificationChannelDescription,
+    importance: Importance.high,
+  );
+
+  final androidImpl = localNotifications
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await androidImpl?.createNotificationChannel(androidChannel);
+
+  final title = message.notification?.title ?? 'SmartRent';
+  final body = message.notification?.body ?? '';
+
+  const androidDetails = AndroidNotificationDetails(
+    _notificationChannelId,
+    _notificationChannelName,
+    channelDescription: _notificationChannelDescription,
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+  const iosDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+
+  await localNotifications.show(
+    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title: title,
+    body: body,
+    notificationDetails: const NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+    ),
+    payload: jsonEncode(message.data),
+  );
 }
 
 class TenantNotificationService {
