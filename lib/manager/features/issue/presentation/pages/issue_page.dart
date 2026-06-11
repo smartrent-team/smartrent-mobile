@@ -374,7 +374,7 @@ class _IssuePageState extends State<IssuePage> {
                     image: DecorationImage(
                       image: NetworkImage(issue.images![0].startsWith('http') 
                           ? issue.images![0] 
-                          : 'http://10.0.2.2:3000${issue.images![0]}'),
+                          : 'http://192.168.1.65:3000${issue.images![0]}'),
                       fit: BoxFit.cover,
                     ),
                   ),

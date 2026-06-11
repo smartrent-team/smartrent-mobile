@@ -15,6 +15,7 @@ import 'package:smartrent_mobile/tenant/features/notification/presentation/pages
 import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/features/marketplace/presentation/pages/marketplace_page.dart';
+import 'package:smartrent_mobile/tenant/features/home/presentation/pages/tenant_room_detail_page.dart';
 
 
 class TenantHomePage extends StatefulWidget {
@@ -72,6 +73,21 @@ class _TenantHomePageState extends State<TenantHomePage> {
         context,
         MaterialPageRoute(builder: (_) => const TenantOrderPage()),
       );
+    }
+  }
+
+  void _openRoomDetail() {
+    final room = _profileData?['room'];
+    if (room != null && room['id'] != null) {
+      final int roomId = int.tryParse(room['id'].toString()) ?? 0;
+      if (roomId > 0) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TenantRoomDetailPage(roomId: roomId),
+          ),
+        );
+      }
     }
   }
 
@@ -312,9 +328,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          _buildHeaderChip(roomCode),
+                          _buildHeaderChip(roomCode, onTap: room != null ? _openRoomDetail : null),
                           const SizedBox(width: 8),
-                          _buildHeaderChip(floor),
+                          _buildHeaderChip(floor, onTap: room != null ? _openRoomDetail : null),
                         ],
                       ),
                     ],
@@ -355,19 +371,22 @@ class _TenantHomePageState extends State<TenantHomePage> {
     );
   }
 
-  Widget _buildHeaderChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+  Widget _buildHeaderChip(String text, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -417,7 +436,12 @@ class _TenantHomePageState extends State<TenantHomePage> {
           Container(width: 1, height: 28, color: Colors.white24),
           Expanded(child: _buildContractCol('Tháng hiện tại', currentMonth)),
           Container(width: 1, height: 28, color: Colors.white24),
-          Expanded(child: _buildContractCol('Phòng', status)),
+          Expanded(
+            child: GestureDetector(
+              onTap: room != null ? _openRoomDetail : null,
+              child: _buildContractCol('Phòng', status),
+            ),
+          ),
         ],
       ),
     );
@@ -784,6 +808,8 @@ class _TenantHomePageState extends State<TenantHomePage> {
   }
 
   Widget _buildQuickServices() {
+    final room = _profileData?['room'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -793,40 +819,42 @@ class _TenantHomePageState extends State<TenantHomePage> {
               fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: _buildServiceItem('Hóa đơn', Icons.description_outlined,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              _buildServiceItem('Hóa đơn', Icons.description_outlined,
                   TenantColors.primaryGreen,
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const TenantOrderPage()))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildServiceItem(
+              const SizedBox(width: 16),
+              _buildServiceItem(
                   'Thanh toán QR', Icons.qr_code_outlined,
                   const Color(0xFF26A69A),
                   onTap: _openPayment),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildServiceItem(
+              const SizedBox(width: 16),
+              _buildServiceItem(
                   'Báo hỏng', Icons.build_outlined,
                   TenantColors.warningAmber,
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const RepairPage()))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildServiceItem(
+              const SizedBox(width: 16),
+              _buildServiceItem(
                   'Hợp đồng', Icons.assignment_outlined,
                   const Color(0xFF5C6BC0),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(
                           builder: (_) => const TenantContractPage()))),
-            ),
-          ],
+              if (room != null) ...[
+                const SizedBox(width: 16),
+                _buildServiceItem(
+                    'Phòng ở', Icons.meeting_room_outlined,
+                    const Color(0xFF8D6E63),
+                    onTap: _openRoomDetail),
+              ],
+            ],
+          ),
         ),
       ],
     );

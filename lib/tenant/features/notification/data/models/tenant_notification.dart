@@ -69,6 +69,9 @@ class TenantNotification {
         return Icons.psychology_rounded;
       case 'contract':
         return Icons.event_busy_rounded;
+      case 'marketplace_post':
+      case 'marketplace_status':
+        return Icons.storefront_rounded;
       case 'system':
         return Icons.info_outline_rounded;
       default:
@@ -88,6 +91,9 @@ class TenantNotification {
         return const Color(0xFF5E35B1);
       case 'contract':
         return const Color(0xFFC62828);
+      case 'marketplace_post':
+      case 'marketplace_status':
+        return const Color(0xFF00838F);
       case 'system':
         return const Color(0xFF3949AB);
       default:
@@ -107,6 +113,9 @@ class TenantNotification {
         return const Color(0xFFF3E5F5);
       case 'contract':
         return const Color(0xFFFFEBEE);
+      case 'marketplace_post':
+      case 'marketplace_status':
+        return const Color(0xFFE0F7FA);
       case 'system':
         return const Color(0xFFE8EAF6);
       default:

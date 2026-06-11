@@ -25,6 +25,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _depositController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final TokenService _tokenService = TokenService();
   final AiContractService _contractAiService = AiContractService();
@@ -190,6 +191,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _depositController.dispose();
     _contractEndDateController.dispose();
     super.dispose();
   }
@@ -236,6 +238,9 @@ class _AddTenantPageState extends State<AddTenantPage> {
         identityNumber: _cccdController.text.trim(),
         contractImages: _contractImageUrls.isNotEmpty ? _contractImageUrls : null,
         contractEndDate: _contractEndDate?.toIso8601String(),
+        depositAmount: _depositController.text.trim().isNotEmpty
+            ? int.tryParse(_depositController.text.trim())
+            : null,
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -573,6 +578,18 @@ class _AddTenantPageState extends State<AddTenantPage> {
                           });
                           _validateForm();
                         },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildFieldLabel("Tiền đặt cọc (VND)"),
+                      _buildTextField(
+                        controller: _depositController,
+                        hintText: "VD: 3000000",
+                        icon: Icons.monetization_on_outlined,
+                        keyboardType: TextInputType.number,
+                        enabled: !_isLoading,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                       ),
                       const SizedBox(height: 20),
                       ContractPhotoUpload(
