@@ -67,7 +67,7 @@ class MarketplaceItemCard extends StatelessWidget {
     }
 
     return Image.network(
-      imageStr.startsWith('http') ? imageStr : 'http://192.168.1.65:3000$imageStr',
+      imageStr.startsWith('http') ? imageStr : 'http://192.168.1.39:3000$imageStr',
       width: 80,
       height: 80,
       fit: BoxFit.cover,

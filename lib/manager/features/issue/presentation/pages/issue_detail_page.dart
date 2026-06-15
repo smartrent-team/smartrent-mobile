@@ -324,7 +324,7 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
                     child: Image.network(
-                      url.startsWith('http') ? url : 'http://192.168.1.65:3000$url',
+                      url.startsWith('http') ? url : 'http://192.168.1.39:3000$url',
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported)),
                     ),

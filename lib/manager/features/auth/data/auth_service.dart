@@ -14,6 +14,12 @@ class AuthService {
         },
       );
     } on DioException catch (e) {
+      print('--- LOGIN FAILURE ---');
+      print('URL: ${e.requestOptions.uri}');
+      print('Status: ${e.response?.statusCode}');
+      print('Data: ${e.response?.data}');
+      print('Message: ${e.message}');
+      print('----------------------');
       rethrow;
     }
   }
