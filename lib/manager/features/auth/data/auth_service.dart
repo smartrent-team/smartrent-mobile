@@ -1,76 +1,46 @@
 import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
 
+/// Service xử lý các API liên quan đến xác thực người dùng.
 class AuthService {
   final ApiClient _apiClient = ApiClient();
 
   Future<Response> login(String identity, String password) async {
-    try {
-      return await _apiClient.dio.post(
-        '/api/auth/login',
-        data: {
-          'phone': identity,
-          'password': password,
-        },
-      );
-    } on DioException catch (e) {
-      print('--- LOGIN FAILURE ---');
-      print('URL: ${e.requestOptions.uri}');
-      print('Status: ${e.response?.statusCode}');
-      print('Data: ${e.response?.data}');
-      print('Message: ${e.message}');
-      print('----------------------');
-      rethrow;
-    }
+    return _apiClient.dio.post(
+      '/api/auth/login',
+      data: {
+        'phone': identity,
+        'password': password,
+      },
+    );
   }
 
   Future<Response> sendOtp(String phone) async {
-    try {
-      return await _apiClient.dio.post('/api/users/send-otp', data: {'phone': phone});
-    } on DioException catch (e) {
-      rethrow;
-    }
+    return _apiClient.dio.post(
+      '/api/users/send-otp',
+      data: {'phone': phone},
+    );
   }
 
   Future<Response> verifyOtp(String phone, String otp) async {
-    try {
-      return await _apiClient.dio.post('/api/users/verify-otp', data: {
-        'phone': phone,
-        'otp': otp,
-      });
-    } on DioException catch (e) {
-      rethrow;
-    }
+    return _apiClient.dio.post('/api/users/verify-otp', data: {
+      'phone': phone,
+      'otp': otp,
+    });
   }
 
   Future<Response> changePassword(String newPassword) async {
-    try {
-      return await _apiClient.dio.post(
-        '/api/auth/change-password',
-        data: {
-          'new_password': newPassword,
-        },
-      );
-    } on DioException catch (e) {
-      rethrow;
-    }
+    return _apiClient.dio.post(
+      '/api/auth/change-password',
+      data: {'new_password': newPassword},
+    );
   }
 
   Future<Response> forgotPassword(String email) async {
-    try {
-      return await _apiClient.dio.post(
-        '/api/auth/forgot-password',
-        data: {
-          'email': email,
-        },
-        options: Options(
-          headers: {
-            'host': 'localhost:3000',
-          },
-        ),
-      );
-    } on DioException catch (e) {
-      rethrow;
-    }
+    return _apiClient.dio.post(
+      '/api/auth/forgot-password',
+      data: {'email': email},
+      options: Options(headers: {'host': 'localhost:3000'}),
+    );
   }
 }

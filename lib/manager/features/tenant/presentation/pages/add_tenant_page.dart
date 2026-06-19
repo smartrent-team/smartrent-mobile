@@ -6,7 +6,7 @@ import 'package:smartrent_mobile/core/network/ai_contract_service.dart';
 import 'package:smartrent_mobile/core/network/ai_cccd_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/contract_photo_upload.dart';
 import 'package:dio/dio.dart';
@@ -116,7 +116,6 @@ class _AddTenantPageState extends State<AddTenantPage> {
         }
       }
     } catch (e) {
-      print('DEBUG: Fetch branches error: $e');
       if (mounted) {
         setState(() {
           // Fallback: if fetch fails but we have a managed branch ID, add it to the list
@@ -170,7 +169,6 @@ class _AddTenantPageState extends State<AddTenantPage> {
         });
       }
     } catch (e) {
-      print('DEBUG: Fetch rooms error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi khi lấy danh sách phòng: $e')),

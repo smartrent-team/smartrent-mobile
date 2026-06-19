@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_shell_page.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/auth_service.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 
 class OtpPage extends StatefulWidget {

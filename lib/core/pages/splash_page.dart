@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_shell_page.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 

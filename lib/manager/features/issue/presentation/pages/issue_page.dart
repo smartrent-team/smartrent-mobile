@@ -8,7 +8,7 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:intl/intl.dart';
 
@@ -374,7 +374,7 @@ class _IssuePageState extends State<IssuePage> {
                     image: DecorationImage(
                       image: NetworkImage(issue.images![0].startsWith('http') 
                           ? issue.images![0] 
-                          : 'http://192.168.1.39:3000${issue.images![0]}'),
+                          : 'http://192.168.1.65:3000${issue.images![0]}'),
                       fit: BoxFit.cover,
                     ),
                   ),

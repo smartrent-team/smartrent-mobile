@@ -7,8 +7,8 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/sta
 import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/repair_card.dart';
 import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_service.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/create_repair_page.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
-import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
+import 'package:smartrent_mobile/tenant/features/profile/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 
 class RepairPage extends StatefulWidget {
