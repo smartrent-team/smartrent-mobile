@@ -11,6 +11,7 @@ import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 class IssuePage extends StatefulWidget {
   final bool embedInShell;
@@ -374,7 +375,7 @@ class _IssuePageState extends State<IssuePage> {
                     image: DecorationImage(
                       image: NetworkImage(issue.images![0].startsWith('http') 
                           ? issue.images![0] 
-                          : 'http://192.168.1.65:3000${issue.images![0]}'),
+                          : '${AppConstants.baseUrl}${issue.images![0]}'),
                       fit: BoxFit.cover,
                     ),
                   ),

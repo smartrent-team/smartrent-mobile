@@ -1,7 +1,12 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+
 /// Hằng số dùng chung toàn ứng dụng.
 abstract final class AppConstants {
   // ── API ──────────────────────────────────────────────────────────────────
-  static const String baseUrl = 'http://192.168.1.65:3000';
+  static final String baseUrl = kIsWeb
+      ? 'http://localhost:3000'
+      : (Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000');
 
   // ── Storage keys ─────────────────────────────────────────────────────────
   static const String kAccessToken  = 'auth_token';
