@@ -1,13 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
-import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
-import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
-import 'package:smartrent_mobile/tenant/features/profile/presentation/widgets/info_tile.dart';
-import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/tenant_change_password_page.dart';
-
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';

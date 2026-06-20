@@ -146,7 +146,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
         }
       }
     } catch (e) {
-      print('DEBUG: Error loading room detail/utilities: $e');
+      debugPrint('Error loading room detail/utilities: $e');
     } finally {
       if (mounted) {
         setState(() {

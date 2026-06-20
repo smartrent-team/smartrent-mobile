@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 /// HTTP client cho AI microservice (FastAPI) — tách biệt với backend chính.
@@ -6,7 +8,12 @@ class AiClient {
 
   AiClient({String? baseUrl})
       : _dio = Dio(BaseOptions(
-          baseUrl: baseUrl ?? 'http://192.168.1.39:8000',
+          baseUrl: baseUrl ??
+              (kIsWeb
+                  ? 'http://localhost:8000'
+                  : (Platform.isAndroid
+                      ? 'http://10.0.2.2:8000'
+                      : 'http://localhost:8000')),
           connectTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
         )) {

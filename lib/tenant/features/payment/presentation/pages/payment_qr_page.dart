@@ -116,7 +116,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
       final dio = Dio();
       String finalUrl = url;
       if (Platform.isAndroid && finalUrl.contains('localhost')) {
-        finalUrl = finalUrl.replaceFirst('localhost', '192.168.1.39');
+        finalUrl = finalUrl.replaceFirst('localhost', '10.0.2.2');
       }
       await dio.get(finalUrl);
     } catch (e) {
