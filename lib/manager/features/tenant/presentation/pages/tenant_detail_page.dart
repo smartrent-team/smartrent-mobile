@@ -5,6 +5,8 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant_detail.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/edit_tenant_page.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/change_room_sheet.dart';
+import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/leave_room_sheet.dart';
 
 class TenantDetailPage extends StatefulWidget {
   final int tenantId;
@@ -100,19 +102,113 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 100),
+                              const SizedBox(height: 160),
                             ],
                           ),
                         ),
+                        if (_detail != null)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: _buildBottomActions(_detail!),
+                          ),
                       ],
                     ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _detail == null
-          ? null
-          : Container(
+    );
+  }
+
+  Widget _buildBottomActions(TenantDetail detail) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      decoration: BoxDecoration(
+        color: ManagerColors.bgLightGreen,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (detail.isActive) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final changed = await ChangeRoomSheet.show(
+                          context,
+                          tenantId: widget.tenantId,
+                          currentRoomId: detail.roomId,
+                          currentRoomLabel: detail.roomLabel,
+                        );
+                        if (changed == true && mounted) {
+                          _loadDetail();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Đã đổi phòng thành công!'),
+                              backgroundColor: ManagerColors.primaryGreen,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.swap_horiz, size: 20),
+                      label: const Text('Đổi phòng'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ManagerColors.primaryGreen,
+                        side: const BorderSide(color: ManagerColors.primaryGreen),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final left = await LeaveRoomSheet.show(
+                          context,
+                          tenantId: widget.tenantId,
+                          tenantName: detail.name,
+                          roomLabel: detail.roomLabel,
+                        );
+                        if (left == true && mounted) {
+                          _loadDetail();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Đã xử lý trả phòng thành công!'),
+                              backgroundColor: ManagerColors.primaryGreen,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.logout, size: 20),
+                      label: const Text('Trả phòng'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade400),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+            SizedBox(
               width: double.infinity,
-              height: 54,
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              height: 50,
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final updated = await context.pushSlide<bool>(
@@ -127,20 +223,22 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                   'Sửa thông tin cư dân',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ManagerColors.primaryGreen,
-                  elevation: 8,
-                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.4),
+                  elevation: 4,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(27),
+                    borderRadius: BorderRadius.circular(25),
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 
