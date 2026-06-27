@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
 import 'package:smartrent_mobile/tenant/features/profile/domain/models/tenant_profile.dart';
 
@@ -12,7 +13,7 @@ class ProfileService {
       }
       return null;
     } catch (e) {
-      print('Error fetching profile: $e');
+      debugPrint('Error fetching profile: $e');
       return null;
     }
   }

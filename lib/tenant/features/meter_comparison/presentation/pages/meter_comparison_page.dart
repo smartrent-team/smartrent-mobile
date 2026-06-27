@@ -6,7 +6,7 @@ import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/core/lottie/app_lottie.dart';
 import 'package:smartrent_mobile/core/lottie/lottie_assets.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/meter_comparison_service.dart';
-import 'package:smartrent_mobile/tenant/features/meter_comparison/data/services/tenant_profile_service.dart';
+import 'package:smartrent_mobile/tenant/features/profile/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/features/meter_comparison/domain/models/utility_analysis.dart';
 import 'package:smartrent_mobile/tenant/core/state/tenant_notification_state.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';

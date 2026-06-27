@@ -3,6 +3,7 @@ import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 class IssueDetailPage extends StatefulWidget {
   final TicketModel issue;
@@ -41,7 +42,7 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
         });
       }
     } catch (e) {
-      print('DEBUG: Fetch ticket detail error: $e');
+      debugPrint('Fetch ticket detail error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -324,7 +325,7 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
                     child: Image.network(
-                      url.startsWith('http') ? url : 'http://192.168.1.65:3000$url',
+                      url.startsWith('http') ? url : '${AppConstants.baseUrl}$url',
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported)),
                     ),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -7,9 +8,9 @@ class ApiClient {
 
   ApiClient({String? baseUrl})
       : _dio = Dio(BaseOptions(
-          baseUrl: baseUrl ?? 'http://192.168.1.65:3000',
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
+          baseUrl: baseUrl ?? AppConstants.baseUrl,
+          connectTimeout: AppConstants.connectTimeout,
+          receiveTimeout: AppConstants.receiveTimeout,
         )) {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -62,8 +63,8 @@ class ApiClient {
       // Dùng Dio riêng để tránh vòng lặp interceptor
       final plainDio = Dio(BaseOptions(
         baseUrl: _dio.options.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: AppConstants.refreshTimeout,
+        receiveTimeout: AppConstants.refreshTimeout,
       ));
 
       final response = await plainDio.post(

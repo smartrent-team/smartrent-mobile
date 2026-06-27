@@ -1,5 +1,4 @@
-/// Module quản lý (Manager) — điểm vào & export công khai.
-library manager;
+// Module quản lý (Manager) — điểm vào & export công khai.
 
 export 'core/navigation/manager_nav.dart';
 export 'core/navigation/manager_shell_page.dart';

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/marketplace/data/models/marketplace_item_model.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 class MarketplaceItemCard extends StatelessWidget {
   final MarketplaceItem item;
@@ -67,7 +68,7 @@ class MarketplaceItemCard extends StatelessWidget {
     }
 
     return Image.network(
-      imageStr.startsWith('http') ? imageStr : 'http://192.168.1.65:3000$imageStr',
+      imageStr.startsWith('http') ? imageStr : '${AppConstants.baseUrl}$imageStr',
       width: 80,
       height: 80,
       fit: BoxFit.cover,

@@ -1,5 +1,4 @@
-/// Module Tenant — điểm vào & export công khai.
-library tenant;
+// Module Tenant — điểm vào & export công khai.
 
 export 'core/navigation/tenant_nav.dart';
 export 'core/theme/tenant_colors.dart';

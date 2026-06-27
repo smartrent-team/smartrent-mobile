@@ -18,7 +18,7 @@ import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dar
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dart';
-import 'package:smartrent_mobile/manager/features/auth/data/token_service.dart';
+import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class TenantPage extends StatefulWidget {
@@ -71,14 +71,12 @@ class _TenantPageState extends State<TenantPage> {
         await _handleSessionExpired();
         return;
       }
-      print('DEBUG: Fetch tenants error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
         );
       }
     } catch (e) {
-      print('DEBUG: Fetch tenants error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
@@ -107,9 +105,7 @@ class _TenantPageState extends State<TenantPage> {
         await _handleSessionExpired();
         return;
       }
-      print('DEBUG: Fetch invoices error: $e');
-    } catch (e) {
-      print('DEBUG: Fetch invoices error: $e');
+    } catch (_) {
     } finally {
       if (mounted) {
         setState(() => _isLoadingInvoices = false);
