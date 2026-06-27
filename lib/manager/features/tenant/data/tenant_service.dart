@@ -120,4 +120,33 @@ class TenantService {
       rethrow;
     }
   }
+
+  Future<Response> changeRoom(int tenantId, int newRoomId) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/tenants/$tenantId/change-room',
+        data: {'newRoomId': newRoomId},
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> leaveRoom(
+    int tenantId, {
+    String? reason,
+    String? moveOutDate,
+  }) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/tenants/$tenantId/leave-room',
+        data: {
+          if (reason != null) 'reason': reason,
+          if (moveOutDate != null) 'moveOutDate': moveOutDate,
+        },
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
 }

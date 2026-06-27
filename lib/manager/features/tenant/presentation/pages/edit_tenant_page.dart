@@ -989,11 +989,11 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     ),
                   ),
                   const Text(
-                    "Không thể thay đổi",
+                    "Đổi tại Chi tiết cư dân",
                     style: TextStyle(
-                      color: ManagerColors.textGrey,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -1044,11 +1044,11 @@ class _EditTenantPageState extends State<EditTenantPage> {
                     ),
                   ),
                   const Text(
-                    "Không thể thay đổi",
+                    "Đổi tại Chi tiết cư dân",
                     style: TextStyle(
-                      color: ManagerColors.textGrey,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
