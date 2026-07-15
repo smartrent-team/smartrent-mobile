@@ -8,6 +8,7 @@ class TicketModel {
   final String? description;
   final String? createdAt;
   final List<dynamic>? images;
+  final int? repairCost;
 
   TicketModel({
     this.id,
@@ -19,6 +20,7 @@ class TicketModel {
     this.description,
     this.createdAt,
     this.images,
+    this.repairCost,
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class TicketModel {
       description: json['description']?.toString(),
       createdAt: json['created_at']?.toString(),
       images: json['images'],
+      repairCost: json['repair_cost'] != null ? (json['repair_cost'] as num).toInt() : null,
     );
   }
 
@@ -65,6 +68,7 @@ class TicketModel {
       'description': description,
       'createdAt': createdAt,
       'images': images,
+      'repair_cost': repairCost,
     };
   }
 }

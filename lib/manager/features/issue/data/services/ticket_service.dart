@@ -24,10 +24,11 @@ class TicketService {
     }
   }
 
-  Future<Response> updateTicketStatus(int id, String status) async {
+  Future<Response> updateTicketStatus(int id, String status, {int? repairCost}) async {
     try {
       return await _apiClient.dio.patch('/api/tickets/$id', data: {
         'status': status,
+        if (repairCost != null) 'repairCost': repairCost,
       });
     } on DioException catch (e) {
       rethrow;
