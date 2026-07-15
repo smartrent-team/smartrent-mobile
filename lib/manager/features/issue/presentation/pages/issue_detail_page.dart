@@ -75,15 +75,107 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
         return Colors.grey;
     }
   }
+  Future<int?> _showRepairCostDialog() async {
+    final TextEditingController costController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shadowColor: ManagerColors.cardShadow,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.monetization_on, color: ManagerColors.primaryGreen),
+              SizedBox(width: 10),
+              Text(
+                'Nhập chi phí sửa chữa',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Vui lòng nhập số tiền sửa chữa cho sự cố này (nếu có). Nhập 0 hoặc để trống nếu không mất phí.',
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: costController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Số tiền (VND)',
+                    hintText: 'Ví dụ: 150000',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.payments, color: Colors.grey),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      final val = int.tryParse(value.trim());
+                      if (val == null || val < 0) {
+                        return 'Vui lòng nhập số tiền hợp lệ';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Hủy', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  final text = costController.text.trim();
+                  final val = text.isEmpty ? 0 : int.parse(text);
+                  Navigator.of(context).pop(val);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ManagerColors.primaryGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Xác nhận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _updateStatus() async {
-    setState(() => _isUpdating = true);
     String statusToSend = _currentStatus;
     if (statusToSend == 'in_progress') statusToSend = 'in-progress';
+    
+    int? repairCost;
+    if (statusToSend == 'resolved') {
+      repairCost = await _showRepairCostDialog();
+      if (repairCost == null) {
+        return; // Cancel status update
+      }
+    }
+
+    setState(() => _isUpdating = true);
     
     try {
       final response = await _ticketService.updateTicketStatus(
         issue.id!,
         statusToSend,
+        repairCost: repairCost,
       );
 
       if (response.statusCode == 200) {
@@ -144,6 +236,10 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
                   if (issue.images != null && issue.images!.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     _buildImageSection(),
+                  ],
+                  if (issue.repairCost != null) ...[
+                    const SizedBox(height: 20),
+                    _buildRepairCostSection(),
                   ],
                   const SizedBox(height: 20),
                   _buildStatusSection(),
@@ -269,6 +365,58 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
             decoration: BoxDecoration(color: _getStatusColor(_currentStatus).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), 
             child: Text(_getStatusText(_currentStatus), style: TextStyle(color: _getStatusColor(_currentStatus), fontSize: 11, fontWeight: FontWeight.bold))
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRepairCostSection() {
+    if (issue.repairCost == null) return const SizedBox.shrink();
+    
+    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+    final formattedCost = formatter.format(issue.repairCost);
+
+    return _buildCardWrapper(
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.monetization_on,
+              color: Colors.blue,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CHI PHÍ SỬA CHỮA',
+                  style: TextStyle(
+                    color: Colors.black26,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formattedCost,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
