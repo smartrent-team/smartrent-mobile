@@ -4,6 +4,17 @@ import 'package:smartrent_mobile/core/network/api_client.dart';
 class TenantService {
   final ApiClient _apiClient = ApiClient();
 
+  Future<Response> checkPhone(String phone) async {
+    try {
+      return await _apiClient.dio.post(
+        '/api/users/check-phone',
+        data: {'phone': phone},
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Response> addTenant({
     required String phone,
     required String fullName,
@@ -16,6 +27,7 @@ class TenantService {
     List<String>? contractImages,
     String? contractEndDate,
     int? depositAmount,
+    bool? updateProfile,
   }) async {
     try {
       // For Postgres backends, IDs are often integers. 
@@ -60,6 +72,10 @@ class TenantService {
 
       if (depositAmount != null) {
         requestData['depositAmount'] = depositAmount;
+      }
+
+      if (updateProfile != null) {
+        requestData['updateProfile'] = updateProfile;
       }
 
       return await _apiClient.dio.post(
