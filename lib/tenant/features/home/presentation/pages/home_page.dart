@@ -239,35 +239,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                     ],
                   ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MarketplacePage()),
-          );
-        },
-        backgroundColor: TenantColors.primaryGreen,
-        elevation: 8,
-        shape: const CircleBorder(),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(
-              Icons.chat_bubble_rounded,
-              color: Colors.white,
-              size: 42,
-            ),
-            Positioned(
-              top: 7,
-              child: const Icon(
-                Icons.storefront_rounded,
-                color: TenantColors.primaryGreen,
-                size: 20,
-              ),
-            ),
-          ],
-        ),
-      ),
+
       bottomNavigationBar: null,
     );
   }

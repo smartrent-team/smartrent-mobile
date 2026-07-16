@@ -429,30 +429,13 @@ class _DashboardPageState extends State<DashboardPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildActionCard(
-                                  'Đổi mật khẩu',
-                                  'Cập nhật mật khẩu mới',
-                                  Icons.lock_reset_rounded,
-                                  const Color(0xFFF3E5F5),
-                                  Colors.purple,
-                                  onTap: () => context.pushSlide(const ChangePasswordPage()),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildActionCard(
-                                  'Chợ đồ cũ',
-                                  'Duyệt bài đăng cư dân',
-                                  Icons.storefront_outlined,
-                                  const Color(0xFFE3F2FD),
-                                  Colors.blue,
-                                  onTap: () => context.pushSlide(const MarketplacePage()),
-                                ),
-                              ),
-                            ],
+                          _buildActionCard(
+                            'Đổi mật khẩu',
+                            'Cập nhật mật khẩu mới',
+                            Icons.lock_reset_rounded,
+                            const Color(0xFFF3E5F5),
+                            Colors.purple,
+                            onTap: () => context.pushSlide(const ChangePasswordPage()),
                           ),
                           if (_utilityAlerts.isNotEmpty) ...[
                             const SizedBox(height: 24),

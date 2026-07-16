@@ -222,8 +222,71 @@ class _AddTenantPageState extends State<AddTenantPage> {
 
     setState(() => _isLoading = true);
 
-    var tenantCreated = false;
+    try {
+      // 1. Kiểm tra số điện thoại
+      final checkRes = await _tenantService.checkPhone(_phoneController.text.trim());
+      if (checkRes.statusCode == 200 && checkRes.data != null) {
+        final exists = checkRes.data['exists'] == true;
+        final user = checkRes.data['user'];
 
+        if (exists && user != null) {
+          if (user['status'] == 'deleted') {
+            // Cho phép khôi phục thông tin
+            if (!mounted) return;
+            final bool? useNewInfo = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Phát hiện cư dân cũ'),
+                content: Text(
+                  'Số điện thoại này đã từng được sử dụng bởi cư dân "${user['full_name']}".\n\n'
+                  'Bạn muốn giữ lại thông tin cá nhân cũ của họ hay ghi đè bằng thông tin mới nhập?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, null), // Cancel
+                    child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false), // Keep old info (updateProfile = false)
+                    child: const Text('Giữ thông tin cũ'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true), // Use new info (updateProfile = true)
+                    style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+                    child: const Text('Dùng thông tin mới', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+
+            if (useNewInfo == null) {
+              setState(() => _isLoading = false);
+              return; // Hủy
+            }
+
+            // Gọi API tạo với param updateProfile
+            await _executeAddTenant(updateProfile: useNewInfo);
+            return;
+          } else {
+            // Tài khoản active trùng SĐT
+            throw Exception('Số điện thoại này đã được sử dụng bởi một tài khoản đang hoạt động trong hệ thống.');
+          }
+        }
+      }
+
+      // Chưa tồn tại user, tiến hành tạo mới bình thường
+      await _executeAddTenant();
+    } catch (e) {
+      _handleError(e, false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _executeAddTenant({bool? updateProfile}) async {
+    var tenantCreated = false;
     try {
       final response = await _tenantService.addTenant(
         phone: _phoneController.text.trim(),
@@ -239,11 +302,11 @@ class _AddTenantPageState extends State<AddTenantPage> {
         depositAmount: _depositController.text.trim().isNotEmpty
             ? int.tryParse(_depositController.text.trim())
             : null,
+        updateProfile: updateProfile,
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         tenantCreated = true;
-
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -257,36 +320,39 @@ class _AddTenantPageState extends State<AddTenantPage> {
         });
         return;
       }
-
       throw Exception(response.data['error'] ?? 'Không thể tạo cư dân');
     } catch (e) {
-      String errMsg = e.toString();
-      if (e is DioException && e.response != null) {
-        final data = e.response?.data;
-        if (data is Map) {
-          if (data.containsKey('error')) {
-            errMsg = data['error'].toString();
-          }
-          if (data['details'] != null) {
-            errMsg = '$errMsg (${data['details']})';
-          }
-        }
-      }
-      if (mounted) {
-        final message = tenantCreated
-            ? 'Đã tạo cư dân nhưng không lưu được ảnh hợp đồng: $errMsg'
-            : 'Lỗi: $errMsg';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: tenantCreated ? Colors.orange : Colors.red,
-          ),
-        );
-      }
+      _handleError(e, tenantCreated);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  void _handleError(dynamic e, bool tenantCreated) {
+    String errMsg = e.toString();
+    if (e is DioException && e.response != null) {
+      final data = e.response?.data;
+      if (data is Map) {
+        if (data.containsKey('error')) {
+          errMsg = data['error'].toString();
+        }
+        if (data['details'] != null) {
+          errMsg = '$errMsg (${data['details']})';
+        }
+      }
+    }
+    if (mounted) {
+      final message = tenantCreated
+          ? 'Đã tạo cư dân nhưng không lưu được ảnh hợp đồng: $errMsg'
+          : 'Lỗi: $errMsg';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: tenantCreated ? Colors.orange : Colors.red,
+        ),
+      );
     }
   }
 
