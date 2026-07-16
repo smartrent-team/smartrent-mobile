@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 /// HTTP client cho AI microservice (FastAPI) — tách biệt với backend chính.
 class AiClient {
@@ -12,7 +13,7 @@ class AiClient {
               (kIsWeb
                   ? 'http://localhost:8000'
                   : (Platform.isAndroid
-                      ? 'http://10.0.2.2:8000'
+                      ? 'http://${AppConstants.emulatorIp}:8000'
                       : 'http://localhost:8000')),
           connectTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
