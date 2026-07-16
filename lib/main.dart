@@ -10,6 +10,7 @@ import 'package:smartrent_mobile/manager/manager.dart';
 
 import 'package:smartrent_mobile/core/services/deep_link_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 final deepLinkService = DeepLinkService();
 
@@ -36,6 +37,7 @@ Future<void> _initializeFirebaseMessaging() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConstants.initEmulatorIp();
   await _initializeFirebaseMessaging();
   await initializeDateFormatting('vi_VN', null);
   

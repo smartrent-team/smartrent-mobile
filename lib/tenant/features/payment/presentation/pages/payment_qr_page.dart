@@ -7,6 +7,7 @@ import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/payment/domain/tenant_payment_args.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_messages.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_success_page.dart';
+import 'package:smartrent_mobile/core/constants/app_constants.dart';
 
 class TenantPaymentQRPage extends StatefulWidget {
   final TenantPaymentArgs? args;
@@ -116,7 +117,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
       final dio = Dio();
       String finalUrl = url;
       if (Platform.isAndroid && finalUrl.contains('localhost')) {
-        finalUrl = finalUrl.replaceFirst('localhost', '10.0.2.2');
+        finalUrl = finalUrl.replaceFirst('localhost', AppConstants.emulatorIp);
       }
       await dio.get(finalUrl);
     } catch (e) {
