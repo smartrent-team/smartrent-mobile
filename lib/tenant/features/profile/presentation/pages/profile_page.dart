@@ -305,18 +305,6 @@ class _ProfilePageState extends State<ProfilePage> {
               MaterialPageRoute(builder: (context) => const TenantChangePasswordPage()),
             ),
           ),
-          MenuActionTile(
-            icon: Icons.call_outlined,
-            color: Colors.blue,
-            title: "Liên hệ quản lý",
-            subtitle: _profile?.room?.branchName != null ? "Chi nhánh: ${_profile!.room!.branchName}" : "Hotline liên hệ",
-          ),
-          MenuActionTile(
-            icon: Icons.security_outlined,
-            color: Colors.purple,
-            title: "Chính sách ứng dụng",
-            subtitle: "Điều khoản & bảo mật",
-          ),
         ],
       ),
     );
