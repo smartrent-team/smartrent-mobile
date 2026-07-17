@@ -40,7 +40,6 @@ class AuthService {
     return _apiClient.dio.post(
       '/api/auth/forgot-password',
       data: {'email': email},
-      options: Options(headers: {'host': 'localhost:3000'}),
     );
   }
 }
