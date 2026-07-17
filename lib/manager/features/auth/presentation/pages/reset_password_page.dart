@@ -3,17 +3,15 @@ import 'package:smartrent_mobile/core/network/api_client.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
-/// Màn hình đổi mật khẩu mới.
-/// Nhận [code] (PKCE flow) hoặc [tokenHash] (OTP flow) từ deep link.
+/// Màn hình đổi mật khẩu mới — mở từ deep link sau khi user click email.
+/// Nhận [accessToken] (PKCE, đã exchange trên web) hoặc [tokenHash] (OTP).
 class ResetPasswordPage extends StatefulWidget {
-  /// PKCE flow: Supabase gửi ?code=xxx trong email link
-  final String? code;
-  /// OTP flow: Supabase gửi ?token_hash=xxx&type=recovery
+  final String? accessToken;
   final String? tokenHash;
 
-  const ResetPasswordPage({super.key, this.code, this.tokenHash})
-      : assert(code != null || tokenHash != null,
-            'Phải có code hoặc tokenHash');
+  const ResetPasswordPage({super.key, this.accessToken, this.tokenHash})
+      : assert(accessToken != null || tokenHash != null,
+            'Phải có accessToken hoặc tokenHash');
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -24,8 +22,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _confirmController  = TextEditingController();
   final _apiClient = ApiClient();
 
-  bool _isLoading     = false;
-  bool _obscurePass   = true;
+  bool _isLoading      = false;
+  bool _obscurePass    = true;
   bool _obscureConfirm = true;
   String? _error;
 
@@ -52,10 +50,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     setState(() { _isLoading = true; _error = null; });
 
     try {
-      // Gửi code hoặc token_hash tuỳ flow
       final Map<String, dynamic> payload = {'password': password};
-      if (widget.code != null) {
-        payload['code'] = widget.code;
+      if (widget.accessToken != null) {
+        payload['access_token'] = widget.accessToken;
       } else {
         payload['token_hash'] = widget.tokenHash;
       }

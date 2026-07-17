@@ -37,27 +37,27 @@ class DeepLinkService {
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
-    // smartrent://reset-password?code=xxx           (PKCE flow)
+    // smartrent://reset-password?access_token=xxx  (PKCE flow, exchanged trên web)
     // smartrent://reset-password?token_hash=xxx&type=recovery  (OTP flow)
     if (uri.host == 'reset-password') {
-      final code      = uri.queryParameters['code'];
-      final tokenHash = uri.queryParameters['token_hash'];
-      final type      = uri.queryParameters['type'];
+      final accessToken = uri.queryParameters['access_token'];
+      final tokenHash   = uri.queryParameters['token_hash'];
+      final type        = uri.queryParameters['type'];
 
-      final hasCode      = code != null && code.isNotEmpty;
-      final hasTokenHash = tokenHash != null && tokenHash.isNotEmpty && type == 'recovery';
+      final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+      final hasTokenHash   = tokenHash != null && tokenHash.isNotEmpty && type == 'recovery';
 
-      if (hasCode || hasTokenHash) {
+      if (hasAccessToken || hasTokenHash) {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ResetPasswordPage(
-              code: hasCode ? code : null,
-              tokenHash: hasTokenHash ? tokenHash : null,
+              accessToken: hasAccessToken ? accessToken : null,
+              tokenHash:   hasTokenHash   ? tokenHash   : null,
             ),
           ),
         );
       } else {
-        debugPrint('reset-password: thiếu code hoặc token_hash/type');
+        debugPrint('reset-password: thiếu access_token hoặc token_hash');
       }
       return;
     }
