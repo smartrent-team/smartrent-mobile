@@ -486,12 +486,10 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return ClipPath(
-      clipper: _InvoiceHeaderClipper(),
-      child: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
-        child: SafeArea(
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
+      child: SafeArea(
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
@@ -555,7 +553,6 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -910,24 +907,4 @@ class _DetailRow {
     required this.value,
     this.highlight = false,
   });
-}
-
-class _InvoiceHeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height - 20);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height + 4,
-      size.width,
-      size.height - 20,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

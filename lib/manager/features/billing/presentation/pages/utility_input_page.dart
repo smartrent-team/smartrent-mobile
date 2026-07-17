@@ -409,12 +409,10 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return ClipPath(
-      clipper: _UtilityHeaderClipper(),
-      child: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
-        child: SafeArea(
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
+      child: SafeArea(
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -528,7 +526,6 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -760,24 +757,4 @@ class _UtilityInputPageState extends State<UtilityInputPage> {
       ),
     );
   }
-}
-
-class _UtilityHeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height - 20);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height + 4,
-      size.width,
-      size.height - 20,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

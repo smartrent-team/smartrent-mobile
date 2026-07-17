@@ -273,12 +273,10 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
   Widget _buildHeader(BuildContext context, TenantDetail detail) {
     final statusColor = detail.isActive ? Colors.white : Colors.white70;
 
-    return ClipPath(
-      clipper: HeaderClipper(),
-      child: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
-        child: SafeArea(
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(color: ManagerColors.primaryGreen),
+      child: SafeArea(
           bottom: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 48),
@@ -415,7 +413,6 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -956,24 +953,4 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
       ],
     );
   }
-}
-
-class HeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height - 32);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height,
-      size.width,
-      size.height - 32,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
