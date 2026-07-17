@@ -12,11 +12,7 @@ class DeepLinkService {
 
   void initDeepLinks() {
     _appLinks = AppLinks();
-
-    // Xử lý deep link khi app đang tắt hoặc background
     _initInitialLink();
-
-    // Xử lý deep link khi app đang chạy
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       debugPrint('onReceiveDeepLink: $uri');
       _handleDeepLink(uri);
@@ -36,24 +32,32 @@ class DeepLinkService {
   }
 
   void _handleDeepLink(Uri uri) {
-    debugPrint('Handling deep link: scheme=${uri.scheme} host=${uri.host} params=${uri.queryParameters}');
+    debugPrint('DeepLink: ${uri.scheme}://${uri.host} params=${uri.queryParameters}');
 
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
-    // smartrent://reset-password?token_hash=xxx&type=recovery
+    // smartrent://reset-password?code=xxx           (PKCE flow)
+    // smartrent://reset-password?token_hash=xxx&type=recovery  (OTP flow)
     if (uri.host == 'reset-password') {
-      final token = uri.queryParameters['token_hash'];
-      final type = uri.queryParameters['type'];
+      final code      = uri.queryParameters['code'];
+      final tokenHash = uri.queryParameters['token_hash'];
+      final type      = uri.queryParameters['type'];
 
-      if (token != null && type == 'recovery') {
+      final hasCode      = code != null && code.isNotEmpty;
+      final hasTokenHash = tokenHash != null && tokenHash.isNotEmpty && type == 'recovery';
+
+      if (hasCode || hasTokenHash) {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ResetPasswordPage(token: token),
+            builder: (_) => ResetPasswordPage(
+              code: hasCode ? code : null,
+              tokenHash: hasTokenHash ? tokenHash : null,
+            ),
           ),
         );
       } else {
-        debugPrint('reset-password deep link thiếu token_hash hoặc type');
+        debugPrint('reset-password: thiếu code hoặc token_hash/type');
       }
       return;
     }
