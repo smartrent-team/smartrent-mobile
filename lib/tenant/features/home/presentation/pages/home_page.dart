@@ -239,35 +239,6 @@ class _TenantHomePageState extends State<TenantHomePage> {
                     ],
                   ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MarketplacePage()),
-          );
-        },
-        backgroundColor: TenantColors.primaryGreen,
-        elevation: 8,
-        shape: const CircleBorder(),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(
-              Icons.chat_bubble_rounded,
-              color: Colors.white,
-              size: 42,
-            ),
-            Positioned(
-              top: 7,
-              child: const Icon(
-                Icons.storefront_rounded,
-                color: TenantColors.primaryGreen,
-                size: 20,
-              ),
-            ),
-          ],
-        ),
-      ),
       bottomNavigationBar: null,
     );
   }
@@ -493,23 +464,24 @@ class _TenantHomePageState extends State<TenantHomePage> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.check_circle_outline_rounded,
+                Icons.inbox_outlined,
                 color: TenantColors.primaryGreen,
                 size: 40,
               ),
             ),
             const SizedBox(height: 16),
             const Text(
-              'Tất cả đã thanh toán',
+              'Không có hóa đơn cần thanh toán',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Bạn đã thanh toán tất cả hóa đơn.',
+              'Hóa đơn mới sẽ xuất hiện tại đây khi được tạo.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -810,6 +782,43 @@ class _TenantHomePageState extends State<TenantHomePage> {
   Widget _buildQuickServices() {
     final room = _profileData?['room'];
 
+    final services = <Map<String, dynamic>>[
+      {
+        'title': 'Hóa đơn',
+        'icon': Icons.description_outlined,
+        'color': TenantColors.primaryGreen,
+        'onTap': () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const TenantOrderPage())),
+      },
+      {
+        'title': 'Thanh toán QR',
+        'icon': Icons.qr_code_outlined,
+        'color': const Color(0xFF26A69A),
+        'onTap': _openPayment,
+      },
+      {
+        'title': 'Báo hỏng',
+        'icon': Icons.build_outlined,
+        'color': TenantColors.warningAmber,
+        'onTap': () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const RepairPage())),
+      },
+      {
+        'title': 'Hợp đồng',
+        'icon': Icons.assignment_outlined,
+        'color': const Color(0xFF5C6BC0),
+        'onTap': () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const TenantContractPage())),
+      },
+      if (room != null)
+        {
+          'title': 'Phòng ở',
+          'icon': Icons.meeting_room_outlined,
+          'color': const Color(0xFF8D6E63),
+          'onTap': _openRoomDetail,
+        },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -819,42 +828,17 @@ class _TenantHomePageState extends State<TenantHomePage> {
               fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              _buildServiceItem('Hóa đơn', Icons.description_outlined,
-                  TenantColors.primaryGreen,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const TenantOrderPage()))),
-              const SizedBox(width: 16),
-              _buildServiceItem(
-                  'Thanh toán QR', Icons.qr_code_outlined,
-                  const Color(0xFF26A69A),
-                  onTap: _openPayment),
-              const SizedBox(width: 16),
-              _buildServiceItem(
-                  'Báo hỏng', Icons.build_outlined,
-                  TenantColors.warningAmber,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const RepairPage()))),
-              const SizedBox(width: 16),
-              _buildServiceItem(
-                  'Hợp đồng', Icons.assignment_outlined,
-                  const Color(0xFF5C6BC0),
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const TenantContractPage()))),
-              if (room != null) ...[
-                const SizedBox(width: 16),
-                _buildServiceItem(
-                    'Phòng ở', Icons.meeting_room_outlined,
-                    const Color(0xFF8D6E63),
-                    onTap: _openRoomDetail),
-              ],
-            ],
-          ),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: services
+              .map((s) => _buildServiceItem(
+                    s['title'] as String,
+                    s['icon'] as IconData,
+                    s['color'] as Color,
+                    onTap: s['onTap'] as VoidCallback?,
+                  ))
+              .toList(),
         ),
       ],
     );
