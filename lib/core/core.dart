@@ -7,7 +7,6 @@ export 'constants/app_constants.dart';
 export 'network/api_client.dart';
 export 'network/ai_client.dart';
 export 'network/ai_cccd_service.dart';
-export 'network/ai_contract_service.dart';
 export 'network/cloudinary_upload_service.dart';
 
 // Services

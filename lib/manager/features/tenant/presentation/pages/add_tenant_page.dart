@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:smartrent_mobile/core/network/ai_contract_service.dart';
 import 'package:smartrent_mobile/core/network/ai_cccd_service.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
@@ -28,7 +27,6 @@ class _AddTenantPageState extends State<AddTenantPage> {
   final _depositController = TextEditingController();
   final TenantService _tenantService = TenantService();
   final TokenService _tokenService = TokenService();
-  final AiContractService _contractAiService = AiContractService();
   final AiCccdService _cccdService = AiCccdService();
   final ImagePicker _imagePicker = ImagePicker();
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
@@ -40,14 +38,11 @@ class _AddTenantPageState extends State<AddTenantPage> {
   String? _selectedRoom;
   bool _isLoading = false;
   bool _isScanningCccd = false;
-  bool _isScanningContract = false;
   bool _isFormValid = false;
   List<String> _contractImageUrls = [];
   DateTime? _contractEndDate;
   final _contractEndDateController = TextEditingController();
   bool _obscurePassword = true;
-  bool _aiDetectedDate = false;
-  bool _aiScanFailed = false;
 
   final List<Map<String, String>> _roles = [
     {'label': 'Cư dân', 'id': 'tenant'},
@@ -421,55 +416,6 @@ class _AddTenantPageState extends State<AddTenantPage> {
       );
     }
   }
-
-  Future<void> _scanContractExpiryBatch(
-    List<List<int>> imageBytesList,
-    List<String> _,
-  ) async {
-    if (!mounted) return;
-
-    setState(() {
-      _isScanningContract = true;
-      _aiScanFailed = false;
-    });
-
-    try {
-      final result = await _contractAiService.scanFromBytesBatch(imageBytesList);
-      final parsedDate = result.parsedDate;
-
-      if (!mounted) return;
-
-      if (parsedDate != null) {
-        setState(() {
-          _contractEndDate = parsedDate;
-          _contractEndDateController.text =
-              _dateFormat.format(parsedDate.toLocal());
-          _aiDetectedDate = true;
-          _aiScanFailed = false;
-        });
-        return;
-      }
-
-      throw Exception('Không đọc được ngày hết hạn từ ảnh hợp đồng');
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _aiScanFailed = true;
-      });
-      if (_contractEndDate != null) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI không nhận diện được ngày hết hạn. Vui lòng chọn thủ công.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isScanningContract = false);
-      }
-    }
-  }
-
   Future<void> _pickContractEndDate() async {
     final initialDate =
         _contractEndDate?.toLocal() ?? DateTime.now().add(const Duration(days: 365));
@@ -659,106 +605,40 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       ContractPhotoUpload(
                         imageUrls: _contractImageUrls,
                         uploadFolder: 'contracts',
-                        enabled: !_isLoading && !_isScanningCccd && !_isScanningContract,
+                        enabled: !_isLoading && !_isScanningCccd,
                         onChanged: (urls) {
                           setState(() {
                             _contractImageUrls = urls;
                             if (urls.isEmpty) {
                               _contractEndDate = null;
                               _contractEndDateController.clear();
-                              _aiDetectedDate = false;
-                              _aiScanFailed = false;
                             }
                           });
                           _validateForm();
                         },
-                        onUploadedBatch: _scanContractExpiryBatch,
                       ),
                       const SizedBox(height: 20),
                       _buildFieldLabel('Ngày hết hạn hợp đồng'),
                       _buildTextField(
                         controller: _contractEndDateController,
-                        hintText: _aiScanFailed
-                            ? 'AI thất bại — Bấm để chọn ngày'
-                            : 'AI tự nhận diện hoặc bấm để chọn',
+                        hintText: 'Bấm để chọn ngày hết hạn hợp đồng',
                         icon: Icons.event_outlined,
-                        enabled: !_isLoading && !_isScanningCccd && !_isScanningContract,
+                        enabled: !_isLoading && !_isScanningCccd,
                         readOnly: true,
                         onTap: _pickContractEndDate,
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_month_outlined),
                           color: ManagerColors.textGrey,
-                          onPressed: (!_isLoading && !_isScanningContract)
-                              ? _pickContractEndDate
-                              : null,
+                          onPressed: !_isLoading ? _pickContractEndDate : null,
                         ),
                       ),
-                      if (_isScanningContract) ...[
+                      if (_contractEndDate != null) ...[
                         const SizedBox(height: 10),
                         Row(
                           children: const [
-                            SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: ManagerColors.primaryGreen,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Đang quét ảnh hợp đồng để lấy ngày hết hạn...',
-                              style: TextStyle(
-                                color: ManagerColors.textGrey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else if (_aiScanFailed && _contractEndDate == null) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: const [
-                            Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                            Icon(Icons.edit_calendar_outlined, size: 14, color: ManagerColors.textGrey),
                             SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'AI không nhận diện được. Vui lòng bấm vào ô trên để chọn ngày thủ công.',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else if (_contractEndDate != null) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Icon(
-                              _aiDetectedDate
-                                  ? Icons.auto_awesome
-                                  : Icons.edit_calendar_outlined,
-                              size: 14,
-                              color: _aiDetectedDate
-                                  ? ManagerColors.primaryGreen
-                                  : ManagerColors.textGrey,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _aiDetectedDate
-                                  ? 'AI đã nhận diện — bạn có thể bấm vào ô trên để sửa'
-                                  : 'Đã chọn thủ công',
-                              style: TextStyle(
-                                color: _aiDetectedDate
-                                    ? ManagerColors.primaryGreen
-                                    : ManagerColors.textGrey,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                            Text('Đã chọn ngày hết hạn', style: TextStyle(color: ManagerColors.textGrey, fontSize: 12)),
                           ],
                         ),
                       ],
@@ -769,7 +649,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
               ),
             ),
           ),
-          if (_isLoading || _isScanningCccd || _isScanningContract)
+          if (_isLoading || _isScanningCccd)
             Container(
               color: Colors.black12,
               child: Center(
@@ -783,15 +663,6 @@ class _AddTenantPageState extends State<AddTenantPage> {
                       const SizedBox(height: 16),
                       Text(
                         'Đang quét CCCD...',
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ] else if (_isScanningContract) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Đang quét hợp đồng...',
                         style: TextStyle(
                           color: Colors.grey[800],
                           fontWeight: FontWeight.w500,
@@ -812,7 +683,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
             height: 54,
             child: ElevatedButton.icon(
               onPressed:
-                  _canSubmit && !_isLoading && !_isScanningCccd && !_isScanningContract
+                  _canSubmit && !_isLoading && !_isScanningCccd
                       ? _handleSubmit
                       : null,
               icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 20),

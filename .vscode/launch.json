@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "smartrent-mobile (Auto IP)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "update-laptop-ip",
+      "args": [
+        "--dart-define-from-file=config.json"
+      ]
+    }
+  ]
+}

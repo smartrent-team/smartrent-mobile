@@ -1,0 +1,6 @@
+﻿{
+    "LAPTOP_IP":  "192.168.1.65",
+    "BACKEND_URL":  "https://postabdominal-vicenta-sapiential.ngrok-free.dev",
+    "USE_TUNNEL":  true,
+    "AI_URL":  "https://postabdominal-vicenta-sapiential.ngrok-free.dev/python"
+}

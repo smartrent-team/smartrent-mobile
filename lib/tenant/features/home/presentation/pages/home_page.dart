@@ -14,7 +14,6 @@ import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 import 'package:smartrent_mobile/tenant/features/notification/presentation/pages/tenant_notification_page.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
-import 'package:smartrent_mobile/tenant/features/marketplace/presentation/pages/marketplace_page.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/tenant_room_detail_page.dart';
 
 

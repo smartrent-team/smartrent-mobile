@@ -16,7 +16,6 @@ import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_ser
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
-import 'package:smartrent_mobile/manager/features/marketplace/presentation/pages/marketplace_page.dart';
 
 class _UtilityAlertData {
   final String room;
