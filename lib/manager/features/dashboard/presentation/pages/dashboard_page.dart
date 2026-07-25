@@ -14,8 +14,11 @@ import 'package:smartrent_mobile/manager/features/billing/presentation/pages/uti
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
+import 'package:smartrent_mobile/manager/features/notification/data/services/manager_notification_service.dart';
+import 'package:smartrent_mobile/manager/features/notification/presentation/pages/manager_notification_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
+import 'package:smartrent_mobile/tenant/features/notification/data/models/tenant_notification.dart';
 
 class _UtilityAlertData {
   final String room;
@@ -69,6 +72,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<TicketModel> _recentTickets = [];
   TicketModel? _emergencyTicket;
   List<_UtilityAlertData> _utilityAlerts = [];
+  List<TenantNotification> _expiringContracts = [];
 
   double _occupancyRate = 0;
   double _electricRate = 0;
@@ -102,6 +106,9 @@ class _DashboardPageState extends State<DashboardPage> {
       _applyTickets(responses[3]);
       _applyUtilities(responses[4]);
 
+      // Load thông báo hợp đồng sắp hết hạn từ notification service
+      await _loadExpiringContracts();
+
       if (mounted) {
         setState(() => _isLoading = false);
         widget.onShellStats?.call(openTickets: _openTickets);
@@ -113,6 +120,46 @@ class _DashboardPageState extends State<DashboardPage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadExpiringContracts() async {
+    try {
+      final notifications = await ManagerNotificationService.instance
+          .fetchNotifications(forceRemote: true);
+      var expiring = notifications
+          .where((n) =>
+              n.type == 'contract_expiring_30d' ||
+              n.type == 'contract_expiring_7d')
+          .toList();
+
+      // Cũng query trực tiếp từ hợp đồng active của các phòng để đề phòng Cron Job chưa chạy
+      final directExpiring = await _roomService.getExpiringContracts(maxDays: 30);
+      for (final item in directExpiring) {
+        final roomCode = item['roomCode'] ?? item['roomName'] ?? '';
+        final days = item['remainingDays'] as int? ?? 0;
+        final contractId = item['contractId'] ?? '';
+        final type = days <= 7 ? 'contract_expiring_7d' : 'contract_expiring_30d';
+
+        // Check xem đã có trong list notification chưa
+        final exists = expiring.any((n) => n.body.contains(roomCode) || n.body.contains(contractId.toString()));
+        if (!exists) {
+          expiring.add(TenantNotification(
+            id: 'direct_$contractId',
+            title: days <= 7 ? 'Hợp đồng sắp hết hạn — còn $days ngày' : 'Hợp đồng sắp hết hạn',
+            body: 'Phòng $roomCode: hợp đồng $contractId sẽ hết hạn sau $days ngày. Vui lòng liên hệ cư dân để gia hạn.',
+            type: type,
+            isRead: false,
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+
+      if (mounted) {
+        setState(() => _expiringContracts = expiring);
+      }
+    } catch (_) {
+      // silent fail — dashboard vẫn hoạt động
     }
   }
 
@@ -436,6 +483,20 @@ class _DashboardPageState extends State<DashboardPage> {
                             Colors.purple,
                             onTap: () => context.pushSlide(const ChangePasswordPage()),
                           ),
+                          // ── Cảnh báo hợp đồng sắp hết hạn ────────
+                          if (_expiringContracts.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            _buildSectionHeader(
+                              'Hợp đồng sắp hết hạn',
+                              onSeeAll: () => Navigator.of(context).push(
+                                AppPageRoutes.slide(
+                                  const ManagerNotificationPage(),
+                                  name: 'manager_notifications',
+                                ),
+                              ),
+                            ),
+                            _buildExpiringContractsBanner(context),
+                          ],
                           if (_utilityAlerts.isNotEmpty) ...[
                             const SizedBox(height: 24),
                             _buildSectionHeader('Cảnh báo điện - nước'),
@@ -721,6 +782,206 @@ class _DashboardPageState extends State<DashboardPage> {
             const Icon(Icons.chevron_right, color: Colors.black26),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Banner hợp đồng sắp hết hạn trên Dashboard ──────────────────────────
+  int? _parseDaysLeft(String body) {
+    final regExp = RegExp(r'(\d+)\s*ngày');
+    final match = regExp.firstMatch(body);
+    if (match != null) return int.tryParse(match.group(1) ?? '');
+    return null;
+  }
+
+  Widget _buildExpiringContractsBanner(BuildContext context) {
+    final urgentItems = _expiringContracts
+        .where((n) => n.type == 'contract_expiring_7d')
+        .toList();
+    final warningItems = _expiringContracts
+        .where((n) => n.type == 'contract_expiring_30d')
+        .toList();
+
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        AppPageRoutes.slide(
+          const ManagerNotificationPage(),
+          name: 'manager_notifications',
+        ),
+      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF8E1), Color(0xFFFFEDE0)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFCCBC), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE64A19).withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE0B2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.event_busy_rounded,
+                    color: Color(0xFFE64A19),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${_expiringContracts.length} phòng cần gia hạn hợp đồng',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFFBF360C),
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFFE64A19)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // ── Chips tóm tắt ──────────────────────────────────────────
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (urgentItems.isNotEmpty)
+                  _buildDashboardChip(
+                    Icons.local_fire_department_rounded,
+                    '${urgentItems.length} phòng ≤ 7 ngày',
+                    const Color(0xFFD32F2F),
+                    const Color(0xFFFFEBEE),
+                  ),
+                if (warningItems.isNotEmpty)
+                  _buildDashboardChip(
+                    Icons.access_time_rounded,
+                    '${warningItems.length} phòng ≤ 30 ngày',
+                    const Color(0xFFE64A19),
+                    const Color(0xFFFFF3E0),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // ── Preview danh sách phòng (tối đa 3) ─────────────────────
+            ..._expiringContracts.take(3).map((item) {
+              final daysLeft = _parseDaysLeft(item.body);
+              final isUrgent = item.type == 'contract_expiring_7d';
+              final color = isUrgent
+                  ? const Color(0xFFD32F2F)
+                  : const Color(0xFFE64A19);
+              final roomMatch =
+                  RegExp(r'Phòng\s+([^\s:]+)').firstMatch(item.body);
+              final roomName = roomMatch != null
+                  ? 'Phòng ${roomMatch.group(1)}'
+                  : 'Phòng';
+
+              return Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: color.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.meeting_room_outlined,
+                        color: color, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        roomName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    if (daysLeft != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Còn $daysLeft ngày',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+            if (_expiringContracts.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '+ ${_expiringContracts.length - 3} phòng khác · Xem tất cả >',
+                  style: const TextStyle(
+                    color: Color(0xFFE64A19),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardChip(
+      IconData icon, String label, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: textColor, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

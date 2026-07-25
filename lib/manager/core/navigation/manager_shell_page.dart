@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_shell_scope.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
-import 'package:smartrent_mobile/manager/features/notification/data/services/manager_notification_service.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
+import 'package:smartrent_mobile/manager/features/notification/data/services/manager_notification_service.dart';
+import 'package:smartrent_mobile/manager/features/notification/presentation/pages/manager_notification_page.dart';
+import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_list_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_page.dart';
 
@@ -22,7 +25,9 @@ class ManagerShellPage extends StatefulWidget {
 class _ManagerShellPageState extends State<ManagerShellPage> {
   late int _currentTab;
   int _openTickets = 0;
+  int _expiringCount = 0;
   final ValueNotifier<int> _notificationUnreadCount = ValueNotifier<int>(0);
+  final RoomService _roomService = RoomService();
 
   @override
   void initState() {
@@ -32,7 +37,26 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
       ManagerNotificationService.instance.bootstrap(
         notifier: _notificationUnreadCount,
       );
+      _checkExpiringContracts();
     });
+  }
+
+  Future<void> _checkExpiringContracts() async {
+    try {
+      final list = await _roomService.getExpiringContracts(maxDays: 30);
+      if (mounted) {
+        setState(() => _expiringCount = list.length);
+
+        if (list.isNotEmpty) {
+          // Bắn thông báo hệ thống lên System Notification Bar (vuốt từ trên xuống của điện thoại)
+          ManagerNotificationService.instance.showSystemNotification(
+            id: 1001,
+            title: '⚠️ SmartRent — Hợp đồng sắp hết hạn',
+            body: 'Có ${list.length} phòng có hợp đồng sắp hết hạn (<30 ngày). Vui lòng bấm vào để kiểm tra và gửi gia hạn.',
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -64,11 +88,45 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
               valueListenable: _notificationUnreadCount,
               builder: (context, count, child) {
                 return ManagerAppHeader(
-                  showNotificationDot: count > 0,
-                  unreadNotificationCount: count,
+                  showNotificationDot: count > 0 || _expiringCount > 0,
+                  unreadNotificationCount: count > 0 ? count : _expiringCount,
                 );
               },
             ),
+            if (_expiringCount > 0)
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    AppPageRoutes.slide(
+                      const ManagerNotificationPage(),
+                      name: 'manager_notifications',
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFFD32F2F),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'CẢNH BÁO: Có $_expiringCount phòng sắp hết hạn HĐ (<30 ngày)! Bấm xem & gửi TB >',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+                    ],
+                  ),
+                ),
+              ),
             Expanded(
               child: IndexedStack(
                 index: _currentTab,
@@ -90,8 +148,10 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
           currentIndex: _currentTab,
           onTap: _goToTab,
           issueBadgeCount: _openTickets,
+          expiringBadgeCount: _expiringCount,
         ),
       ),
     );
   }
 }
+

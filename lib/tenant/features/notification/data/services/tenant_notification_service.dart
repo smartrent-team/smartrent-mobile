@@ -317,6 +317,38 @@ class TenantNotificationService {
     });
   }
 
+  Future<void> showSystemNotification({
+    required String title,
+    required String body,
+    int? id,
+  }) async {
+    try {
+      await ensureFirebaseInitialized();
+      const androidDetails = AndroidNotificationDetails(
+        _notificationChannelId,
+        _notificationChannelName,
+        channelDescription: _notificationChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        styleInformation: BigTextStyleInformation(''),
+      );
+      const iosDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+
+      await _localNotifications.show(
+        id: id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: androidDetails,
+          iOS: iosDetails,
+          macOS: iosDetails,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error showing system notification: $e');
+    }
+  }
+
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     final title = message.notification?.title ?? 'SmartRent';
     final body = message.notification?.body ?? '';

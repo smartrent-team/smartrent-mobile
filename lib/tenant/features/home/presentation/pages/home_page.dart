@@ -15,6 +15,7 @@ import 'package:smartrent_mobile/tenant/features/notification/presentation/pages
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/tenant_room_detail_page.dart';
+import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
 
 
 class TenantHomePage extends StatefulWidget {
@@ -117,6 +118,8 @@ class _TenantHomePageState extends State<TenantHomePage> {
           setState(() {
             _profileData = response.data['data'];
           });
+          // Kiểm tra hợp đồng sắp hết hạn → bắn thông báo lên System Notification Bar
+          _checkAndNotifyExpiringContract(response.data['data']);
         }
       } else {
         if (mounted) {
@@ -149,6 +152,39 @@ class _TenantHomePageState extends State<TenantHomePage> {
       }
     }
   }
+
+  /// Tính ngày còn lại từ profile data và bắn thông báo hệ thống nếu ≤ 30 ngày
+  void _checkAndNotifyExpiringContract(Map<String, dynamic>? data) {
+    try {
+      final activeContract = data?['active_contract'] as Map<String, dynamic>?;
+      final contracts = (data?['contracts'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .toList() ??
+          const [];
+      final contractForDisplay =
+          activeContract ?? (contracts.isNotEmpty ? contracts.first : null);
+      if (contractForDisplay == null || contractForDisplay['end_date'] == null) return;
+
+      final endDate = DateTime.parse(contractForDisplay['end_date'].toString());
+      final now = DateTime.now();
+      final diffMs = endDate.difference(now).inMilliseconds;
+      final daysLeft = diffMs > 0 ? (diffMs / (1000 * 60 * 60 * 24)).ceil() : 0;
+
+      if (daysLeft <= 30) {
+        final isUrgent = daysLeft <= 7;
+        TenantNotificationService.instance.showSystemNotification(
+          id: 2001,
+          title: isUrgent
+              ? '🔴 Hợp đồng hết hạn sau $daysLeft ngày!'
+              : '⚠️ Hợp đồng sắp hết hạn sau $daysLeft ngày',
+          body: isUrgent
+              ? 'Hợp đồng thuê phòng của bạn chỉ còn $daysLeft ngày! Liên hệ quản lý ngay để gia hạn.'
+              : 'Hợp đồng thuê phòng của bạn còn $daysLeft ngày. Vui lòng liên hệ quản lý để chuẩn bị gia hạn.',
+        );
+      }
+    } catch (_) {}
+  }
+
 
   String _formatMoney(dynamic amount) {
     if (amount == null) return '0 đ';

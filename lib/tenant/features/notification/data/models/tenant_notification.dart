@@ -68,7 +68,12 @@ class TenantNotification {
       case 'analysis':
         return Icons.psychology_rounded;
       case 'contract':
+      case 'contract_expired':
         return Icons.event_busy_rounded;
+      case 'contract_expiring_7d':
+        return Icons.local_fire_department_rounded;
+      case 'contract_expiring_30d':
+        return Icons.access_time_rounded;
       case 'system':
         return Icons.info_outline_rounded;
       default:
@@ -87,7 +92,12 @@ class TenantNotification {
       case 'analysis':
         return const Color(0xFF5E35B1);
       case 'contract':
+      case 'contract_expired':
         return const Color(0xFFC62828);
+      case 'contract_expiring_7d':
+        return const Color(0xFFD32F2F);
+      case 'contract_expiring_30d':
+        return const Color(0xFFE64A19);
       case 'system':
         return const Color(0xFF3949AB);
       default:
@@ -106,7 +116,12 @@ class TenantNotification {
       case 'analysis':
         return const Color(0xFFF3E5F5);
       case 'contract':
+      case 'contract_expired':
         return const Color(0xFFFFEBEE);
+      case 'contract_expiring_7d':
+        return const Color(0xFFFFEBEE);
+      case 'contract_expiring_30d':
+        return const Color(0xFFFFF3E0);
       case 'system':
         return const Color(0xFFE8EAF6);
       default:

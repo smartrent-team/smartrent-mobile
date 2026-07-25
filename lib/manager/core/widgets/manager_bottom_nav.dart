@@ -5,12 +5,14 @@ class ManagerBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final int issueBadgeCount;
+  final int expiringBadgeCount;
 
   const ManagerBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
     this.issueBadgeCount = 0,
+    this.expiringBadgeCount = 0,
   });
 
   @override
@@ -33,13 +35,14 @@ class ManagerBottomNav extends StatelessWidget {
           _buildNavItem(1, Icons.people_alt, 'Cư dân'),
           _buildNavItem(2, Icons.receipt_long_outlined, 'Hóa đơn'),
           _buildNavItem(3, Icons.report_problem_outlined, 'Sự cố', badgeCount: issueBadgeCount),
-          _buildNavItem(4, Icons.grid_view_outlined, 'Dashboard'),
+          _buildNavItem(4, Icons.grid_view_outlined, 'Dashboard',
+              badgeCount: expiringBadgeCount, badgeColor: Colors.orange),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, {int badgeCount = 0}) {
+  Widget _buildNavItem(int index, IconData icon, String label, {int badgeCount = 0, Color badgeColor = Colors.redAccent}) {
     final isSelected = currentIndex == index;
     final color = isSelected ? ManagerColors.primaryGreen : Colors.grey;
     final displayBadge = badgeCount > 99 ? '99+' : '$badgeCount';
@@ -76,8 +79,8 @@ class ManagerBottomNav extends StatelessWidget {
                         right: -10,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
+                          decoration: BoxDecoration(
+                            color: badgeColor,
                             shape: BoxShape.circle,
                           ),
                           constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
