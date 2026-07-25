@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -244,16 +245,19 @@ class ManagerNotificationService {
       await _showForegroundNotification(message);
       await _syncUnreadCount();
       await fetchNotifications(forceRemote: true);
+      _fireEventFromPush(message.data);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) async {
       await fetchNotifications(forceRemote: true);
+      _fireEventFromPush(message.data);
       _openNotificationsPage();
     });
 
     FirebaseMessaging.instance.getInitialMessage().then((message) async {
       if (message != null) {
         await fetchNotifications(forceRemote: true);
+        _fireEventFromPush(message.data);
         _openNotificationsPage();
       }
     });
@@ -344,5 +348,23 @@ class ManagerNotificationService {
     Navigator.of(context).push(
       AppPageRoutes.slide(const ManagerNotificationPage(), name: 'manager_notifications'),
     );
+  }
+
+  void _fireEventFromPush(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    switch (type) {
+      case 'ticket':
+        AppEventBus.instance.fire(AppEvent.ticketChanged);
+        break;
+      case 'invoice':
+      case 'payment':
+        AppEventBus.instance.fire(AppEvent.invoiceChanged);
+        break;
+      case 'contract':
+        AppEventBus.instance.fire(AppEvent.contractChanged);
+        break;
+      default:
+        AppEventBus.instance.fire(AppEvent.dataChanged);
+    }
   }
 }

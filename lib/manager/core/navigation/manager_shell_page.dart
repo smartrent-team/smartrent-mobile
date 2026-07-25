@@ -27,12 +27,14 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
   int _openTickets = 0;
   int _expiringCount = 0;
   final ValueNotifier<int> _notificationUnreadCount = ValueNotifier<int>(0);
+  late final ValueNotifier<int> _activeTab;
   final RoomService _roomService = RoomService();
 
   @override
   void initState() {
     super.initState();
     _currentTab = widget.initialTab;
+    _activeTab = ValueNotifier<int>(_currentTab);
     Future.microtask(() {
       ManagerNotificationService.instance.bootstrap(
         notifier: _notificationUnreadCount,
@@ -62,12 +64,14 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
   @override
   void dispose() {
     _notificationUnreadCount.dispose();
+    _activeTab.dispose();
     super.dispose();
   }
 
   void _goToTab(int index) {
     if (index == _currentTab) return;
     setState(() => _currentTab = index);
+    _activeTab.value = index;
   }
 
   void _onDashboardStats({required int openTickets}) {
@@ -80,6 +84,7 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
   Widget build(BuildContext context) {
     return ManagerShellScope(
       goToTab: _goToTab,
+      activeTab: _activeTab,
       child: Scaffold(
         backgroundColor: ManagerColors.bgLightGreen,
         body: Column(

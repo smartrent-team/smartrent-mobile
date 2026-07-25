@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,7 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/creat
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/tenant/features/profile/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class RepairPage extends StatefulWidget {
   const RepairPage({super.key, bool showBottomNav = false});
@@ -31,12 +33,22 @@ class _RepairPageState extends State<RepairPage> {
 
   int activeFilterIndex = 0;
   final List<String> filters = ["Tất cả", "Tiếp nhận", "Đang sửa", "Hoàn thành"];
+  late final StreamSubscription<AppEvent> _eventSub;
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _loadProfile();
+    _eventSub = AppEventBus.instance.on(AppEvent.ticketChanged, () {
+      if (mounted) _loadData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub.cancel();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {

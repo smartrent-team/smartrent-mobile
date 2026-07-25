@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
+import 'package:smartrent_mobile/manager/core/navigation/manager_shell_scope.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
@@ -12,6 +14,7 @@ import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/core/constants/app_constants.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class IssuePage extends StatefulWidget {
   final bool embedInShell;
@@ -29,12 +32,39 @@ class _IssuePageState extends State<IssuePage> {
   List<TicketModel> _allTickets = [];
   bool _isLoading = true;
   String? _errorMessage;
+  late final StreamSubscription<AppEvent> _eventSub;
 
   @override
   void initState() {
     super.initState();
-
     _fetchTickets();
+    _eventSub = AppEventBus.instance.on(AppEvent.ticketChanged, () {
+      if (mounted) _fetchTickets();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shell = ManagerShellScope.maybeOf(context);
+    if (shell != null) {
+      shell.activeTab.removeListener(_onTabChanged);
+      shell.activeTab.addListener(_onTabChanged);
+    }
+  }
+
+  void _onTabChanged() {
+    final shell = ManagerShellScope.maybeOf(context);
+    if (shell != null && shell.activeTab.value == 3 && mounted) {
+      _fetchTickets();
+    }
+  }
+
+  @override
+  void dispose() {
+    _eventSub.cancel();
+    ManagerShellScope.maybeOf(context)?.activeTab.removeListener(_onTabChanged);
+    super.dispose();
   }
 
   Future<void> _fetchTickets() async {

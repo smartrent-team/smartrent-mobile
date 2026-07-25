@@ -27,8 +27,8 @@ class TenantNotification {
       body: json['body']?.toString() ?? '',
       type: json['type']?.toString() ?? 'system',
       isRead: json['isRead'] == true || json['is_read'] == true,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
-      userId: json['user_id']?.toString(),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? json['created_at'])?.toString() ?? ''),
+      userId: (json['userId'] ?? json['user_id'])?.toString(),
     );
   }
 

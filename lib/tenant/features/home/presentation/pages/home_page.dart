@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/features/home/presentation/pages/tenant_room_detail_page.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 
 class TenantHomePage extends StatefulWidget {
@@ -32,11 +34,21 @@ class _TenantHomePageState extends State<TenantHomePage> {
 
   bool _isBillExpanded = false;
   TenantInvoice? _unpaidInvoice;
+  late final StreamSubscription<AppEvent> _eventSub;
 
   @override
   void initState() {
     super.initState();
     _loadAllData();
+    _eventSub = AppEventBus.instance.onAny((_) {
+      if (mounted) _loadAllData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAllData() async {
@@ -1051,6 +1063,11 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   ),
                 );
               },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: const Text(
                 'Tất cả >',
                 style: TextStyle(
@@ -1063,6 +1080,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
         ),
         const SizedBox(height: 2),
         ListView.builder(
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: displayItems.length,
@@ -1083,6 +1101,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
                 ],
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -1132,13 +1151,13 @@ class _TenantHomePageState extends State<TenantHomePage> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 6),
+                        Text(
+                          item['time'] ?? '',
+                          style: const TextStyle(fontSize: 11, color: Colors.black26),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    item['time'] ?? '',
-                    style: const TextStyle(fontSize: 11, color: Colors.black26),
                   ),
                 ],
               ),

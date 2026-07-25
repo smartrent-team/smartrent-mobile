@@ -216,7 +216,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
         onPressed: () => Navigator.of(context).pop(),
       ),
       flexibleSpace: FlexibleSpaceBar(
-        title: Text('Tạo Yêu Cầu Sửa Chữa',
+        title: Text('Tạo yêu cầu sửa chữa',
             style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
         background: Container(
           decoration: const BoxDecoration(
@@ -319,19 +319,19 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
     const priorityConfig = {
       'low': {
         'label': 'Thấp',
-        'desc': 'Thẩm mỹ, không cấp bách',
+        'desc': 'Thẩm mỹ, không\ncấp bách',
         'icon': Icons.arrow_downward_rounded,
         'color': Colors.blue,
       },
       'medium': {
         'label': 'Trung bình',
-        'desc': 'Gây bất tiện sinh hoạt',
+        'desc': 'Gây bất tiện\nsinh hoạt',
         'icon': Icons.remove_rounded,
         'color': TenantColors.warningOrange,
       },
       'high': {
         'label': 'Khẩn cấp',
-        'desc': 'Nguy hiểm, cần xử lý ngay',
+        'desc': 'Nguy hiểm, cần\nxử lý ngay',
         'icon': Icons.priority_high_rounded,
         'color': TenantColors.errorRed,
       },
@@ -359,7 +359,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: isSelected ? color.withOpacity(0.1) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -369,6 +369,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                     ),
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(icon, color: isSelected ? color : Colors.grey, size: 22),
                       const SizedBox(height: 6),
@@ -381,11 +382,11 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
                           color: isSelected ? color : TenantColors.textGrey,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         desc,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(fontSize: 9, color: TenantColors.subtitleGrey),
+                        style: GoogleFonts.outfit(fontSize: 9, color: TenantColors.subtitleGrey, height: 1.3),
                       ),
                     ],
                   ),

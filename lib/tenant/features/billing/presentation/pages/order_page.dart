@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
@@ -7,6 +8,7 @@ import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_pay
 import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class TenantOrderPage extends StatefulWidget {
   const TenantOrderPage({super.key, bool showBottomNav = false});
@@ -43,10 +45,21 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     Color(0xFF009688),
   ];
 
+  late final StreamSubscription<AppEvent> _eventSub;
+
   @override
   void initState() {
     super.initState();
     _loadInvoices();
+    _eventSub = AppEventBus.instance.on(AppEvent.invoiceChanged, () {
+      if (mounted) _loadInvoices();
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub.cancel();
+    super.dispose();
   }
 
   Future<void> _reloadAfterPayment() => _loadInvoices();

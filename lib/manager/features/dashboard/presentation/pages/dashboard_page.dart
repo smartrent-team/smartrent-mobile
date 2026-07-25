@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
@@ -19,6 +20,7 @@ import 'package:smartrent_mobile/manager/features/notification/presentation/page
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/models/tenant_notification.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class _UtilityAlertData {
   final String room;
@@ -78,10 +80,21 @@ class _DashboardPageState extends State<DashboardPage> {
   double _electricRate = 0;
   double _waterRate = 0;
 
+  late final StreamSubscription<AppEvent> _eventSub;
+
   @override
   void initState() {
     super.initState();
     _loadDashboard();
+    _eventSub = AppEventBus.instance.onAny((_) {
+      if (mounted) _loadDashboard();
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub.cancel();
+    super.dispose();
   }
 
   Future<void> _loadDashboard() async {
