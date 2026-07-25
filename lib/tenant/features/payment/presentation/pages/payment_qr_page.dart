@@ -133,7 +133,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
 
   void _navigateToSuccess() {
     if (!mounted) return;
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
         builder: (_) => TenantPaymentSuccessPage(
@@ -141,6 +141,7 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
           amount: _args.amount,
         ),
       ),
+      (route) => false,
     );
   }
 

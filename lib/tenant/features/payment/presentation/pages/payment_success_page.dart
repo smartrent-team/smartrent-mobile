@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
-import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_page.dart';
-import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 
 class TenantPaymentSuccessPage extends StatefulWidget {
   final String? invoiceCode;
@@ -322,7 +321,9 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
             child: ElevatedButton(
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const TenantOrderPage()),
+                MaterialPageRoute(
+                  builder: (_) => const TenantNav(initialIndex: 1),
+                ),
                 (route) => false,
               ),
               style: ElevatedButton.styleFrom(
@@ -355,7 +356,9 @@ class _TenantPaymentSuccessPageState extends State<TenantPaymentSuccessPage>
             child: OutlinedButton(
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const TenantHomePage()),
+                MaterialPageRoute(
+                  builder: (_) => const TenantNav(initialIndex: 0),
+                ),
                 (route) => false,
               ),
               style: OutlinedButton.styleFrom(

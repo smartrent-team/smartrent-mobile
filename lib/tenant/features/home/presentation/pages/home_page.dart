@@ -259,9 +259,9 @@ class _TenantHomePageState extends State<TenantHomePage> {
                                   children: [
                                     const SizedBox(height: 16),
                                     _buildBillCard(),
-                                    const SizedBox(height: 24),
+                                    const SizedBox(height: 16),
                                     _buildQuickServices(),
-                                    const SizedBox(height: 24),
+                                    const SizedBox(height: 16),
                                     _buildNotifications(),
                                     const SizedBox(height: 24),
                                   ],
@@ -862,16 +862,17 @@ class _TenantHomePageState extends State<TenantHomePage> {
           style: TextStyle(
               fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: services
-              .map((s) => _buildServiceItem(
-                    s['title'] as String,
-                    s['icon'] as IconData,
-                    s['color'] as Color,
-                    onTap: s['onTap'] as VoidCallback?,
+              .map((s) => Expanded(
+                    child: _buildServiceItem(
+                      s['title'] as String,
+                      s['icon'] as IconData,
+                      s['color'] as Color,
+                      onTap: s['onTap'] as VoidCallback?,
+                    ),
                   ))
               .toList(),
         ),
@@ -886,28 +887,28 @@ class _TenantHomePageState extends State<TenantHomePage> {
       child: Column(
         children: [
           Container(
-            width: 68,
-            height: 68,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: Colors.white, size: 28),
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87),
           ),
@@ -1060,7 +1061,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

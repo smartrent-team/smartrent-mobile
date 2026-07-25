@@ -10,14 +10,15 @@ import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/prof
 import 'package:smartrent_mobile/tenant/features/meter_comparison/presentation/pages/meter_comparison_page.dart';
 
 class TenantNav extends StatefulWidget {
-  const TenantNav({super.key});
+  final int initialIndex;
+  const TenantNav({super.key, this.initialIndex = 0});
 
   @override
   State<TenantNav> createState() => _TenantNavState();
 }
 
 class _TenantNavState extends State<TenantNav> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   late final TenantNotificationNotifier _notificationNotifier;
 
   // Use IndexedStack to keep the state of each screen
@@ -26,6 +27,7 @@ class _TenantNavState extends State<TenantNav> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _notificationNotifier = TenantNotificationNotifier();
     Future.microtask(() {
       TenantNotificationService.instance.bootstrap(
