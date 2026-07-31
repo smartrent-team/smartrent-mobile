@@ -115,10 +115,13 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
 
     try {
       final dio = Dio();
-      String finalUrl = url;
-      if (Platform.isAndroid && finalUrl.contains('localhost')) {
-        finalUrl = finalUrl.replaceFirst('localhost', AppConstants.emulatorIp);
-      }
+
+      // Xây lại URL dùng baseUrl từ AppConstants để hoạt động trên cả
+      // emulator (10.0.2.2) lẫn điện thoại thật (tunnel URL)
+      final queryString = uri.query;
+      final backendBase = AppConstants.baseUrl.replaceAll(RegExp(r'/$'), '');
+      final finalUrl = '$backendBase/api/webhooks/vnpay/return?$queryString';
+
       await dio.get(finalUrl);
     } catch (e) {
       debugPrint('Error triggering webhook: $e');
