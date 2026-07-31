@@ -123,7 +123,7 @@ class _IssuePageState extends State<IssuePage> {
 
   List<TicketModel> get filteredIssues {
     if (selectedFilter == 'Tiếp nhận') {
-      return _allTickets.where((i) => i.status == 'new').toList();
+      return _allTickets.where((i) => i.status == 'new' || i.status == 'pending').toList();
     } else if (selectedFilter == 'Đang sửa') {
       return _allTickets.where((i) => i.status == 'in_progress').toList();
     }

@@ -85,6 +85,7 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
 
   Future<void> _pickAndUpload() async {
     if (!widget.enabled || _isUploading) return;
+    setState(() => _isUploading = true);
 
     final mode = await showModalBottomSheet<_ContractPickMode>(
       context: context,
@@ -115,7 +116,10 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
       ),
     );
 
-    if (mode == null || !mounted) return;
+    if (mode == null || !mounted) {
+      setState(() => _isUploading = false);
+      return;
+    }
 
     try {
       final List<XFile> pickedFiles;
@@ -133,9 +137,10 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
         pickedFiles = picked == null ? [] : [picked];
       }
 
-      if (pickedFiles.isEmpty || !mounted) return;
-
-      setState(() => _isUploading = true);
+      if (pickedFiles.isEmpty || !mounted) {
+        setState(() => _isUploading = false);
+        return;
+      }
 
       final uploadedBytes = <List<int>>[];
       final uploadedUrls = <String>[];

@@ -12,6 +12,7 @@ import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.d
 import 'package:smartrent_mobile/manager/features/billing/data/utility_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
+import 'package:smartrent_mobile/manager/features/dashboard/data/dashboard_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
@@ -58,6 +59,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final InvoiceService _invoiceService = InvoiceService();
   final TicketService _ticketService = TicketService();
   final UtilityService _utilityService = UtilityService();
+  final DashboardService _dashboardService = DashboardService();
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -105,19 +107,19 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
-      final responses = await Future.wait([
-        _roomService.getRooms(limit: 100),
-        _tenantService.getTenants(),
-        _invoiceService.getInvoices(limit: 100),
-        _ticketService.getTickets(),
-        _utilityService.getLatestUtilities(),
-      ]);
+      // 1 request thay vì 5 — tránh connection reset qua ngrok
+      final summaryRes = await _dashboardService.getSummary();
 
-      _applyRooms(responses[0]);
-      _applyTenants(responses[1]);
-      _applyInvoices(responses[2]);
-      _applyTickets(responses[3]);
-      _applyUtilities(responses[4]);
+      if (summaryRes.statusCode == 200 && summaryRes.data['success'] == true) {
+        final data = summaryRes.data['data'] as Map<String, dynamic>;
+
+        // Wrap từng phần vào fake response object cho các _apply* method dùng lại
+        _applyRooms(_FakeResponse(200, {'success': true, ...data['rooms'] as Map<String, dynamic>}));
+        _applyTenants(_FakeResponse(200, {'success': true, ...data['tenants'] as Map<String, dynamic>}));
+        _applyInvoices(_FakeResponse(200, {'success': true, ...data['invoices'] as Map<String, dynamic>}));
+        _applyTickets(_FakeResponse(200, {'success': true, ...data['tickets'] as Map<String, dynamic>}));
+        _applyUtilities(_FakeResponse(200, {'success': true, ...data['utilities'] as Map<String, dynamic>}));
+      }
 
       // Load thông báo hợp đồng sắp hết hạn từ notification service
       await _loadExpiringContracts();
@@ -1273,4 +1275,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+}
+
+/// Wrapper nhẹ để tái sử dụng các _apply* method vốn nhận Dio Response.
+/// Chỉ cần statusCode và data — không cần Dio dependency.
+class _FakeResponse {
+  final int statusCode;
+  final Map<String, dynamic> data;
+  const _FakeResponse(this.statusCode, this.data);
 }
