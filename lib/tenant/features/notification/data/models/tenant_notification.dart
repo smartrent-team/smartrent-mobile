@@ -9,6 +9,7 @@ class TenantNotification {
   final bool isRead;
   final DateTime? createdAt;
   final String? userId;
+  final String? relatedId;
 
   const TenantNotification({
     required this.id,
@@ -18,6 +19,7 @@ class TenantNotification {
     required this.isRead,
     required this.createdAt,
     this.userId,
+    this.relatedId,
   });
 
   factory TenantNotification.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class TenantNotification {
       isRead: json['isRead'] == true || json['is_read'] == true,
       createdAt: DateTime.tryParse((json['createdAt'] ?? json['created_at'])?.toString() ?? ''),
       userId: (json['userId'] ?? json['user_id'])?.toString(),
+      relatedId: (json['relatedId'] ?? json['related_id'])?.toString(),
     );
   }
 
@@ -41,6 +44,7 @@ class TenantNotification {
       'isRead': isRead,
       'created_at': createdAt?.toIso8601String(),
       'user_id': userId,
+      'related_id': relatedId,
     };
   }
 
@@ -59,6 +63,8 @@ class TenantNotification {
 
   IconData get icon {
     switch (type) {
+      case 'invoice_overdue':
+        return Icons.warning_amber_rounded;
       case 'invoice':
       case 'payment':
         return Icons.receipt_long_rounded;
@@ -83,6 +89,8 @@ class TenantNotification {
 
   Color get iconColor {
     switch (type) {
+      case 'invoice_overdue':
+        return const Color(0xFFC62828);
       case 'invoice':
       case 'payment':
         return const Color(0xFF2E7D32);
@@ -107,6 +115,8 @@ class TenantNotification {
 
   Color get backgroundColor {
     switch (type) {
+      case 'invoice_overdue':
+        return const Color(0xFFFFEBEE);
       case 'invoice':
       case 'payment':
         return const Color(0xFFE8F5E9);

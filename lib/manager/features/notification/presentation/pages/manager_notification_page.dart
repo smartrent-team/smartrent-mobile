@@ -38,34 +38,10 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
     setState(() => _isLoading = true);
     await _service.fetchNotifications(forceRemote: true);
     final cached = await _service.getCachedNotifications();
-    final notifications = List<TenantNotification>.from(cached);
-
-    try {
-      final directExpiring = await _roomService.getExpiringContracts(maxDays: 30);
-      for (final item in directExpiring) {
-        final roomCode = item['roomCode'] ?? item['roomName'] ?? '';
-        final days = item['remainingDays'] as int? ?? 0;
-        final contractId = item['contractId'] ?? '';
-        final type = days <= 7 ? 'contract_expiring_7d' : 'contract_expiring_30d';
-
-        final exists = notifications.any((n) => n.body.contains(roomCode) || n.body.contains(contractId.toString()));
-        if (!exists) {
-          notifications.add(TenantNotification(
-            id: 'direct_$contractId',
-            title: days <= 7 ? 'Hợp đồng sắp hết hạn — còn $days ngày' : 'Hợp đồng sắp hết hạn',
-            body: 'Phòng $roomCode: hợp đồng $contractId sẽ hết hạn sau $days ngày. Vui lòng liên hệ cư dân để gia hạn.',
-            type: type,
-            isRead: false,
-            createdAt: DateTime.now(),
-            userId: item['userId']?.toString(),
-          ));
-        }
-      }
-    } catch (_) {}
 
     if (!mounted) return;
     setState(() {
-      _notifications = notifications;
+      _notifications = List<TenantNotification>.from(cached);
       _isLoading = false;
     });
   }
@@ -75,15 +51,18 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
     final roomMatch = RegExp(r'Phòng\s+([^\s:]+)').firstMatch(item.body);
     final roomCode = roomMatch != null ? roomMatch.group(1)! : 'Phòng';
 
-    String? targetUserId = item.userId;
-
     setState(() => _sendingNotificationIds.add(item.id));
+
+    // Lấy userId: ưu tiên từ item, fallback tìm qua /api/contracts/expiring
+    String? targetUserId = item.userId;
 
     if (targetUserId == null || targetUserId.isEmpty) {
       try {
         final directExpiring = await _roomService.getExpiringContracts(maxDays: 30);
         final match = directExpiring.firstWhere(
-          (e) => (e['roomCode']?.toString().contains(roomCode) ?? false) || (e['roomName']?.toString().contains(roomCode) ?? false),
+          (e) =>
+              (e['roomCode']?.toString() == roomCode) ||
+              (e['roomName']?.toString() == roomCode),
           orElse: () => {},
         );
         targetUserId = match['userId']?.toString();
@@ -102,11 +81,19 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
       return;
     }
 
+    // Lấy contractId từ relatedId (format "contract:ID") hoặc từ item.id (format "direct_ID")
+    String? contractId;
+    if (item.relatedId != null && item.relatedId!.startsWith('contract:')) {
+      contractId = item.relatedId!.replaceFirst('contract:', '');
+    } else if (item.id.startsWith('direct_')) {
+      contractId = item.id.replaceFirst('direct_', '');
+    }
+
     final success = await _roomService.sendExpiringContractNotification(
       targetUserId: targetUserId,
       roomCode: roomCode,
       remainingDays: daysLeft,
-      contractId: item.id.startsWith('direct_') ? item.id.replaceFirst('direct_', '') : null,
+      contractId: contractId,
     );
 
     if (!mounted) return;
