@@ -146,14 +146,36 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
           n.type != 'contract_expiring_30d' && n.type != 'contract_expiring_7d')
       .toList();
 
-  /// Trích xuất số ngày còn lại từ body message
+  /// Tính số ngày còn lại từ relatedId hoặc parse từ body
+  /// Ưu tiên tính real-time để đồng bộ với màn hình hợp đồng
   int? _parseDaysLeft(String body) {
-    final regExp = RegExp(r'(\d+)\s*ngày');
+    // Thử parse số ngày từ body — chỉ dùng làm fallback
+    final regExp = RegExp(r'còn\s+(\d+)\s*ngày', caseSensitive: false);
     final match = regExp.firstMatch(body);
     if (match != null) {
       return int.tryParse(match.group(1) ?? '');
     }
+    // Fallback: pattern khác
+    final regExp2 = RegExp(r'(\d+)\s*ngày');
+    final match2 = regExp2.firstMatch(body);
+    if (match2 != null) {
+      return int.tryParse(match2.group(1) ?? '');
+    }
     return null;
+  }
+
+  /// Tính số ngày còn lại real-time từ endDate string (format yyyy-MM-dd)
+  int? _computeDaysLeft(String? endDateStr) {
+    if (endDateStr == null || endDateStr.isEmpty) return null;
+    try {
+      final end = DateTime.parse(endDateStr);
+      final today = DateTime.now();
+      final endMidnight = DateTime(end.year, end.month, end.day);
+      final todayMidnight = DateTime(today.year, today.month, today.day);
+      return endMidnight.difference(todayMidnight).inDays;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Màu theo số ngày còn lại
@@ -572,7 +594,8 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
   }
 
   Widget _buildExpiringContractCard(TenantNotification item) {
-    final daysLeft = _parseDaysLeft(item.body);
+    // Ưu tiên tính real-time từ endDate, fallback parse từ body
+    final daysLeft = _computeDaysLeft(item.endDate) ?? _parseDaysLeft(item.body);
     final daysColor = _daysColor(daysLeft);
     final urgencyLabel = _urgencyLabel(item.type, daysLeft);
     final isUrgent = item.type == 'contract_expiring_7d';

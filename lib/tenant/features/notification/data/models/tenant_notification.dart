@@ -10,6 +10,7 @@ class TenantNotification {
   final DateTime? createdAt;
   final String? userId;
   final String? relatedId;
+  final String? endDate;
 
   const TenantNotification({
     required this.id,
@@ -20,6 +21,7 @@ class TenantNotification {
     required this.createdAt,
     this.userId,
     this.relatedId,
+    this.endDate,
   });
 
   factory TenantNotification.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class TenantNotification {
       createdAt: DateTime.tryParse((json['createdAt'] ?? json['created_at'])?.toString() ?? ''),
       userId: (json['userId'] ?? json['user_id'])?.toString(),
       relatedId: (json['relatedId'] ?? json['related_id'])?.toString(),
+      endDate: (json['endDate'] ?? json['end_date'])?.toString(),
     );
   }
 
@@ -45,6 +48,7 @@ class TenantNotification {
       'created_at': createdAt?.toIso8601String(),
       'user_id': userId,
       'related_id': relatedId,
+      'end_date': endDate,
     };
   }
 
