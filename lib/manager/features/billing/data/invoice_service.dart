@@ -62,4 +62,16 @@ class InvoiceService {
       rethrow;
     }
   }
+
+  Future<Response> markInvoicePaid(int invoiceId, {String note = 'Tiền mặt'}) async {
+    try {
+      return await _apiClient.dio.patch(
+        '/api/invoices/$invoiceId/mark-paid',
+        data: {'note': note},
+      );
+    } on DioException {
+      rethrow;
+    }
+  }
 }
+

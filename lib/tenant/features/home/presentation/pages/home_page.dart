@@ -5,10 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/billing/data/tenant_invoice_service.dart';
 import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_invoice.dart';
-import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/contract_page.dart';
-import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_tab_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/features/home/data/services/home_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
@@ -81,12 +80,10 @@ class _TenantHomePageState extends State<TenantHomePage> {
     if (_unpaidInvoice != null) {
       openTenantPaymentQr(context, _unpaidInvoice!);
     } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const TenantOrderPage()),
-      );
+      TenantTabNav.openInvoices(context);
     }
   }
+
 
   void _openRoomDetail() {
     final room = _profileData?['room'];
@@ -546,9 +543,12 @@ class _TenantHomePageState extends State<TenantHomePage> {
     
     final issued = DateTime.tryParse(inv.issuedAt ?? inv.createdAt ?? '');
     final monthStr = issued != null ? '${issued.month}/${issued.year}' : '--/--';
-    final dueDateStr = issued != null 
-        ? '10/${issued.month + 1 > 12 ? 1 : issued.month + 1}/${issued.month + 1 > 12 ? issued.year + 1 : issued.year}' 
-        : '--/--/----';
+    final dueParsed = DateTime.tryParse(inv.dueDate ?? '');
+    final dueDateStr = dueParsed != null
+        ? '${dueParsed.day.toString().padLeft(2, '0')}/${dueParsed.month.toString().padLeft(2, '0')}/${dueParsed.year}'
+        : (issued != null 
+            ? '10/${issued.month + 1 > 12 ? 1 : issued.month + 1}/${issued.month + 1 > 12 ? issued.year + 1 : issued.year}' 
+            : '--/--/----');
 
     final roomCode = inv.roomCode ?? '--';
     final branchName = inv.branchName ?? 'Nhà trọ';
@@ -623,22 +623,32 @@ class _TenantHomePageState extends State<TenantHomePage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: isPaid ? TenantColors.bgMint : const Color(0xFFFFF3E0),
+                        color: isPaid
+                            ? TenantColors.bgMint
+                            : (inv.isOverdue ? const Color(0xFFFFEBEE) : const Color(0xFFFFF3E0)),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isPaid ? Icons.check_circle_outline_rounded : Icons.access_time,
-                            color: isPaid ? TenantColors.primaryGreen : const Color(0xFFE65100),
+                            isPaid
+                                ? Icons.check_circle_outline_rounded
+                                : (inv.isOverdue ? Icons.error_outline_rounded : Icons.access_time),
+                            color: isPaid
+                                ? TenantColors.primaryGreen
+                                : (inv.isOverdue ? TenantColors.errorRed : const Color(0xFFE65100)),
                             size: 14,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isPaid ? 'Đã thanh toán' : 'Chờ thanh toán',
+                            isPaid
+                                ? 'Đã thanh toán'
+                                : (inv.isOverdue ? 'Quá hạn' : 'Chờ thanh toán'),
                             style: TextStyle(
-                              color: isPaid ? TenantColors.primaryGreen : const Color(0xFFE65100),
+                              color: isPaid
+                                  ? TenantColors.primaryGreen
+                                  : (inv.isOverdue ? TenantColors.errorRed : const Color(0xFFE65100)),
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -749,26 +759,45 @@ class _TenantHomePageState extends State<TenantHomePage> {
                   SizedBox(
                     width: double.infinity,
                     height: 54,
-                    child: ElevatedButton.icon(
-                      onPressed: _openPayment,
-                      icon: const Icon(Icons.qr_code_scanner_outlined,
-                          color: Colors.white),
-                      label: const Text(
-                        'Thanh toán ngay',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TenantColors.primaryGreen,
-                        elevation: 4,
-                        shadowColor:
-                            TenantColors.primaryGreen.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                      ),
-                    ),
+                    child: inv.isOverdue
+                        ? ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.lock_outline_rounded,
+                                color: Colors.white70),
+                            label: const Text(
+                              'Đã quá hạn thanh toán',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade400,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: _openPayment,
+                            icon: const Icon(Icons.qr_code_scanner_outlined,
+                                color: Colors.white),
+                            label: const Text(
+                              'Thanh toán ngay',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: TenantColors.primaryGreen,
+                              elevation: 4,
+                              shadowColor:
+                                  TenantColors.primaryGreen.withValues(alpha: 0.4),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
                   ),
                 ],
               ],
@@ -834,8 +863,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
         'title': 'Hóa đơn',
         'icon': Icons.description_outlined,
         'color': TenantColors.primaryGreen,
-        'onTap': () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const TenantOrderPage())),
+        'onTap': () => TenantTabNav.openInvoices(context),
       },
       {
         'title': 'Thanh toán QR',
@@ -847,8 +875,7 @@ class _TenantHomePageState extends State<TenantHomePage> {
         'title': 'Báo hỏng',
         'icon': Icons.build_outlined,
         'color': TenantColors.warningAmber,
-        'onTap': () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const RepairPage())),
+        'onTap': () => TenantTabNav.openRepair(context),
       },
       {
         'title': 'Hợp đồng',

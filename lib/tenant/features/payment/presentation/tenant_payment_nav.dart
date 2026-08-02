@@ -17,57 +17,63 @@ Future<void> openTenantPaymentQr(
     return;
   }
 
+  if (invoice.isOverdue) {
+    showTenantPaymentSnackBar(
+      context,
+      'Hóa đơn đã quá hạn thanh toán. Vui lòng liên hệ ban quản lý.',
+    );
+    return;
+  }
+
   TenantInvoice current = invoice;
 
-  if (!current.canPay) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(TenantPaymentMessages.loadingQr),
-              ],
-            ),
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(TenantPaymentMessages.loadingQr),
+            ],
           ),
         ),
       ),
-    );
+    ),
+  );
 
-    try {
-      final res = await _invoiceService.ensurePaymentLink(current.id);
-      if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
+  try {
+    final res = await _invoiceService.ensurePaymentLink(current.id);
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
 
-      if (res.statusCode == 200 && res.data['success'] == true) {
-        current = TenantInvoice.fromJson(
-          res.data['invoice'] as Map<String, dynamic>,
-        );
-      } else {
-        final err = TenantPaymentMessages.fromApi(res.data['error']?.toString());
-        showTenantPaymentSnackBar(context, err);
-        return;
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        final msg = e is DioException
-            ? TenantPaymentMessages.fromApi(
-                (e.response?.data is Map)
-                    ? (e.response!.data as Map)['error']?.toString()
-                    : null,
-              )
-            : TenantPaymentMessages.unavailable;
-        showTenantPaymentSnackBar(context, msg);
-      }
+    if (res.statusCode == 200 && res.data['success'] == true) {
+      current = TenantInvoice.fromJson(
+        res.data['invoice'] as Map<String, dynamic>,
+      );
+    } else {
+      final err = TenantPaymentMessages.fromApi(res.data['error']?.toString());
+      showTenantPaymentSnackBar(context, err);
       return;
     }
+  } catch (e) {
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+      final msg = e is DioException
+          ? TenantPaymentMessages.fromApi(
+              (e.response?.data is Map)
+                  ? (e.response!.data as Map)['error']?.toString()
+                  : null,
+            )
+          : TenantPaymentMessages.unavailable;
+      showTenantPaymentSnackBar(context, msg);
+    }
+    return;
   }
 
   if (!current.hasLink || current.checkoutUrl == null || current.checkoutUrl!.trim().isEmpty) {

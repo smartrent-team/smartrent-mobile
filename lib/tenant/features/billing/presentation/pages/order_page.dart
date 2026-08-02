@@ -156,9 +156,10 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
       });
     }
 
-    final deadline = issued != null
+    final dueParsed = DateTime.tryParse(inv.dueDate ?? '');
+    final deadline = dueParsed ?? (issued != null
         ? DateTime(issued.year, issued.month + 1, 10)
-        : null;
+        : null);
 
     return {
       '_tenantInvoice': inv,
@@ -862,28 +863,45 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
           Row(children: [
             Expanded(
               flex: 3,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final tenantInv = inv['_tenantInvoice'] as TenantInvoice?;
-                  if (tenantInv != null) {
-                    await openTenantPaymentQr(context, tenantInv);
-                    if (mounted) _reloadAfterPayment();
-                  }
-                },
-                icon: const Icon(Icons.payment_outlined,
-                    color: Colors.white, size: 18),
-                label: const Text('Thanh toán',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TenantColors.primaryGreen,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
+              child: (inv['_tenantInvoice'] as TenantInvoice?)?.isOverdue == true
+                  ? ElevatedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.lock_outline_rounded,
+                          color: Colors.white70, size: 18),
+                      label: const Text('Đã quá hạn',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade400,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () async {
+                        final tenantInv = inv['_tenantInvoice'] as TenantInvoice?;
+                        if (tenantInv != null) {
+                          await openTenantPaymentQr(context, tenantInv);
+                          if (mounted) _reloadAfterPayment();
+                        }
+                      },
+                      icon: const Icon(Icons.payment_outlined,
+                          color: Colors.white, size: 18),
+                      label: const Text('Thanh toán',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TenantColors.primaryGreen,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
             ),
             const SizedBox(width: 10),
             Expanded(

@@ -143,13 +143,15 @@ class _TenantPageState extends State<TenantPage> {
 
   String _formatInvoiceDeadline(Invoice invoice) {
     try {
-      final dateStr = invoice.issuedAt ?? invoice.createdAt;
+      final dateStr = invoice.dueDate ?? invoice.issuedAt ?? invoice.createdAt;
       if (dateStr != null) {
-        final date = DateTime.parse(dateStr);
-        return "Hạn: 15/${date.month.toString().padLeft(2, '0')}/${date.year}";
+        final date = DateTime.parse(dateStr).toLocal();
+        final day = date.day.toString().padLeft(2, '0');
+        final month = date.month.toString().padLeft(2, '0');
+        return "Hạn: $day/$month/${date.year}";
       }
     } catch (e) {}
-    return "Hạn: 15 Hàng tháng";
+    return "Hạn: N/A";
   }
 
   String _formatCurrency(num amount) {
@@ -158,6 +160,70 @@ class _TenantPageState extends State<TenantPage> {
           (Match m) => '${m[1]}.',
         );
     return "$format đ";
+  }
+
+  Future<void> _confirmCashPayment(Invoice invoice) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.payments_outlined, color: Color(0xFF5D4037), size: 24),
+            SizedBox(width: 10),
+            Text('Xác nhận thu tiền mặt',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'Xác nhận đã thu tiền mặt cho hóa đơn ${invoice.invoiceCode} (Phòng ${invoice.roomCode})?\n\nHành động này không thể hoàn tác.',
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5D4037),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Xác nhận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final res = await _invoiceService.markInvoicePaid(invoice.id);
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Đã xác nhận thanh toán thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        _fetchInvoices();
+      } else {
+        final msg = res.data?['error'] ?? 'Không thể cập nhật hóa đơn';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi kết nối. Vui lòng thử lại.'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
@@ -1160,7 +1226,26 @@ class _TenantPageState extends State<TenantPage> {
                 itemBuilder: (context, index) {
                   final invoice = _allInvoices[index];
                   final isPaid = invoice.isPaid;
-                  final statusText = isPaid ? "Đã TT" : "Chờ TT";
+                  final isOverdue = invoice.isOverdue;
+
+                  final String statusText;
+                  final Color statusBg;
+                  final Color statusFg;
+
+                  if (isPaid) {
+                    statusText = "Đã TT";
+                    statusBg = ManagerColors.bgMint;
+                    statusFg = ManagerColors.primaryGreen;
+                  } else if (isOverdue) {
+                    statusText = "Quá hạn";
+                    statusBg = const Color(0xFFFFEBEE);
+                    statusFg = Colors.red;
+                  } else {
+                    statusText = "Chờ TT";
+                    statusBg = const Color(0xFFFFF3E0);
+                    statusFg = const Color(0xFFE65100);
+                  }
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(18),
@@ -1175,82 +1260,109 @@ class _TenantPageState extends State<TenantPage> {
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        // Billing month, room code and deadline
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _formatInvoiceMonth(invoice),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: ManagerColors.textCharcoal,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
+                        Row(
+                          children: [
+                            // Billing month, room code and deadline
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
-                                    Icons.meeting_room_outlined,
-                                    size: 12,
-                                    color: ManagerColors.primaryGreen,
-                                  ),
-                                  const SizedBox(width: 4),
                                   Text(
-                                    'Phòng ${invoice.roomCode}',
+                                    _formatInvoiceMonth(invoice),
                                     style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: ManagerColors.textCharcoal,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.meeting_room_outlined,
+                                        size: 12,
+                                        color: ManagerColors.primaryGreen,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Phòng ${invoice.roomCode}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: ManagerColors.primaryGreen,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _formatInvoiceDeadline(invoice),
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: ManagerColors.primaryGreen,
+                                      color: isOverdue ? Colors.red : ManagerColors.textGrey,
+                                      fontWeight: isOverdue ? FontWeight.bold : FontWeight.normal,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _formatInvoiceDeadline(invoice),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: ManagerColors.textGrey,
+                            ),
+
+                            // Amount Text
+                            Text(
+                              _formatCurrency(invoice.totalAmount),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: ManagerColors.textCharcoal,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Status Badge Chip
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusBg,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                statusText,
+                                style: TextStyle(
+                                  color: statusFg,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-
-                        // Amount Text
-                        Text(
-                          _formatCurrency(invoice.totalAmount),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: ManagerColors.textCharcoal,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Status Badge Chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isPaid ? ManagerColors.bgMint : const Color(0xFFFFF3E0),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            statusText,
-                            style: TextStyle(
-                              color: isPaid ? ManagerColors.primaryGreen : const Color(0xFFE65100),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                        if (!isPaid) ...[
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _confirmCashPayment(invoice),
+                              icon: const Icon(Icons.payments_outlined, color: Colors.white, size: 16),
+                              label: const Text(
+                                'Xác nhận đã thu tiền mặt',
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5D4037),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   );

@@ -4,6 +4,7 @@ class TenantInvoice {
   final num totalAmount;
   final String paymentStatus;
   final String? issuedAt;
+  final String? dueDate;
   final String? createdAt;
   final num roomPrice;
   final num serviceCost;
@@ -30,6 +31,7 @@ class TenantInvoice {
     required this.totalAmount,
     required this.paymentStatus,
     this.issuedAt,
+    this.dueDate,
     this.createdAt,
     this.roomPrice = 0,
     this.serviceCost = 0,
@@ -58,6 +60,7 @@ class TenantInvoice {
       totalAmount: (json['totalAmount'] ?? json['total_amount'] ?? 0) as num,
       paymentStatus: json['paymentStatus'] as String? ?? json['payment_status'] as String? ?? 'unpaid',
       issuedAt: json['issuedAt'] as String? ?? json['issued_at'] as String?,
+      dueDate: json['dueDate'] as String? ?? json['due_date'] as String?,
       createdAt: json['createdAt'] as String? ?? json['created_at'] as String?,
       roomPrice: (json['roomPrice'] ?? json['room_price'] ?? 0) as num,
       serviceCost: (json['serviceCost'] ?? json['service_cost'] ?? 0) as num,
@@ -88,10 +91,15 @@ class TenantInvoice {
     return 'SmartRent';
   }
 
-  bool get canPay =>
-      !isPaid &&
-      hasLink &&
-      (checkoutUrl != null && checkoutUrl!.trim().isNotEmpty);
+  bool get isOverdue {
+    if (isPaid || dueDate == null || dueDate!.trim().isEmpty) return false;
+    final parsed = DateTime.tryParse(dueDate!);
+    if (parsed == null) return false;
+    final endOfDueDay = DateTime(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999);
+    return DateTime.now().isAfter(endOfDueDay);
+  }
+
+  bool get canPay => !isPaid && !isOverdue;
 
   static bool _hasNonEmpty(String? value) =>
       value != null && value.trim().isNotEmpty;

@@ -80,6 +80,70 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     );
   }
 
+  Future<void> _confirmCashPayment(int invoiceId, String invoiceCode) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.payments_outlined, color: Color(0xFF5D4037), size: 24),
+            SizedBox(width: 10),
+            Text('Xác nhận thu tiền mặt',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'Xác nhận đã thu tiền mặt cho hóa đơn $invoiceCode?\n\nHành động này không thể hoàn tác.',
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5D4037),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Xác nhận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final res = await _roomService.markInvoicePaid(invoiceId);
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Đã xác nhận thanh toán thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        _fetchRoomDetail(); // Reload để cập nhật trạng thái
+      } else {
+        final msg = res.data?['error'] ?? 'Không thể cập nhật hóa đơn';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi kết nối. Vui lòng thử lại.'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   String _formatDate(String? dateStr) {
     if (dateStr == null) return 'N/A';
     try {
@@ -184,12 +248,24 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     }
   }
 
-  String _getInvoiceStatusText(String status) {
+  bool _isOverdue(String? dueDateStr) {
+    if (dueDateStr == null) return false;
+    try {
+      final d = DateTime.parse(dueDateStr).toLocal();
+      final endOfDay = DateTime(d.year, d.month, d.day, 23, 59, 59);
+      return DateTime.now().isAfter(endOfDay);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _getInvoiceStatusText(String status, {bool overdue = false}) {
+    if (overdue && status == 'unpaid') return 'Quá hạn';
     switch (status) {
       case 'paid':
-        return 'Đã thanh toán';
+        return 'Đã TT';
       case 'unpaid':
-        return 'Chưa thanh toán';
+        return 'Chờ TT';
       case 'partial':
         return 'Một phần';
       default:
@@ -197,7 +273,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     }
   }
 
-  Color _getInvoiceStatusColor(String status) {
+  Color _getInvoiceStatusColor(String status, {bool overdue = false}) {
+    if (overdue && status == 'unpaid') return Colors.red;
     switch (status) {
       case 'paid':
         return Colors.green;
@@ -574,12 +651,40 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           ...displayInvoices.map((inv) {
             final month = _formatMonth(inv['issuedAt']);
             final amount = _formatCurrency(inv['totalAmount']);
-            final dueDate = _formatDate(inv['issuedAt']);
+            final dueDateRaw = inv['dueDate'] as String?;
+            final dueDate = dueDateRaw != null
+                ? _formatDate(dueDateRaw)
+                : _formatDate(inv['issuedAt']);
             final status = inv['paymentStatus'] ?? 'unpaid';
+            final overdue = _isOverdue(dueDateRaw);
+            final invoiceId = (inv['id'] as num?)?.toInt();
 
             return Column(
               children: [
-                _buildInvoiceItem(month, amount, dueDate, _getInvoiceStatusText(status), _getInvoiceStatusColor(status)),
+                _buildInvoiceItem(
+                  month, amount, dueDate,
+                  _getInvoiceStatusText(status, overdue: overdue),
+                  _getInvoiceStatusColor(status, overdue: overdue),
+                ),
+                if (status == 'unpaid' && invoiceId != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _confirmCashPayment(invoiceId, inv['invoiceCode'] as String? ?? ''),
+                        icon: const Icon(Icons.payments_outlined, color: Colors.white, size: 18),
+                        label: const Text('Xác nhận đã thu tiền mặt',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF5D4037),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (inv != displayInvoices.last)
                   const Divider(height: 1, indent: 16, endIndent: 16),
               ],

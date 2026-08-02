@@ -16,6 +16,7 @@ class Invoice {
   final num totalAmount;
   final String paymentStatus;
   final String? issuedAt;
+  final String? dueDate;
   final String? createdAt;
   final String? checkoutUrl;
 
@@ -37,6 +38,7 @@ class Invoice {
     required this.totalAmount,
     required this.paymentStatus,
     this.issuedAt,
+    this.dueDate,
     this.createdAt,
     this.checkoutUrl,
   });
@@ -60,6 +62,7 @@ class Invoice {
       totalAmount: json['totalAmount'] ?? 0,
       paymentStatus: json['paymentStatus'] ?? 'unpaid',
       issuedAt: json['issuedAt'],
+      dueDate: json['dueDate'],
       createdAt: json['createdAt'],
       checkoutUrl: json['checkoutUrl'],
     );
@@ -67,4 +70,15 @@ class Invoice {
 
   bool get isPaid => paymentStatus == 'paid';
   bool get isUnpaid => paymentStatus == 'unpaid';
+
+  bool get isOverdue {
+    if (isPaid || dueDate == null) return false;
+    try {
+      final d = DateTime.parse(dueDate!).toLocal();
+      final endOfDay = DateTime(d.year, d.month, d.day, 23, 59, 59);
+      return DateTime.now().isAfter(endOfDay);
+    } catch (_) {
+      return false;
+    }
+  }
 }

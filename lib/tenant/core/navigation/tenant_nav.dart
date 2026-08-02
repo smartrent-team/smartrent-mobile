@@ -7,6 +7,7 @@ import 'package:smartrent_mobile/tenant/features/home/presentation/pages/home_pa
 import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/order_page.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/profile_page.dart';
+import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav_scope.dart';
 
 class TenantNav extends StatefulWidget {
   final int initialIndex;
@@ -47,16 +48,24 @@ class _TenantNavState extends State<TenantNav> {
     super.dispose();
   }
 
+  void _goToTab(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return TenantNotificationScope(
       notifier: _notificationNotifier,
-      child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
+      child: TenantNavScope(
+        goToTab: _goToTab,
+        child: Scaffold(
+          body: IndexedStack(
+            index: _currentIndex,
+            children: _screens,
+          ),
+          bottomNavigationBar: _buildBottomNav(),
         ),
-        bottomNavigationBar: _buildBottomNav(),
       ),
     );
   }
