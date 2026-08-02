@@ -190,8 +190,6 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
     final floor = _room!['floor'] ?? 0;
     final area = _room!['area'] ?? 0;
     final basePrice = _room!['basePrice'] ?? 0;
-    final electricPrice = _room!['electricPrice'] ?? 0;
-    final waterPrice = _room!['waterPrice'] ?? 0;
     final status = _room!['status'] ?? 'available';
     final tenant = _room!['tenant'];
     final List<dynamic> fixtures = _room!['fixtures'] ?? [];
@@ -213,12 +211,6 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
               _buildDetailRow('Tầng', 'Tầng $floor'),
               _buildDetailRow('Diện tích', '$area m²'),
               _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng', isLast: true),
-            ]),
-            const SizedBox(height: 20),
-
-            _buildSection('Đơn giá điện - nước', Icons.bolt_outlined, [
-              _buildDetailRow('Điện', '${_formatCurrency(electricPrice)}/kWh'),
-              _buildDetailRow('Nước', '${_formatCurrency(waterPrice)}/m³', isLast: true),
             ]),
             const SizedBox(height: 20),
 

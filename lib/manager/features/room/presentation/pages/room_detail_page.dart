@@ -355,8 +355,6 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     final floor = _room!['floor'] ?? 0;
     final area = _room!['area'] ?? 0;
     final basePrice = _room!['basePrice'] ?? 0;
-    final electricPrice = _room!['electricPrice'] ?? 0;
-    final waterPrice = _room!['waterPrice'] ?? 0;
     final status = _room!['status'] ?? 'available';
     final tenant = _room!['tenant'];
     final List<dynamic> invoices = _room!['invoices'] ?? [];
@@ -384,12 +382,6 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
             const SizedBox(height: 20),
 
             _buildFixturesList(fixtures),
-            const SizedBox(height: 20),
-
-            _buildSection('Đơn giá điện - nước', Icons.bolt_outlined, [
-              _buildDetailRow('Điện', '${_formatCurrency(electricPrice)}/kWh'),
-              _buildDetailRow('Nước', '${_formatCurrency(waterPrice)}/m³', isLast: true),
-            ]),
             const SizedBox(height: 20),
 
             _buildTenantCard(tenant),
