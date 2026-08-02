@@ -192,8 +192,6 @@ class _TenantContractPageState extends State<TenantContractPage>
                     _buildDepositCard(),
                     const SizedBox(height: 24),
                     _buildOriginalImagesSection(context),
-                    const SizedBox(height: 20),
-                    _buildExpiryWarningCard(context),
                     const SizedBox(height: 24),
                   ],
                 ),
