@@ -732,35 +732,6 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                     ],
                   ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _sendingNotificationIds.contains(item.id)
-                        ? null
-                        : () => _sendNotificationToTenant(item),
-                    icon: _sendingNotificationIds.contains(item.id)
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.send_rounded, size: 16),
-                    label: Text(
-                      _sendingNotificationIds.contains(item.id)
-                          ? 'Đang gửi thông báo...'
-                          : 'Gửi thông báo gia hạn cho cư dân',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ManagerColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Text(
                   item.timeLabel,
                   style: GoogleFonts.outfit(
