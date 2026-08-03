@@ -38,10 +38,12 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     try {
       final res = await _service.getInvoiceDetail(widget.invoiceId);
       if (res.statusCode == 200 && res.data['success'] == true) {
-        if (mounted) setState(() {
-          _data = Map<String, dynamic>.from(res.data['data'] as Map);
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _data = Map<String, dynamic>.from(res.data['data'] as Map);
+            _isLoading = false;
+          });
+        }
       } else {
         throw Exception(res.data['error'] ?? 'Không tải được hóa đơn');
       }
@@ -113,7 +115,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
                   const SizedBox(height: 4),
                   if (d['room'] != null)
                     Text(
-                      'Phòng ${(d['room'] as Map)['roomCode'] ?? '—'}  ·  ${(d['room'] as Map)['branchName'] ?? ''}',
+                      _buildHeaderRoomSubtitle(d['room'] as Map<String, dynamic>?),
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                 ])),
@@ -133,15 +135,21 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
 
   Widget _buildBody() {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: ManagerColors.primaryGreen));
-    if (_error != null) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-      const SizedBox(height: 12),
-      Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
-      const SizedBox(height: 16),
-      ElevatedButton(onPressed: _load,
-          style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
-          child: const Text('Thử lại', style: TextStyle(color: Colors.white))),
-    ]));
+    if (_error != null) {
+      return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+          const SizedBox(height: 12),
+          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _load,
+            style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+            child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+          ),
+        ]),
+      );
+    }
 
     final d = _data!;
     return RefreshIndicator(
@@ -290,9 +298,29 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     );
   }
 
+  String _getBranchName(Map<String, dynamic>? room) {
+    if (room == null) return '—';
+    final bName = room['branchName'] ?? (room['branch'] is Map ? room['branch']['name'] : room['branch']);
+    if (bName != null && bName.toString().trim().isNotEmpty) {
+      return bName.toString().trim();
+    }
+    return '—';
+  }
+
+  String _buildHeaderRoomSubtitle(Map<String, dynamic>? room) {
+    if (room == null) return '';
+    final code = room['roomCode']?.toString() ?? '—';
+    final branch = _getBranchName(room);
+    if (branch != '—' && branch.isNotEmpty) {
+      return 'Phòng $code  ·  $branch';
+    }
+    return 'Phòng $code';
+  }
+
   Widget _infoCard(Map<String, dynamic> d) {
     final room   = d['room']   as Map<String, dynamic>?;
     final tenant = d['tenant'] as Map<String, dynamic>?;
+    final branchName = _getBranchName(room);
     return _sectionCard(
       title: 'Thông tin phòng & khách thuê',
       icon: Icons.info_outline_rounded,
@@ -302,36 +330,58 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
         child: Column(children: [
           if (room != null) ...[
             _infoRow(Icons.meeting_room_outlined, 'Phòng', 'Phòng ${room['roomCode']} · Tầng ${room['floor']}'),
-            _infoRow(Icons.business_outlined, 'Chi nhánh', room['branchName'] ?? '—'),
+            _infoRow(Icons.business_outlined, 'Chi nhánh', branchName),
             if ((room['basePrice'] as num? ?? 0) > 0)
               _infoRow(Icons.attach_money_rounded, 'Giá thuê', _fmt(room['basePrice'] as num?)),
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            const SizedBox(height: 8),
+          ],
+          if (room != null && tenant != null) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Divider(height: 1, color: Color(0xFFF0F0F0)),
+            ),
           ],
           if (tenant != null) ...[
             _infoRow(Icons.person_outline_rounded, 'Khách thuê', tenant['fullName'] ?? '—'),
             _infoRow(Icons.phone_outlined, 'Điện thoại', tenant['phone'] ?? '—'),
             _infoRow(Icons.email_outlined, 'Email', tenant['email'] ?? '—'),
-          ] else
+          ] else if (room != null) ...[
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('Chưa gắn khách thuê', style: TextStyle(fontSize: 13, color: ManagerColors.textGrey, fontStyle: FontStyle.italic)),
             ),
+          ],
         ]),
       ),
     );
   }
 
   Widget _infoRow(IconData icon, String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(children: [
-      Icon(icon, size: 15, color: ManagerColors.textGrey),
-      const SizedBox(width: 10),
-      Text(label, style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey)),
-      const Spacer(),
-      Flexible(child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ManagerColors.textCharcoal), textAlign: TextAlign.right)),
-    ]),
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 20,
+          child: Icon(icon, size: 16, color: ManagerColors.textGrey),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 95,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey, fontWeight: FontWeight.w500),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ManagerColors.textCharcoal),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    ),
   );
 
   Widget _paymentCard(Map<String, dynamic> d) {
