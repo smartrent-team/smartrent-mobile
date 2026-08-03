@@ -64,6 +64,11 @@ class InvoiceService {
     );
   }
 
+  // ─── Chi tiết hóa đơn ───────────────────────────────────────────────────
+  Future<Response> getInvoiceDetail(int invoiceId) async {
+    return _apiClient.dio.get('/api/invoices/$invoiceId');
+  }
+
   // ─── Xác nhận thanh toán tiền mặt ───────────────────────────────────────
   Future<Response> markInvoicePaid(int invoiceId, {String note = 'Tiền mặt'}) async {
     return _apiClient.dio.patch(

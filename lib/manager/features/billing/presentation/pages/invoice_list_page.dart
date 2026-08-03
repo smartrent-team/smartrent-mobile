@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_detail_page.dart';
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key});
@@ -314,7 +315,14 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         : '';
     final isOverdue = !isPaid && due != null && DateTime.now().isAfter(due);
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+        builder: (_) => InvoiceDetailPage(
+          invoiceId: inv['id'] as int,
+          invoiceCode: code,
+        ),
+      )),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(18),
@@ -381,6 +389,8 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                 ),
               ),
             ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: ManagerColors.textGrey),
           ]),
           const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
@@ -446,6 +456,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
           ],
         ]),
       ),
+    ), // GestureDetector
     );
   }
 
