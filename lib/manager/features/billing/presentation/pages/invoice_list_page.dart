@@ -117,7 +117,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
           content: Text('Đã xác nhận thanh toán ${inv['invoiceCode']}'),
           backgroundColor: ManagerColors.primaryGreen,
         ));
-        AppEventBus.instance.emit(AppEvent.invoiceChanged);
+        AppEventBus.instance.fire(AppEvent.invoiceChanged);
       } else {
         _showError(res.data['error'] ?? 'Không thể cập nhật hóa đơn');
       }

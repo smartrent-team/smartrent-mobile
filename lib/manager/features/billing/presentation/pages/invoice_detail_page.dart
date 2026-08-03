@@ -440,7 +440,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
       if (!mounted) return;
       Navigator.pop(context);
       if (res.statusCode == 200 && res.data['success'] == true) {
-        AppEventBus.instance.emit(AppEvent.invoiceChanged);
+        AppEventBus.instance.fire(AppEvent.invoiceChanged);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Đã xác nhận thanh toán ${d['invoiceCode']}'),
           backgroundColor: ManagerColors.primaryGreen,
