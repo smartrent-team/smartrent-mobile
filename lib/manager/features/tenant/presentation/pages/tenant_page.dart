@@ -6,6 +6,7 @@ import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
+import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
@@ -1246,7 +1247,15 @@ class _TenantPageState extends State<TenantPage> {
                     statusFg = const Color(0xFFE65100);
                   }
 
-                  return Container(
+                  return InkWell(
+                    onTap: () => context.pushSlide(
+                      InvoiceDetailPage(
+                        invoiceId: invoice.id,
+                        invoiceCode: invoice.invoiceCode,
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -1339,6 +1348,9 @@ class _TenantPageState extends State<TenantPage> {
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded,
+                                size: 16, color: ManagerColors.textGrey),
                           ],
                         ),
                         if (!isPaid) ...[
@@ -1365,6 +1377,7 @@ class _TenantPageState extends State<TenantPage> {
                         ],
                       ],
                     ),
+                    ), // InkWell
                   );
                 },
               ),
