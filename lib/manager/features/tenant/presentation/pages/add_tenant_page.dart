@@ -51,6 +51,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
 
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _rooms = [];
+  // Lưu thông tin capacity phòng: roomId -> {remaining, max}
+  Map<String, Map<String, int>> _roomCapacityMap = {};
 
   @override
   void initState() {
@@ -146,21 +148,35 @@ class _AddTenantPageState extends State<AddTenantPage> {
       _isLoading = true;
       _rooms = [];
       _selectedRoom = null;
+      _roomCapacityMap = {};
     });
     try {
       final roomService = RoomService();
       final response = await roomService.getRooms(
         branchId: branchId.toString(),
-        status: 'available',
+        includePartial: true, // Lấy cả occupied còn chỗ
         limit: 100,
       );
       if (response.statusCode == 200) {
         final List<dynamic> docs = response.data['docs'];
+        final newCapacityMap = <String, Map<String, int>>{};
         setState(() {
-          _rooms = docs.map((doc) => {
-            'label': doc['roomCode'].toString(),
-            'id': doc['id'],
+          _rooms = docs.map((doc) {
+            final id = doc['id'].toString();
+            final remaining = (doc['remainingSlots'] as num?)?.toInt() ?? 1;
+            final max = (doc['maxCapacity'] as num?)?.toInt() ?? 1;
+            final current = (doc['currentTenantCount'] as num?)?.toInt() ?? 0;
+            newCapacityMap[id] = {'remaining': remaining, 'max': max, 'current': current};
+            // Label: "P101 (còn 1/2 chỗ)" hoặc "P101 (trống)" nếu max=1
+            final slotLabel = max == 1
+                ? '(trống)'  
+                : '(còn $remaining/$max chỗ)';
+            return <String, dynamic>{
+              'label': '${doc['roomCode']} $slotLabel',
+              'id': doc['id'],
+            };
           }).toList();
+          _roomCapacityMap = newCapacityMap;
         });
       }
     } catch (e) {

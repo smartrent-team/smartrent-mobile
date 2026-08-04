@@ -458,6 +458,10 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     final basePrice = _room!['basePrice'] ?? 0;
     final status = _room!['status'] ?? 'available';
     final tenant = _room!['tenant'];
+    final List<dynamic> rawTenants = _room!['tenants'] ?? [];
+    final List<dynamic> tenants = rawTenants.isNotEmpty
+        ? rawTenants
+        : (tenant != null ? [tenant] : []);
     final List<dynamic> invoices = _room!['invoices'] ?? [];
     final List<dynamic> tickets = _room!['tickets'] ?? [];
     final List<dynamic> fixtures = _room!['fixtures'] ?? [];
@@ -487,7 +491,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
             _buildFixturesList(fixtures),
             const SizedBox(height: 20),
 
-            _buildTenantCard(tenant),
+            _buildTenantCard(tenants),
             const SizedBox(height: 20),
 
             _buildInvoiceHistory(invoices),
@@ -629,8 +633,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     );
   }
 
-  Widget _buildTenantCard(Map<String, dynamic>? tenant) {
-    if (tenant == null) {
+  Widget _buildTenantCard(List<dynamic> tenants) {
+    if (tenants.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -653,9 +657,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
       );
     }
 
-    final String name = tenant['name'] ?? 'Chưa xác định';
-    final String phone = tenant['phone'] ?? 'Chưa cập nhật';
-    final String checkInDate = _formatDate(tenant['checkInDate']);
+    final tenantCount = tenants.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -669,44 +671,63 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
-              children: const [
-                Icon(Icons.account_circle_outlined, color: ManagerColors.primaryGreen, size: 20),
-                SizedBox(width: 8),
-                Text('Cư dân đang thuê', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              children: [
+                const Icon(Icons.account_circle_outlined, color: ManagerColors.primaryGreen, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Cư dân đang thuê ($tenantCount)',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
           const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+          ...tenants.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final t = entry.value as Map<String, dynamic>;
+            final String name = t['name'] ?? 'Chưa xác định';
+            final String phone = t['phone'] ?? 'Chưa cập nhật';
+            final String checkInDate = _formatDate(t['checkInDate']);
+
+            return Column(
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: ManagerColors.primaryGreen.withOpacity(0.8),
-                      child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                if (idx > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const Text('CCCD: Đã xác minh', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: ManagerColors.primaryGreen.withOpacity(0.8),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                const Text('CCCD: Đã xác minh', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 13)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      _buildTenantInfoRow('Số điện thoại', phone, ManagerColors.primaryGreen),
+                      const SizedBox(height: 8),
+                      _buildTenantInfoRow('Ngày vào ở', checkInDate, Colors.black87),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                _buildTenantInfoRow('Số điện thoại', phone, ManagerColors.primaryGreen),
-                const SizedBox(height: 12),
-                _buildTenantInfoRow('Ngày vào ở', checkInDate, Colors.black87),
               ],
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );

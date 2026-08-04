@@ -8,6 +8,7 @@ import 'package:smartrent_mobile/tenant/features/payment/domain/tenant_payment_a
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_messages.dart';
 import 'package:smartrent_mobile/tenant/features/payment/presentation/pages/payment_success_page.dart';
 import 'package:smartrent_mobile/core/constants/app_constants.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TenantPaymentQRPage extends StatefulWidget {
   final TenantPaymentArgs? args;
@@ -73,15 +74,36 @@ class _TenantPaymentQRPageState extends State<TenantPaymentQRPage> {
             setState(() => _isLoading = false);
           },
           onWebResourceError: (error) {
-            if (!_hasNavigated) {
+            debugPrint('[WebView Error] type: ${error.errorType}, desc: ${error.description}, isMainFrame: ${error.isForMainFrame}');
+            // Chỉ coi là lỗi fatal khi chính trang chính (main frame) không thể tải
+            if (!_hasNavigated && (error.isForMainFrame == true)) {
               setState(() {
                 _isLoading = false;
-                _errorMessage = 'Không thể tải trang thanh toán. Vui lòng thử lại.';
+                _errorMessage = 'Không thể tải trang thanh toán (${error.description}). Vui lòng thử lại.';
               });
             }
           },
-          onNavigationRequest: (request) {
-            _handleNavigation(request.url);
+          onNavigationRequest: (request) async {
+            final url = request.url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+              try {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Thiết bị chưa cài ứng dụng Ngân hàng này. Vui lòng chọn tab "Thẻ ATM / Tài khoản ngân hàng" để thanh toán demo.'),
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                }
+              } catch (_) {}
+              return NavigationDecision.prevent;
+            }
+            _handleNavigation(url);
             return NavigationDecision.navigate;
           },
         ),

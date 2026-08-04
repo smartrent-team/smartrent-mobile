@@ -11,15 +11,17 @@ class RoomService {
     String? floor,
     int? page,
     int? limit,
+    bool includePartial = false,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (status != null) queryParams['status'] = status;
+      if (status != null && !includePartial) queryParams['status'] = status;
       if (branchId != null) queryParams['branch_id'] = branchId;
       if (search != null) queryParams['search'] = search;
       if (floor != null) queryParams['floor'] = floor;
       if (page != null) queryParams['page'] = page;
       if (limit != null) queryParams['limit'] = limit;
+      if (includePartial) queryParams['include_partial'] = 'true';
 
       return await _apiClient.dio.get(
         '/api/rooms/list',
