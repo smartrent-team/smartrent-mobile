@@ -17,8 +17,8 @@ class ManagerBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
-      height: 76,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -28,16 +28,23 @@ class ManagerBottomNav extends StatelessWidget {
           BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, -4)),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(0, Icons.meeting_room_outlined, 'Phòng'),
-          _buildNavItem(1, Icons.people_alt, 'Cư dân'),
-          _buildNavItem(2, Icons.receipt_long_outlined, 'Hóa đơn'),
-          _buildNavItem(3, Icons.report_problem_outlined, 'Sự cố', badgeCount: issueBadgeCount),
-          _buildNavItem(4, Icons.grid_view_outlined, 'Dashboard',
-              badgeCount: expiringBadgeCount, badgeColor: Colors.orange),
-        ],
+      child: Padding(
+        // Thêm padding bottom bằng đúng chiều cao system nav bar (gesture bar / button bar)
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.meeting_room_outlined, 'Phòng'),
+              _buildNavItem(1, Icons.people_alt, 'Cư dân'),
+              _buildNavItem(2, Icons.receipt_long_outlined, 'Hóa đơn'),
+              _buildNavItem(3, Icons.report_problem_outlined, 'Sự cố', badgeCount: issueBadgeCount),
+              _buildNavItem(4, Icons.grid_view_outlined, 'Dashboard',
+                  badgeCount: expiringBadgeCount, badgeColor: Colors.orange),
+            ],
+          ),
+        ),
       ),
     );
   }

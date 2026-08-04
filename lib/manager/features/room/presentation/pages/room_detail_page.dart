@@ -144,6 +144,107 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     }
   }
 
+  Future<void> _showEditVehicleCountDialog(int currentCount) async {
+    final controller = TextEditingController(text: currentCount.toString());
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.directions_car_outlined, color: ManagerColors.primaryGreen, size: 22),
+            SizedBox(width: 10),
+            Text('Cập nhật số lượng xe',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nhập số lượng xe đang giữ trong phòng này.',
+                style: TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Số lượng xe',
+                  hintText: 'VD: 2',
+                  suffixText: 'xe',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: ManagerColors.primaryGreen, width: 2),
+                  ),
+                ),
+                validator: (v) {
+                  final n = int.tryParse(v ?? '');
+                  if (n == null || n < 0) return 'Số không hợp lệ';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy', style: TextStyle(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(ctx).pop(int.parse(controller.text));
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ManagerColors.primaryGreen,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Lưu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    try {
+      final res = await _roomService.updateRoomVehicleCount(widget.roomId, result);
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Cập nhật số lượng xe thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        _fetchRoomDetail();
+      } else {
+        final msg = res.data?['error'] ?? 'Không thể cập nhật';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi kết nối. Vui lòng thử lại.'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   String _formatDate(String? dateStr) {
     if (dateStr == null) return 'N/A';
     try {
@@ -360,6 +461,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     final List<dynamic> invoices = _room!['invoices'] ?? [];
     final List<dynamic> tickets = _room!['tickets'] ?? [];
     final List<dynamic> fixtures = _room!['fixtures'] ?? [];
+    final vehicleCount = _room!['vehicleCount'] as int? ?? 0;
 
     return RefreshIndicator(
       onRefresh: _fetchRoomDetail,
@@ -377,7 +479,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
               _buildDetailRow('Số phòng', 'Phòng $roomCode'),
               _buildDetailRow('Tầng', 'Tầng $floor'),
               _buildDetailRow('Diện tích', '$area m²'),
-              _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng', isLast: true),
+              _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng'),
+              _buildVehicleCountRow(vehicleCount),
             ]),
             const SizedBox(height: 20),
 
@@ -462,7 +565,45 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isLast = false}) {
+  Widget _buildVehicleCountRow(int vehicleCount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.directions_car_outlined, size: 16, color: ManagerColors.subtitleGrey),
+              const SizedBox(width: 6),
+              const Text('Số lượng xe', style: TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
+            ],
+          ),
+          Row(
+            children: [
+              Text(
+                '$vehicleCount xe',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _showEditVehicleCountDialog(vehicleCount),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: ManagerColors.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.edit_outlined, size: 16, color: ManagerColors.primaryGreen),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {bool isLast = false, IconData? icon}) {
     return Column(
       children: [
         Padding(
@@ -470,7 +611,15 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
+              Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 16, color: ManagerColors.subtitleGrey),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(label, style: const TextStyle(color: ManagerColors.subtitleGrey, fontSize: 14)),
+                ],
+              ),
               Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             ],
           ),

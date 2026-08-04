@@ -92,6 +92,13 @@ class RoomService {
       data: {'note': note},
     );
   }
+
+  Future<Response> updateRoomVehicleCount(int roomId, int vehicleCount) async {
+    return await _apiClient.dio.patch(
+      '/api/rooms/$roomId',
+      data: {'vehicleCount': vehicleCount},
+    );
+  }
 }
 
 

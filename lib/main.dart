@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smartrent_mobile/core/pages/splash_page.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
@@ -37,6 +38,15 @@ Future<void> _initializeFirebaseMessaging() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Cho phép Flutter vẽ sau system nav bar (edge-to-edge)
+  // → MediaQuery.padding.bottom sẽ trả về chiều cao thực của nav bar
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarDividerColor: Colors.transparent,
+  ));
+
   await AppConstants.initEmulatorIp();
   await _initializeFirebaseMessaging();
   await initializeDateFormatting('vi_VN', null);

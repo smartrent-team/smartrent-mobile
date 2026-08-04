@@ -4,6 +4,27 @@ import 'package:smartrent_mobile/core/network/api_client.dart';
 class InvoiceService {
   final ApiClient _apiClient = ApiClient();
 
+  // ─── Kiểm tra phòng đã có hóa đơn trong tháng chưa ───────────────────────
+  Future<bool> hasInvoiceForMonth(int roomId, int month, int year) async {
+    try {
+      final res = await _apiClient.dio.get(
+        '/api/invoices/list',
+        queryParameters: {
+          'room_id': roomId,
+          'month':   month,
+          'year':    year,
+          'limit':   1,
+        },
+      );
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        return ((res.data['totalDocs'] as num?) ?? 0) > 0;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ─── Danh sách hóa đơn (manager / super_admin) ──────────────────────────
   Future<Response> getInvoices({
     String? status,

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/core/network/api_client.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
@@ -190,6 +191,8 @@ class _TenantContractPageState extends State<TenantContractPage>
                     _buildContractInfoBadge(),
                     const SizedBox(height: 20),
                     _buildDepositCard(),
+                    const SizedBox(height: 16),
+                    _buildCheckoutActionButton(),
                     const SizedBox(height: 24),
                     _buildOriginalImagesSection(context),
                     const SizedBox(height: 24),
@@ -701,5 +704,221 @@ class _TenantContractPageState extends State<TenantContractPage>
         ],
       ),
     );
+  }
+
+  // ── CHECKOUT ACTION BUTTON ───────────────────────────────────────────────
+  Widget _buildCheckoutActionButton() {
+    final endDate = _contract?.endDate;
+    final now = DateTime.now();
+    final isEarly = endDate != null && now.isBefore(endDate);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isEarly ? Colors.red.shade200 : Colors.orange.shade200),
+        boxShadow: const [
+          BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isEarly ? Icons.warning_amber_rounded : Icons.logout_rounded,
+                color: isEarly ? Colors.redAccent : Colors.orangeAccent,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isEarly ? 'Yêu cầu trả phòng (Trước hạn)' : 'Trả phòng & Thanh lý hợp đồng',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isEarly
+                ? 'Lưu ý: Hợp đồng của bạn còn hạn đến ${_formatDate(endDate)}. Trả phòng sớm sẽ bị MẤT TOÀN BỘ TIỀN CỌC.'
+                : 'Thực hiện thủ tục trả phòng và bàn giao lại phòng.',
+            style: TextStyle(fontSize: 12, color: isEarly ? Colors.red.shade700 : Colors.black54),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showCheckoutConfirmDialog(context),
+              icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white, size: 18),
+              label: const Text('Trả phòng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isEarly ? Colors.redAccent : Colors.orangeAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCheckoutConfirmDialog(BuildContext context) async {
+    final endDate = _contract?.endDate;
+    final now = DateTime.now();
+    final isEarly = endDate != null && now.isBefore(endDate);
+    final depositStr = _formatDeposit(_contract?.deposit ?? 0);
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(
+              isEarly ? Icons.warning_amber_rounded : Icons.logout_rounded,
+              color: isEarly ? Colors.redAccent : Colors.orangeAccent,
+              size: 28,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isEarly ? 'Cảnh báo trả phòng trước hạn' : 'Xác nhận trả phòng',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isEarly) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Trả phòng trước hạn sẽ bị MẤT TOÀN BỘ TIỀN CỌC ($depositStr).',
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Hợp đồng của bạn có hiệu lực đến ngày ${_formatDate(endDate)}. Bạn có chắc chắn muốn hủy hợp đồng và trả phòng ngay không?',
+                style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+              ),
+            ] else ...[
+              const Text(
+                'Bạn có chắc chắn muốn xác nhận trả phòng và hoàn tất hợp đồng thuê không?',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Text(
+              'Lưu ý: Sau khi xác nhận trả phòng, tài khoản của bạn sẽ ở trạng thái khóa.',
+              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Không, giữ lại', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isEarly ? Colors.redAccent : TenantColors.primaryGreenAlt,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              isEarly ? 'Có, tôi chấp nhận mất cọc' : 'Xác nhận trả phòng',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator(color: TenantColors.primaryGreenAlt)),
+      );
+
+      final dio = ApiClient().dio;
+      final res = await dio.post('/api/tenants/me/checkout');
+
+      if (!mounted) return;
+      Navigator.pop(context); // Đóng loading
+
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded, color: Colors.green, size: 28),
+                SizedBox(width: 10),
+                Text('Trả phòng thành công', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            content: Text(
+              res.data['message']?.toString() ?? 'Trả phòng thành công. Tài khoản của bạn đã được khóa.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: TenantColors.primaryGreenAlt,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Đồng ý', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+
+        await _tokenService.clearToken();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      } else {
+        final err = res.data['error']?.toString() ?? 'Trả phòng không thành công';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.redAccent));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.redAccent));
+    }
   }
 }

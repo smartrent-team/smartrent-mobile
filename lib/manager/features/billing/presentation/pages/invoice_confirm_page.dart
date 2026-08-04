@@ -40,6 +40,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   num _waterPrice       = 30000;  // fallback
   num _fixedServiceCost = 0;
   List<Map<String, dynamic>> _fixedServices = [];
+  int _vehicleCount = 0;
 
   // ── Chỉ số & chi phí ────────────────────────────────────────────────────
   num _electricOld  = 0;
@@ -49,12 +50,19 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   num _electricCost = 0;
   num _waterCost    = 0;
 
+  // Controllers nhập chỉ số mới trực tiếp trong màn hình tạo HĐ
+  final TextEditingController _electricNewCtrl = TextEditingController();
+  final TextEditingController _waterNewCtrl    = TextEditingController();
+
   // ── Chi phí sửa chữa từ maintenance_tickets resolved ────────────────────
   num _repairCost = 0;
   List<Map<String, dynamic>> _resolvedTickets = [];
 
   int _selectedMonth = DateTime.now().month;
   int _selectedYear  = DateTime.now().year;
+
+  /// true nếu phòng đang chọn đã có HĐ trong tháng _selectedMonth/_selectedYear
+  bool _invoiceExists = false;
 
   num get _totalAmount =>
       _roomPrice + _electricCost + _waterCost + _fixedServiceCost + _repairCost;
@@ -63,6 +71,13 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   void initState() {
     super.initState();
     _fetchOccupiedRooms();
+  }
+
+  @override
+  void dispose() {
+    _electricNewCtrl.dispose();
+    _waterNewCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchOccupiedRooms() async {
@@ -109,6 +124,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
         if (d['fixedServices'] != null) {
           _fixedServices = List<Map<String, dynamic>>.from(d['fixedServices']);
         }
+        if (d['vehicleCount'] != null) _vehicleCount = (d['vehicleCount'] as num).toInt();
       }
 
       // 2. Utility latest → chỉ số + giá điện/nước per room (ưu tiên hơn room detail)
@@ -134,16 +150,32 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
           if (roomUtil['fixedServices']    != null) {
             _fixedServices = List<Map<String, dynamic>>.from(roomUtil['fixedServices']);
           }
+          if (roomUtil['vehicleCount'] != null) _vehicleCount = (roomUtil['vehicleCount'] as num).toInt();
 
-          // Tính lại chi phí với đơn giá mới
-          _electricCost = (_electricNew - _electricOld) * _electricPrice;
-          if (_electricCost < 0) _electricCost = 0;
-          _waterCost    = (_waterNew - _waterOld) * _waterPrice;
-          if (_waterCost < 0) _waterCost = 0;
+          // Khởi tạo controller nhập chỉ số mới — reset về rỗng khi đổi phòng
+          // (chỉ số cũ là _electricOld/_waterOld, người dùng tự nhập chỉ số mới)
+          _electricNewCtrl.removeListener(_onUtilityChanged);
+          _waterNewCtrl.removeListener(_onUtilityChanged);
+          _electricNewCtrl.text = '';
+          _waterNewCtrl.text    = '';
+          _electricNewCtrl.addListener(_onUtilityChanged);
+          _waterNewCtrl.addListener(_onUtilityChanged);
+
+          // Reset cost về 0 chờ người dùng nhập
+          _electricNew  = _electricOld;
+          _electricCost = 0;
+          _waterNew     = _waterOld;
+          _waterCost    = 0;
         } else {
           _latestUtility = null;
           _electricOld = _electricNew = _waterOld = _waterNew = 0;
           _electricCost = _waterCost = 0;
+          _electricNewCtrl.removeListener(_onUtilityChanged);
+          _waterNewCtrl.removeListener(_onUtilityChanged);
+          _electricNewCtrl.text = '';
+          _waterNewCtrl.text    = '';
+          _electricNewCtrl.addListener(_onUtilityChanged);
+          _waterNewCtrl.addListener(_onUtilityChanged);
         }
       }
 
@@ -161,6 +193,11 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       } catch (_) {
         // Không có repair cost thì bỏ qua, không fail cả màn hình
       }
+
+      // 4. Kiểm tra phòng đã có HĐ trong tháng chưa
+      _invoiceExists = await _invoiceService.hasInvoiceForMonth(
+        roomId, _selectedMonth, _selectedYear,
+      );
     } catch (e) {
       debugPrint('Error loading room detail/utilities: $e');
     } finally {
@@ -168,14 +205,77 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     }
   }
 
+  /// Gọi mỗi khi người dùng gõ chỉ số điện/nước mới → tính lại chi phí realtime
+  void _onUtilityChanged() {
+    final eNew = num.tryParse(_electricNewCtrl.text.trim());
+    final wNew = num.tryParse(_waterNewCtrl.text.trim());
+    setState(() {
+      if (eNew != null) {
+        _electricNew  = eNew;
+        _electricCost = (eNew - _electricOld) * _electricPrice;
+        if (_electricCost < 0) _electricCost = 0;
+      } else {
+        _electricNew  = _electricOld;
+        _electricCost = 0;
+      }
+      if (wNew != null) {
+        _waterNew  = wNew;
+        _waterCost = (wNew - _waterOld) * _waterPrice;
+        if (_waterCost < 0) _waterCost = 0;
+      } else {
+        _waterNew  = _waterOld;
+        _waterCost = 0;
+      }
+    });
+  }
+
   Future<void> _createInvoice() async {
     if (_selectedRoom == null) return;
+
+    // ── Validate chỉ số mới ──────────────────────────────────────────────
+    final eNewVal = num.tryParse(_electricNewCtrl.text.trim());
+    final wNewVal = num.tryParse(_waterNewCtrl.text.trim());
+
+    if (eNewVal == null || wNewVal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập chỉ số điện và nước mới'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (eNewVal < _electricOld) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chỉ số điện mới ($eNewVal) không được nhỏ hơn chỉ số cũ (${_electricOld.toInt()})'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (wNewVal < _waterOld) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chỉ số nước mới ($wNewVal) không được nhỏ hơn chỉ số cũ (${_waterOld.toInt()})'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Xác nhận tạo hóa đơn'),
         content: Text(
-          'Xuất hóa đơn cho ${_selectedRoom['roomCode']} - Tháng $_selectedMonth/$_selectedYear?',
+          'Xuất hóa đơn cho Phòng ${_selectedRoom['roomCode']} - Tháng $_selectedMonth/$_selectedYear?\n\n'
+          'Điện: ${_electricOld.toInt()} → ${eNewVal.toInt()} kWh\n'
+          'Nước: ${_waterOld.toInt()} → ${wNewVal.toInt()} m³',
         ),
         actions: [
           TextButton(
@@ -202,8 +302,27 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     );
 
     try {
-      final tenantId     = _selectedRoom['tenant']?['id'];
-      final utilityLogId = _latestUtility?['utilityLogId'];
+      // ── Bước 1: Lưu chỉ số điện/nước mới ────────────────────────────────
+      int? utilityLogId = _latestUtility?['utilityLogId'];
+      try {
+        final submitRes = await _utilityService.submitUtility(
+          roomId:             _selectedRoom['id'],
+          currentElectricity: eNewVal,
+          currentWater:       wNewVal,
+          month:              _selectedMonth,
+          year:               _selectedYear,
+        );
+        if (submitRes.statusCode == 200 && submitRes.data['success'] == true) {
+          // Lấy utilityLogId mới nhất từ kết quả submit nếu API trả về
+          utilityLogId = (submitRes.data['data']?['id'] as num?)?.toInt() ?? utilityLogId;
+        }
+      } catch (e) {
+        debugPrint('utility/submit warning: $e');
+        // Không block — vẫn tiếp tục tạo HĐ với utilityLogId cũ
+      }
+
+      // ── Bước 2: Tạo hóa đơn ─────────────────────────────────────────────
+      final tenantId = _selectedRoom['tenant']?['id'];
 
       final res = await _invoiceService.createInvoice(
         roomId:        _selectedRoom['id'],
@@ -215,13 +334,13 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
         waterCost:     _waterCost,
         repairCost:    _repairCost > 0 ? _repairCost : null,
         electricOld:   _electricOld,
-        electricNew:   _electricNew,
+        electricNew:   eNewVal,
         waterOld:      _waterOld,
-        waterNew:      _waterNew,
+        waterNew:      wNewVal,
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // close spinner
+      Navigator.pop(context); // đóng spinner
 
       if (res.statusCode == 200 && res.data['success'] == true) {
         final payment = res.data['payment'];
@@ -234,6 +353,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
               ? 'Hóa đơn đã tạo. Lưu ý: $warning'
               : 'Hóa đơn đã tạo thành công.'),
           backgroundColor: hasLink ? ManagerColors.primaryGreen : Colors.orange.shade800,
+          behavior: SnackBarBehavior.floating,
           duration: Duration(seconds: hasLink ? 4 : 6),
         ));
         Navigator.pop(context, true);
@@ -279,28 +399,53 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: (_isLoadingRooms || _occupiedRooms.isEmpty || _isLoadingDetail)
           ? null
-          : Container(
-              width: double.infinity, height: 54,
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: ElevatedButton.icon(
-                onPressed: _createInvoice,
-                icon: Container(
-                  width: 22, height: 22,
+          : _invoiceExists
+              ? Container(
+                  width: double.infinity, height: 54,
+                  margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(27),
+                    border: Border.all(color: Colors.orange.shade300),
                   ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Phòng này đã có hóa đơn tháng $_selectedMonth/$_selectedYear',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Container(
+                  width: double.infinity, height: 54,
+                  margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: _createInvoice,
+                    icon: Container(
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: const Icon(Icons.check, color: Colors.white, size: 14),
+                    ),
+                    label: const Text('Xác nhận tạo hóa đơn',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ManagerColors.primaryGreen, elevation: 8,
+                      shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+                    ),
+                  ),
                 ),
-                label: const Text('Xác nhận tạo hóa đơn',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ManagerColors.primaryGreen, elevation: 8,
-                  shadowColor: ManagerColors.primaryGreen.withValues(alpha: 0.35),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                ),
-              ),
-            ),
     );
   }
 
@@ -498,32 +643,161 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   );
 
   // ── Card tiền điện ───────────────────────────────────────────────────────
-  Widget _buildElectricCard() => _buildUtilityCard(
-    rows: [
-      _Row('CHỈ SỐ CŨ',     '${_electricOld.toInt()} kWh'),
-      _Row('CHỈ SỐ MỚI',     '${_electricNew.toInt()} kWh', hi: true),
-      _Row('TIÊU THỤ',       '${(_electricNew - _electricOld).toInt()} kWh', hi: true),
-      _Row('ĐƠN GIÁ',        '${_fmt(_electricPrice)}/kWh'),
-    ],
-    icon: Icons.bolt, iconColor: electricOrange,
-    label: 'Thành tiền điện', amount: _fmt(_electricCost),
-    tint: electricTint, textColor: electricOrange,
-  );
+  Widget _buildElectricCard() {
+    final consumption = (_electricNew - _electricOld).clamp(0, double.infinity).toInt();
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white, borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 12, offset: Offset(0, 4))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: [
+        // Chỉ số cũ — readonly
+        _utilityRow('CHỈ SỐ CŨ', '${_electricOld.toInt()} kWh'),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        // Chỉ số mới — input field
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            const Text('CHỈ SỐ MỚI',
+                style: TextStyle(fontSize: 12, color: ManagerColors.textGrey,
+                    fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+            const Spacer(),
+            SizedBox(
+              width: 120,
+              child: TextField(
+                controller: _electricNewCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: electricOrange),
+                decoration: InputDecoration(
+                  suffixText: 'kWh',
+                  suffixStyle: const TextStyle(fontSize: 12, color: ManagerColors.textGrey),
+                  hintText: '0',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: electricOrange, width: 1.5)),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: electricOrange, width: 2)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        _utilityRow('TIÊU THỤ', '$consumption kWh', hi: true),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        _utilityRow('ĐƠN GIÁ', '${_fmt(_electricPrice)}/kWh'),
+        // Thành tiền
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: const BoxDecoration(
+            color: electricTint,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.bolt, size: 18, color: electricOrange),
+            const SizedBox(width: 8),
+            const Text('Thành tiền điện',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: electricOrange)),
+            const Spacer(),
+            Text(_fmt(_electricCost),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: electricOrange)),
+          ]),
+        ),
+      ]),
+    );
+  }
 
   // ── Card tiền nước ───────────────────────────────────────────────────────
-  Widget _buildWaterCard() => _buildUtilityCard(
-    rows: [
-      _Row('CHỈ SỐ CŨ',     '${_waterOld.toInt()} m³'),
-      _Row('CHỈ SỐ MỚI',     '${_waterNew.toInt()} m³', hi: true),
-      _Row('TIÊU THỤ',       '${(_waterNew - _waterOld).toInt()} m³', hi: true),
-      _Row('ĐƠN GIÁ',        '${_fmt(_waterPrice)}/m³'),
-    ],
-    icon: Icons.water_drop_outlined, iconColor: waterBlue,
-    label: 'Thành tiền nước', amount: _fmt(_waterCost),
-    tint: waterTint, textColor: waterBlue,
+  Widget _buildWaterCard() {
+    final consumption = (_waterNew - _waterOld).clamp(0, double.infinity).toInt();
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white, borderRadius: BorderRadius.circular(16),
+        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 12, offset: Offset(0, 4))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: [
+        // Chỉ số cũ — readonly
+        _utilityRow('CHỈ SỐ CŨ', '${_waterOld.toInt()} m³'),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        // Chỉ số mới — input field
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            const Text('CHỈ SỐ MỚI',
+                style: TextStyle(fontSize: 12, color: ManagerColors.textGrey,
+                    fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+            const Spacer(),
+            SizedBox(
+              width: 120,
+              child: TextField(
+                controller: _waterNewCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: waterBlue),
+                decoration: InputDecoration(
+                  suffixText: 'm³',
+                  suffixStyle: const TextStyle(fontSize: 12, color: ManagerColors.textGrey),
+                  hintText: '0',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: waterBlue, width: 1.5)),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: waterBlue, width: 2)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        _utilityRow('TIÊU THỤ', '$consumption m³', hi: true),
+        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+        _utilityRow('ĐƠN GIÁ', '${_fmt(_waterPrice)}/m³'),
+        // Thành tiền
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: const BoxDecoration(
+            color: waterTint,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.water_drop_outlined, size: 18, color: waterBlue),
+            const SizedBox(width: 8),
+            const Text('Thành tiền nước',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: waterBlue)),
+            const Spacer(),
+            Text(_fmt(_waterCost),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: waterBlue)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  // Helper row dùng chung cho các dòng readonly trong card điện/nước
+  Widget _utilityRow(String label, String value, {bool hi = false}) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    child: Row(children: [
+      Text(label,
+          style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey,
+              fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+      const Spacer(),
+      Text(value,
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+              color: hi ? ManagerColors.primaryGreen : ManagerColors.textCharcoal)),
+    ]),
   );
 
-  // ── Card dịch vụ cố định ─────────────────────────────────────────────────
   Widget _buildFixedServicesCard() {
     return Container(
       decoration: BoxDecoration(
@@ -536,12 +810,17 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(children: [
-              Text((_fixedServices[i]['name'] as String?) ?? 'Dịch vụ',
-                  style: const TextStyle(fontSize: 13, color: ManagerColors.textGrey, fontWeight: FontWeight.w500)),
-              const Spacer(),
-              Text(_fmt((_fixedServices[i]['price'] as num?) ?? 0),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                      color: ManagerColors.textCharcoal)),
+              Expanded(
+                child: Text(
+                  _serviceDisplayName(_fixedServices[i]),
+                  style: const TextStyle(fontSize: 13, color: ManagerColors.textGrey, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Text(
+                _fmt(_serviceDisplayAmount(_fixedServices[i])),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                    color: ManagerColors.textCharcoal),
+              ),
             ]),
           ),
           if (i < _fixedServices.length - 1)
@@ -566,6 +845,34 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
         ),
       ]),
     );
+  }
+
+  /// Trả về tên hiển thị có kèm chú thích số lượng nếu là per_unit hoặc per_person
+  String _serviceDisplayName(Map<String, dynamic> svc) {
+    final name        = (svc['name'] as String?) ?? 'Dịch vụ';
+    final billingType = (svc['billingType'] as String?) ?? 'per_room';
+    switch (billingType) {
+      case 'per_unit':
+        return '$name ($_vehicleCount xe)';
+      case 'per_person':
+        return '$name (1 người)';
+      default:
+        return name;
+    }
+  }
+
+  /// Trả về số tiền thực tế = đơn giá × số lượng
+  num _serviceDisplayAmount(Map<String, dynamic> svc) {
+    final price       = (svc['price'] as num?) ?? 0;
+    final billingType = (svc['billingType'] as String?) ?? 'per_room';
+    switch (billingType) {
+      case 'per_unit':
+        return price * _vehicleCount;
+      case 'per_person':
+        return price * 1; // mở rộng sau nếu có tenantCount
+      default:
+        return price;
+    }
   }
 
   // ── Grand total card ─────────────────────────────────────────────────────
@@ -628,56 +935,6 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
           color: textColor ?? ManagerColors.textCharcoal)),
     ]),
   );
-
-  // ── Utility detail card (điện / nước) ────────────────────────────────────
-  Widget _buildUtilityCard({
-    required List<_Row> rows,
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String amount,
-    required Color tint,
-    required Color textColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: ManagerColors.cardShadow, blurRadius: 12, offset: Offset(0, 4))],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(children: [
-              Text(rows[i].label,
-                  style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey,
-                      fontWeight: FontWeight.w500, letterSpacing: 0.3)),
-              const Spacer(),
-              Text(rows[i].value,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                      color: rows[i].hi ? ManagerColors.primaryGreen : ManagerColors.textCharcoal)),
-            ]),
-          ),
-          if (i < rows.length - 1) const Divider(height: 1, color: Color(0xFFEEEEEE)),
-        ],
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: tint, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-          ),
-          child: Row(children: [
-            Icon(icon, size: 18, color: iconColor),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor)),
-            const Spacer(),
-            Text(amount, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
-          ]),
-        ),
-      ]),
-    );
-  }
 
   Widget _whiteCard({required Widget child}) => Container(
     padding: const EdgeInsets.all(16),
@@ -770,12 +1027,4 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     if (dt == null) return '';
     return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
   }
-}
-
-// ── Helper data class ────────────────────────────────────────────────────────
-class _Row {
-  final String label;
-  final String value;
-  final bool   hi;
-  const _Row(this.label, this.value, {this.hi = false});
 }

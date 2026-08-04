@@ -193,6 +193,7 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
     final status = _room!['status'] ?? 'available';
     final tenant = _room!['tenant'];
     final List<dynamic> fixtures = _room!['fixtures'] ?? [];
+    final vehicleCount = _room!['vehicleCount'] as int? ?? 0;
 
     return RefreshIndicator(
       onRefresh: _fetchRoomDetail,
@@ -210,7 +211,8 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
               _buildDetailRow('Số phòng', 'Phòng $roomCode'),
               _buildDetailRow('Tầng', 'Tầng $floor'),
               _buildDetailRow('Diện tích', '$area m²'),
-              _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng', isLast: true),
+              _buildDetailRow('Giá thuê gốc', '${_formatCurrency(basePrice)}/tháng'),
+              _buildDetailRow('Số lượng xe', '$vehicleCount xe', isLast: true, icon: Icons.directions_car_outlined),
             ]),
             const SizedBox(height: 20),
 
@@ -289,7 +291,7 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isLast = false}) {
+  Widget _buildDetailRow(String label, String value, {bool isLast = false, IconData? icon}) {
     return Column(
       children: [
         Padding(
@@ -297,7 +299,15 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: TenantColors.subtitleGrey, fontSize: 14)),
+              Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 16, color: TenantColors.subtitleGrey),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(label, style: const TextStyle(color: TenantColors.subtitleGrey, fontSize: 14)),
+                ],
+              ),
               Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             ],
           ),

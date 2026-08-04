@@ -7,7 +7,6 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_detail_page.dart';
-import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
@@ -1016,80 +1015,7 @@ class _TenantPageState extends State<TenantPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Quick Action Feature Cards (Top Menu)
-            // Card 1: Utility Input
-            InkWell(
-              onTap: () {
-                context.pushModal(const UtilityInputPage());
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: ManagerColors.cardShadow,
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: ManagerColors.primaryGreen.withValues(alpha: 0.08),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
-                        color: ManagerColors.bgMint,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.bolt_outlined,
-                        color: ManagerColors.primaryGreen,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Nhập chỉ số điện - nước",
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: ManagerColors.textCharcoal,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "Kỳ tháng 5/2026 - Nhập chỉ số phòng",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: ManagerColors.textGrey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: ManagerColors.textGrey,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Card 2: Create Bill
+            // Card: Create Bill
             InkWell(
               onTap: () {
                 context.pushModal(const InvoiceConfirmPage());

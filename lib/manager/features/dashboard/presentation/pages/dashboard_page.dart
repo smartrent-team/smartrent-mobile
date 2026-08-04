@@ -11,7 +11,6 @@ import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dar
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/utility_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
-import 'package:smartrent_mobile/manager/features/billing/presentation/pages/utility_input_page.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/data/dashboard_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
@@ -464,30 +463,13 @@ class _DashboardPageState extends State<DashboardPage> {
                           _buildSummaryGrid(context),
                           const SizedBox(height: 24),
                           _buildSectionHeader('Thao tác nhanh', showAction: false),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildActionCard(
-                                  'Tạo hóa đơn',
-                                  'Xác nhận & tạo hóa đơn mới',
-                                  Icons.request_quote_outlined,
-                                  ManagerColors.bgMint,
-                                  ManagerColors.primaryGreen,
-                                  onTap: () => context.pushModal(const InvoiceConfirmPage()),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildActionCard(
-                                  'Nhập chỉ số',
-                                  'Điện · nước cho phòng',
-                                  Icons.timeline_rounded,
-                                  const Color(0xFFFFF8E1),
-                                  Colors.orange,
-                                  onTap: () => context.pushModal(const UtilityInputPage()),
-                                ),
-                              ),
-                            ],
+                          _buildActionCard(
+                            'Tạo hóa đơn',
+                            'Xác nhận & tạo hóa đơn mới',
+                            Icons.request_quote_outlined,
+                            ManagerColors.bgMint,
+                            ManagerColors.primaryGreen,
+                            onTap: () => context.pushModal(const InvoiceConfirmPage()),
                           ),
                           const SizedBox(height: 16),
                           _buildActionCard(
@@ -740,7 +722,7 @@ class _DashboardPageState extends State<DashboardPage> {
     IconData icon,
   ) {
     return InkWell(
-      onTap: () => context.pushModal(const UtilityInputPage()),
+      onTap: () => context.pushModal(const InvoiceConfirmPage()),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
