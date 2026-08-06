@@ -48,7 +48,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
         throw Exception(res.data['error'] ?? 'Không tải được hóa đơn');
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+      if (mounted) setState(() { _error = 'Không thể tải chi tiết hóa đơn. Vui lòng thử lại.'; _isLoading = false; });
     }
   }
 

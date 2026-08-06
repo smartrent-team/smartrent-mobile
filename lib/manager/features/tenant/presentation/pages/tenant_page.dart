@@ -73,13 +73,13 @@ class _TenantPageState extends State<TenantPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
+          const SnackBar(content: Text('Không thể tải danh sách cư dân. Vui lòng thử lại.')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi tải danh sách cư dân: $e')),
+          const SnackBar(content: Text('Không thể tải danh sách cư dân. Vui lòng thử lại.')),
         );
       }
     } finally {

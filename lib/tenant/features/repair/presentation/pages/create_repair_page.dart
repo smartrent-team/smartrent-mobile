@@ -72,7 +72,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi khi gửi yêu cầu: ${e.toString()}', style: GoogleFonts.outfit()),
+            content: Text('Gửi yêu cầu không thành công. Vui lòng thử lại.', style: GoogleFonts.outfit()),
             backgroundColor: TenantColors.errorRed,
           ),
         );
@@ -525,7 +525,7 @@ class _CreateRepairPageState extends State<CreateRepairPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi tải ảnh: ${e.toString()}', style: GoogleFonts.outfit()),
+            content: Text('Không thể tải ảnh lên. Vui lòng thử lại.', style: GoogleFonts.outfit()),
             backgroundColor: TenantColors.errorRed,
           ),
         );

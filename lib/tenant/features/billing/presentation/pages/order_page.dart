@@ -104,7 +104,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _loadError = e.toString();
+        _loadError = 'Không thể tải hóa đơn. Vui lòng thử lại.';
         _isLoadingInvoices = false;
       });
     }

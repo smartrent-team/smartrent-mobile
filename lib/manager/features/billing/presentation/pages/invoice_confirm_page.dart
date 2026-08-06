@@ -41,6 +41,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   num _fixedServiceCost = 0;
   List<Map<String, dynamic>> _fixedServices = [];
   int _vehicleCount = 0;
+  int _tenantCount  = 1; // số người đang ở trong phòng (dùng cho per_person)
 
   // ── Chỉ số & chi phí ────────────────────────────────────────────────────
   num _electricOld  = 0;
@@ -146,11 +147,14 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
           // ★ Giá từ branch_services qua utility/latest
           if (roomUtil['electricPrice']    != null) _electricPrice    = roomUtil['electricPrice'];
           if (roomUtil['waterPrice']       != null) _waterPrice       = roomUtil['waterPrice'];
-          if (roomUtil['fixedServiceCost'] != null) _fixedServiceCost = roomUtil['fixedServiceCost'];
           if (roomUtil['fixedServices']    != null) {
             _fixedServices = List<Map<String, dynamic>>.from(roomUtil['fixedServices']);
           }
           if (roomUtil['vehicleCount'] != null) _vehicleCount = (roomUtil['vehicleCount'] as num).toInt();
+          if (roomUtil['tenantCount']  != null) _tenantCount  = (roomUtil['tenantCount']  as num).toInt();
+
+          // Tính lại fixedServiceCost dựa trên tenantCount và vehicleCount thực tế
+          _fixedServiceCost = _calcFixedServiceCost();
 
           // Khởi tạo controller nhập chỉ số mới — reset về rỗng khi đổi phòng
           // (chỉ số cũ là _electricOld/_waterOld, người dùng tự nhập chỉ số mới)
@@ -847,6 +851,19 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     );
   }
 
+  /// Tính tổng phí dịch vụ cố định có nhân số người / số xe
+  num _calcFixedServiceCost() {
+    return _fixedServices.fold<num>(0, (sum, svc) {
+      final price       = (svc['price'] as num?) ?? 0;
+      final billingType = (svc['billingType'] as String?) ?? 'per_room';
+      switch (billingType) {
+        case 'per_person': return sum + price * _tenantCount.clamp(1, 99);
+        case 'per_unit':   return sum + price * _vehicleCount;
+        default:           return sum + price;
+      }
+    });
+  }
+
   /// Trả về tên hiển thị có kèm chú thích số lượng nếu là per_unit hoặc per_person
   String _serviceDisplayName(Map<String, dynamic> svc) {
     final name        = (svc['name'] as String?) ?? 'Dịch vụ';
@@ -855,7 +872,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       case 'per_unit':
         return '$name ($_vehicleCount xe)';
       case 'per_person':
-        return '$name (1 người)';
+        return '$name ($_tenantCount người)';
       default:
         return name;
     }
@@ -869,7 +886,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       case 'per_unit':
         return price * _vehicleCount;
       case 'per_person':
-        return price * 1; // mở rộng sau nếu có tenantCount
+        return price * _tenantCount.clamp(1, 99);
       default:
         return price;
     }

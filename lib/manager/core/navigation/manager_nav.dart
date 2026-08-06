@@ -27,6 +27,10 @@ class ManagerNav {
 
   static void openRoomList(BuildContext context) => _goToTab(context, 0);
 
+  static void openTenantPage(BuildContext context) => _goToTab(context, 1);
+
+  static void openInvoiceList(BuildContext context) => _goToTab(context, 2);
+
   static void openTenantTab(BuildContext context, int tabIndex) => _goToTab(context, tabIndex);
 
   static void openIssuePage(BuildContext context) => _goToTab(context, 3);

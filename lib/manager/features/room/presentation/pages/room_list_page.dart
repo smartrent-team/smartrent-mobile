@@ -226,14 +226,27 @@ class _RoomListPageState extends State<RoomListPage> {
         final floor = room['floor'] ?? 0;
         final area = room['area'] ?? 0.0;
         final status = room['status'] ?? 'available';
-        final tenantName = room['tenant']?['name'];
+
+        // Lấy danh sách tất cả cư dân (ưu tiên tenants array, fallback về tenant single)
+        final tenantsList = room['tenants'] as List?;
+        final List<String> tenantNames;
+        if (tenantsList != null && tenantsList.isNotEmpty) {
+          tenantNames = tenantsList
+              .whereType<Map>()
+              .map((t) => t['name']?.toString() ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+        } else {
+          final singleName = room['tenant']?['name']?.toString();
+          tenantNames = singleName != null && singleName.isNotEmpty ? [singleName] : [];
+        }
 
         return _buildRoomCard(
           context,
           roomId,
           roomCode,
           'Tầng $floor · ${area.toStringAsFixed(0)} m²',
-          tenantName,
+          tenantNames,
           _getStatusText(status),
           _getStatusColor(status),
         );
@@ -242,7 +255,7 @@ class _RoomListPageState extends State<RoomListPage> {
   }
 
   Widget _buildRoomCard(BuildContext context, int roomId, String name, String details,
-      String? tenant, String status, Color statusColor) {
+      List<String> tenants, String status, Color statusColor) {
     return InkWell(
       onTap: () {
         context.pushSlide(RoomDetailPage(roomId: roomId));
@@ -292,18 +305,23 @@ class _RoomListPageState extends State<RoomListPage> {
                         const TextStyle(color: Colors.black38, fontSize: 13)),
               ],
             ),
-            if (tenant != null) ...[
+            if (tenants.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Divider(height: 1, color: Color(0xFFF1F1F1)),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.person_outline,
-                      size: 16, color: ManagerColors.primaryGreen),
+                  Icon(
+                    tenants.length > 1 ? Icons.people_outline : Icons.person_outline,
+                    size: 16,
+                    color: ManagerColors.primaryGreen,
+                  ),
                   const SizedBox(width: 6),
-                  Text(tenant,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, color: Colors.black87)),
+                  Text(
+                    'Phòng đã có ${tenants.length} người thuê',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, color: Colors.black87),
+                  ),
                 ],
               ),
             ],

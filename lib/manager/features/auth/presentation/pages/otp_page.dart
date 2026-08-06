@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
@@ -98,9 +99,18 @@ class _OtpPageState extends State<OtpPage> {
           _errorMessage = 'Xác thực OTP thất bại';
         });
       }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String msg;
+      if (e.response != null && data is Map) {
+        msg = data['message']?.toString() ?? data['error']?.toString() ?? 'Xác thực OTP thất bại.';
+      } else {
+        msg = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
+      }
+      setState(() { _errorMessage = msg; });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Lỗi: ${e.toString()}';
+        _errorMessage = 'Xác thực không thành công. Vui lòng thử lại.';
       });
     } finally {
       if (mounted) {

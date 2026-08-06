@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/data/auth_service.dart';
@@ -52,12 +53,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         }
       } else {
         setState(() {
-          _emailError = 'Lỗi máy chủ: ${response.statusCode}';
+          _emailError = 'Không thể gửi email. Vui lòng thử lại sau.';
         });
       }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String msg;
+      if (e.response != null && data is Map) {
+        msg = data['message']?.toString() ?? data['error']?.toString() ?? 'Gửi email thất bại. Vui lòng thử lại.';
+      } else {
+        msg = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
+      }
+      setState(() { _emailError = msg; });
     } catch (e) {
       setState(() {
-        _emailError = 'Lỗi: ${e.toString()}';
+        _emailError = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
       });
     } finally {
       if (mounted) {

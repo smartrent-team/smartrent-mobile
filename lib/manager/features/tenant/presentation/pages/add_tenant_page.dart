@@ -131,7 +131,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
         // If we still don't have a branch ID, show error
         if (_managedBranchId == null && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Lỗi khi lấy danh sách chi nhánh: $e')),
+            const SnackBar(content: Text('Không thể tải danh sách chi nhánh. Vui lòng thử lại.')),
           );
         }
       }
@@ -182,7 +182,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi lấy danh sách phòng: $e')),
+          const SnackBar(content: Text('Không thể tải danh sách phòng. Vui lòng thử lại.')),
         );
       }
     } finally {
@@ -342,22 +342,34 @@ class _AddTenantPageState extends State<AddTenantPage> {
   }
 
   void _handleError(dynamic e, bool tenantCreated) {
-    String errMsg = e.toString();
+    String errMsg;
     if (e is DioException && e.response != null) {
       final data = e.response?.data;
       if (data is Map) {
-        if (data.containsKey('error')) {
-          errMsg = data['error'].toString();
+        // Lấy thông báo lỗi từ server nếu có (thường là tiếng Việt hoặc ngắn gọn)
+        final serverMsg = data['error']?.toString() ?? data['message']?.toString();
+        if (serverMsg != null && serverMsg.isNotEmpty) {
+          errMsg = serverMsg;
+          if (data['details'] != null) {
+            errMsg = '$errMsg (${data['details']})';
+          }
+        } else {
+          errMsg = 'Yêu cầu không thành công. Vui lòng thử lại.';
         }
-        if (data['details'] != null) {
-          errMsg = '$errMsg (${data['details']})';
-        }
+      } else {
+        errMsg = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
       }
+    } else if (e is Exception) {
+      // Exception do code tự throw thường chứa message tiếng Việt hữu ích
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      errMsg = msg.isNotEmpty ? msg : 'Đã xảy ra lỗi. Vui lòng thử lại.';
+    } else {
+      errMsg = 'Đã xảy ra lỗi. Vui lòng thử lại.';
     }
     if (mounted) {
       final message = tenantCreated
           ? 'Đã tạo cư dân nhưng không lưu được ảnh hợp đồng: $errMsg'
-          : 'Lỗi: $errMsg';
+          : errMsg;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
@@ -425,8 +437,8 @@ class _AddTenantPageState extends State<AddTenantPage> {
       if (!mounted) return;
       setState(() => _isScanningCccd = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        const SnackBar(
+          content: Text('Không thể đọc thông tin CCCD. Vui lòng chụp lại ảnh rõ hơn.'),
           backgroundColor: Colors.red,
         ),
       );

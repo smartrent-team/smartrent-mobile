@@ -144,13 +144,13 @@ class _TenantHomePageState extends State<TenantHomePage> {
       }
       if (mounted) {
         setState(() {
-          _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+          _errorMessage = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+          _errorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
         });
       }
     } finally {

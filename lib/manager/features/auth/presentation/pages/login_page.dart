@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/otp_page.dart';
@@ -102,12 +103,31 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         setState(() {
-          _passwordError = 'Lỗi máy chủ: ${response.statusCode}';
+          _passwordError = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
         });
       }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      String msg;
+      if (e.response != null) {
+        // Server đã phản hồi — đọc message lỗi từ body
+        if (data is Map) {
+          msg = data['message']?.toString() ??
+              data['error']?.toString() ??
+              'Số điện thoại hoặc mật khẩu không đúng.';
+        } else {
+          msg = 'Số điện thoại hoặc mật khẩu không đúng.';
+        }
+      } else {
+        // Không nhận được response — lỗi mạng thật sự
+        msg = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
+      }
+      setState(() {
+        _passwordError = msg;
+      });
     } catch (e) {
       setState(() {
-        _passwordError = 'Lỗi kết nối hoặc sai thông tin: ${e.toString()}';
+        _passwordError = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
       });
     } finally {
       if (mounted) {

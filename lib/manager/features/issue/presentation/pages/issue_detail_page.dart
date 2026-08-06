@@ -191,7 +191,7 @@ class _IssueDetailPageState extends State<IssueDetailPage> {
     } catch (e) {
        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Lỗi: ${e.toString()}')),
+            const SnackBar(content: Text('Không thể cập nhật trạng thái. Vui lòng thử lại.')),
           );
         }
     } finally {
