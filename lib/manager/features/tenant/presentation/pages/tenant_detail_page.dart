@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartrent_mobile/core/contract/presentation/contract_cancellation_section.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
@@ -7,6 +8,8 @@ import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant_de
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/edit_tenant_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/change_room_sheet.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/widgets/leave_room_sheet.dart';
+import 'package:smartrent_mobile/tenant/features/contract/data/contract_repository.dart';
+import 'package:smartrent_mobile/tenant/features/contract/domain/models/contract_model.dart';
 
 class TenantDetailPage extends StatefulWidget {
   final int tenantId;
@@ -19,8 +22,10 @@ class TenantDetailPage extends StatefulWidget {
 
 class _TenantDetailPageState extends State<TenantDetailPage> {
   final TenantService _tenantService = TenantService();
+  final ContractRepository _contractRepository = ContractRepository();
 
   TenantDetail? _detail;
+  ContractModel? _contract;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -39,10 +44,19 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
     try {
       final response = await _tenantService.getTenantDetail(widget.tenantId);
       if (response.statusCode == 200 && response.data['success'] == true) {
+        final detail = TenantDetail.fromJson(
+          response.data['data'] as Map<String, dynamic>,
+        );
+        ContractModel? contract;
+        try {
+          contract =
+              await _contractRepository.fetchContractByTenantId(widget.tenantId);
+        } catch (_) {
+          contract = null;
+        }
         setState(() {
-          _detail = TenantDetail.fromJson(
-            response.data['data'] as Map<String, dynamic>,
-          );
+          _detail = detail;
+          _contract = contract;
           _isLoading = false;
         });
       } else {
@@ -57,6 +71,19 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
         _errorMessage = 'Không thể kết nối máy chủ. Vui lòng thử lại.';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _reloadContract() async {
+    try {
+      final contract =
+          await _contractRepository.fetchContractByTenantId(widget.tenantId);
+      if (!mounted) return;
+      setState(() => _contract = contract);
+      await _loadDetail();
+    } catch (_) {
+      if (!mounted) return;
+      await _loadDetail();
     }
   }
 
@@ -91,6 +118,19 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                               _buildRentalInfoSection(_detail!),
                               const SizedBox(height: 24),
                               _buildContractSection(_detail!),
+                              if (_contract != null && _contract!.isActive) ...[
+                                const SizedBox(height: 16),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: ContractCancellationSection(
+                                    contract: _contract!,
+                                    viewerRole: 'manager',
+                                    primaryColor: ManagerColors.primaryGreen,
+                                    backgroundTint: ManagerColors.bgMint,
+                                    onChanged: _reloadContract,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 24),
                               const Center(
                                 child: Text(
