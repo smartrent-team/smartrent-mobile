@@ -64,10 +64,23 @@ class ContractModel {
         return 'Đã hủy';
       case 'terminated':
         return 'Đã chấm dứt';
+      case 'pending_checkout':
+        return 'Đang chờ kiểm tra';
+      case 'inspection':
+        return 'Đang kiểm tra';
+      case 'pending_settlement':
+        return 'Chờ thanh toán cuối';
+      case 'moved_out':
+        return 'Đã chuyển đi';
       default:
         return status;
     }
   }
+
+  bool get isPendingCheckout => status == 'pending_checkout';
+  bool get isInspection => status == 'inspection';
+  bool get isPendingSettlement => status == 'pending_settlement';
+  bool get isMovedOut => status == 'moved_out';
 
   double? get validityProgress {
     if (startDate == null || endDate == null) return null;

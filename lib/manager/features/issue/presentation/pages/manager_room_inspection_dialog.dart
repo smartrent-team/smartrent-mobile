@@ -43,6 +43,8 @@ class _ManagerRoomInspectionDialogState
   final _damagesController = TextEditingController();
   final _costController = TextEditingController();
   final _notesController = TextEditingController();
+  final _electricController = TextEditingController();
+  final _waterController = TextEditingController();
 
   bool _isSubmitting = false;
 
@@ -51,6 +53,8 @@ class _ManagerRoomInspectionDialogState
     _damagesController.dispose();
     _costController.dispose();
     _notesController.dispose();
+    _electricController.dispose();
+    _waterController.dispose();
     super.dispose();
   }
 
@@ -75,6 +79,8 @@ class _ManagerRoomInspectionDialogState
         'damagedItems': damagedList.isNotEmpty ? damagedList : ['Hư hỏng khác'],
         'estimatedRepairCost': cost,
         'notes': _notesController.text.trim(),
+        'electric_new': int.tryParse(_electricController.text.replaceAll(RegExp(r'\D'), '')) ?? 0,
+        'water_new': int.tryParse(_waterController.text.replaceAll(RegExp(r'\D'), '')) ?? 0,
       });
 
       if (!mounted) return;
@@ -153,7 +159,47 @@ class _ManagerRoomInspectionDialogState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '1. Thiết bị / hạng mục hư hỏng:',
+                '1. Số điện cuối (kWh):',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _electricController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'VD: 1542',
+                  suffixText: 'kWh',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Vui lòng nhập số điện';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '2. Số nước cuối (khối):',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _waterController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'VD: 342',
+                  suffixText: 'm3',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Vui lòng nhập số nước';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '3. Thiết bị / hạng mục hư hỏng:',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -176,7 +222,7 @@ class _ManagerRoomInspectionDialogState
               ),
               const SizedBox(height: 16),
               const Text(
-                '2. Chi phí sửa chữa dự kiến (đ):',
+                '4. Chi phí sửa chữa dự kiến (đ):',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -195,7 +241,7 @@ class _ManagerRoomInspectionDialogState
               ),
               const SizedBox(height: 16),
               const Text(
-                '3. Ghi chú / Nhận xét thực tế:',
+                '5. Ghi chú / Nhận xét thực tế:',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 13),
               ),

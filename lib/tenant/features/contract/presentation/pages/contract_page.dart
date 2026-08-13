@@ -8,6 +8,7 @@ import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/contract/data/contract_repository.dart';
 import 'package:smartrent_mobile/tenant/features/contract/domain/models/contract_model.dart';
+import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/checkout_status_page.dart';
 import 'package:smartrent_mobile/core/utils/vn_date.dart';
 
 class TenantContractPage extends StatefulWidget {
@@ -218,7 +219,11 @@ class _TenantContractPageState extends State<TenantContractPage>
                       ),
                       const SizedBox(height: 16),
                     ],
-                    _buildCheckoutActionButton(),
+                    _buildCheckoutStatusBanner(),
+                    if (_contract!.isActive) ...[
+                      const SizedBox(height: 16),
+                      _buildCheckoutActionButton(),
+                    ],
                     const SizedBox(height: 24),
                     _buildOriginalImagesSection(context),
                     const SizedBox(height: 24),
@@ -735,6 +740,86 @@ class _TenantContractPageState extends State<TenantContractPage>
     );
   }
 
+  // ── CHECKOUT STATUS BANNER ─────────────────────────────────────────────
+  Widget _buildCheckoutStatusBanner() {
+    if (_contract == null || _contract!.isActive || _contract!.isCancelled) {
+      return const SizedBox.shrink();
+    }
+
+    String title = 'Đang xử lý trả phòng';
+    String desc = 'Hệ thống đang xử lý yêu cầu của bạn.';
+    IconData icon = Icons.hourglass_empty_rounded;
+    Color color = Colors.orangeAccent;
+
+    if (_contract!.isPendingCheckout) {
+      title = 'Yêu cầu trả phòng đã ghi nhận';
+      desc = 'Quản lý sẽ sớm đến kiểm tra phòng.';
+      icon = Icons.assignment_late_outlined;
+    } else if (_contract!.isInspection) {
+      title = 'Đang kiểm tra phòng';
+      desc = 'Quản lý đang tiến hành kiểm tra hư hỏng.';
+      icon = Icons.search_rounded;
+      color = Colors.blueAccent;
+    } else if (_contract!.isPendingSettlement) {
+      title = 'Đang chờ quyết toán';
+      desc = 'Vui lòng kiểm tra chi tiết bảng quyết toán.';
+      icon = Icons.receipt_long_rounded;
+      color = TenantColors.primaryGreenAlt;
+    } else if (_contract!.isMovedOut) {
+      title = 'Đã hoàn tất trả phòng';
+      desc = 'Cảm ơn bạn đã sử dụng dịch vụ.';
+      icon = Icons.check_circle_outline_rounded;
+      color = Colors.grey;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            desc,
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutStatusPage()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Xem chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── CHECKOUT ACTION BUTTON ───────────────────────────────────────────────
   Widget _buildCheckoutActionButton() {
     final endDate = _contract?.endDate;
@@ -934,12 +1019,9 @@ class _TenantContractPageState extends State<TenantContractPage>
           ),
         );
 
-        await _tokenService.clearToken();
+        await _loadContract(bustCache: true);
         if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-          (route) => false,
-        );
+        // Có thể navigate sang trang chi tiết trạng thái checkout ở đây trong tương lai.
       } else {
         final err = res.data['error']?.toString() ?? 'Trả phòng không thành công';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.redAccent));
