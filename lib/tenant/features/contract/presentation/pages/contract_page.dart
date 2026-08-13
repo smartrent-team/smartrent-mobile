@@ -947,7 +947,19 @@ class _TenantContractPageState extends State<TenantContractPage>
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.redAccent));
+      // Trích xuất message thân thiện từ response JSON nếu có
+      String errMsg = 'Có lỗi xảy ra. Vui lòng thử lại.';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['error'] != null) {
+          errMsg = data['error'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errMsg = data['message'].toString();
+        }
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errMsg), backgroundColor: Colors.redAccent),
+      );
     }
   }
 }

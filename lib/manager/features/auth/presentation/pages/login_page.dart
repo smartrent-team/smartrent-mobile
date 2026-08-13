@@ -108,9 +108,58 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on DioException catch (e) {
       final data = e.response?.data;
+      final statusCode = e.response?.statusCode;
+
+      // Trường hợp đặc biệt: tài khoản bị khóa (403)
+      if (statusCode == 403 && data is Map) {
+        final lockedMsg = data['error']?.toString() ?? data['message']?.toString() ?? '';
+        final isLocked = lockedMsg.toLowerCase().contains('khóa') ||
+            lockedMsg.toLowerCase().contains('lock') ||
+            lockedMsg.toLowerCase().contains('locked');
+        if (isLocked && mounted) {
+          setState(() => _isLoading = false);
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.lock_outline_rounded, color: Colors.redAccent, size: 28),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tài khoản bị khóa',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                lockedMsg.isNotEmpty
+                    ? lockedMsg
+                    : 'Tài khoản của bạn đã bị khóa sau khi hoàn tất thủ tục trả phòng. Vui lòng liên hệ quản lý nếu có thắc mắc.',
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Đã hiểu', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      }
+
+      // Các lỗi thông thường khác
       String msg;
       if (e.response != null) {
-        // Server đã phản hồi — đọc message lỗi từ body
         if (data is Map) {
           msg = data['message']?.toString() ??
               data['error']?.toString() ??
@@ -119,7 +168,6 @@ class _LoginPageState extends State<LoginPage> {
           msg = 'Số điện thoại hoặc mật khẩu không đúng.';
         }
       } else {
-        // Không nhận được response — lỗi mạng thật sự
         msg = 'Không thể kết nối. Vui lòng kiểm tra mạng và thử lại.';
       }
       setState(() {

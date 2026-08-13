@@ -40,24 +40,15 @@ class ManagerRoomInspectionDialog extends StatefulWidget {
 class _ManagerRoomInspectionDialogState
     extends State<ManagerRoomInspectionDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _damagesController = TextEditingController();
   final _costController = TextEditingController();
   final _notesController = TextEditingController();
 
-  final List<String> _commonDamages = [
-    'Tường bong tróc / vẽ bẩn',
-    'Khóa cửa / Tay cầm bị hỏng',
-    'Bóng đèn / Hệ thống điện hỏng',
-    'Vòi nước / Bồn rửa bị rò rỉ',
-    'Thiết bị vệ sinh hỏng hóc',
-    'Gạch vỡ / Cửa sổ rạn nứt',
-    'Phòng quá bẩn / Cần dọn dẹp',
-  ];
-
-  final Set<String> _selectedDamages = {};
   bool _isSubmitting = false;
 
   @override
   void dispose() {
+    _damagesController.dispose();
     _costController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -71,10 +62,17 @@ class _ManagerRoomInspectionDialogState
       final cost = int.tryParse(_costController.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
       final dio = ApiClient().dio;
 
+      // Phân tách các hạng mục hư hỏng nhập vào qua dấu phẩy
+      final damagedList = _damagesController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
       final res = await dio.post('/api/tenants/inspection', data: {
         'roomId': widget.roomId,
         'tenantId': widget.tenantId,
-        'damagedItems': _selectedDamages.toList(),
+        'damagedItems': damagedList.isNotEmpty ? damagedList : ['Hư hỏng khác'],
         'estimatedRepairCost': cost,
         'notes': _notesController.text.trim(),
       });
@@ -155,32 +153,26 @@ class _ManagerRoomInspectionDialogState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '1. Chọn thiết bị / hạng mục hư hỏng:',
+                '1. Thiết bị / hạng mục hư hỏng:',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 13),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: _commonDamages.map((item) {
-                  final isSelected = _selectedDamages.contains(item);
-                  return FilterChip(
-                    label: Text(item, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
-                    selected: isSelected,
-                    selectedColor: ManagerColors.primaryGreen,
-                    checkmarkColor: Colors.white,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedDamages.add(item);
-                        } else {
-                          _selectedDamages.remove(item);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _damagesController,
+                decoration: InputDecoration(
+                  hintText: 'Nhập các mục hỏng (cách nhau bằng dấu phẩy)\nVD: Điều hòa hỏng, Cửa kẹt, Tủ hỏng',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                maxLines: 2,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Vui lòng nhập hạng mục hư hỏng';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               const Text(
