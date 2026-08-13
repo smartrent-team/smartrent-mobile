@@ -13,17 +13,20 @@ class ContractRepository {
   })  : _contractService = contractService ?? ContractService(),
         _profileService = profileService ?? ProfileService();
 
-  Future<ContractModel?> fetchContractForCurrentTenant() async {
+  Future<ContractModel?> fetchContractForCurrentTenant({bool bustCache = false}) async {
     final profile = await _profileService.getProfile();
     if (profile == null) {
       throw ContractRepositoryException('Không tải được hồ sơ người thuê');
     }
-    return fetchContractByTenantId(profile.tenantId);
+    return fetchContractByTenantId(profile.tenantId, bustCache: bustCache);
   }
 
-  Future<ContractModel?> fetchContractByTenantId(int tenantId) async {
+  Future<ContractModel?> fetchContractByTenantId(int tenantId, {bool bustCache = false}) async {
     try {
-      final response = await _contractService.getContractByTenantId(tenantId);
+      final response = await _contractService.getContractByTenantId(
+        tenantId,
+        bustCache: bustCache,
+      );
       final data = response.data;
       if (response.statusCode == 200 && data is Map && data['success'] == true) {
         final payload = data['data'];

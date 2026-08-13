@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
@@ -16,22 +19,41 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   final ProfileService _profileService = ProfileService();
   TenantProfile? _profile;
   bool _isLoading = true;
+  late final StreamSubscription<AppEvent> _eventSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchProfile();
+    _eventSub = AppEventBus.instance.onAny((_) {
+      if (mounted) _fetchProfile(silent: true);
+    });
   }
 
-  Future<void> _fetchProfile() async {
-    setState(() {
-      _isLoading = true;
-    });
-    final profile = await _profileService.getProfile();
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _eventSub.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _fetchProfile(silent: true);
+    }
+  }
+
+  Future<void> _fetchProfile({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isLoading = true);
+    }
+    final profile = await _profileService.getProfile(bustCache: true);
     if (mounted) {
       setState(() {
         _profile = profile;
@@ -223,7 +245,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildRoomInfoCard() {
     final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-    final dateFormat = DateFormat('dd/MM/yyyy');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -271,7 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ProfileInfoTile(
             icon: Icons.calendar_today_outlined,
             label: "Ngày bắt đầu thuê",
-            value: _profile?.moveInDate != null ? dateFormat.format(_profile!.moveInDate) : "N/A",
+            value: VnDate.format(_profile?.moveInDate),
           ),
           ProfileInfoTile(
             icon: Icons.check_circle_outline,

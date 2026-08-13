@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
 
 class TenantService {
   final ApiClient _apiClient = ApiClient();
@@ -103,9 +104,17 @@ class TenantService {
     }
   }
 
-  Future<Response> getTenantDetail(int tenantId) async {
+  Future<Response> getTenantDetail(int tenantId, {bool bustCache = false}) async {
     try {
-      return await _apiClient.dio.get('/api/tenants/$tenantId');
+      return await _apiClient.dio.get(
+        '/api/tenants/$tenantId',
+        queryParameters: bustCache
+            ? {'_t': DateTime.now().millisecondsSinceEpoch}
+            : null,
+        options: bustCache
+            ? Options(headers: {'Cache-Control': 'no-cache'})
+            : null,
+      );
     } on DioException catch (e) {
       rethrow;
     }
@@ -137,11 +146,22 @@ class TenantService {
     }
   }
 
-  Future<Response> changeRoom(int tenantId, int newRoomId) async {
+  Future<Response> changeRoom(
+    int tenantId,
+    int newRoomId, {
+    List<String>? contractImages,
+    DateTime? moveInDate,
+    DateTime? endDate,
+  }) async {
     try {
       return await _apiClient.dio.post(
         '/api/tenants/$tenantId/change-room',
-        data: {'newRoomId': newRoomId},
+        data: {
+          'newRoomId': newRoomId,
+          if (contractImages != null) 'contractImages': contractImages,
+          if (moveInDate != null) 'moveInDate': VnDate.toCalendarKey(moveInDate),
+          if (endDate != null) 'endDate': VnDate.toCalendarKey(endDate),
+        },
       );
     } on DioException catch (e) {
       rethrow;

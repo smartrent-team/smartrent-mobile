@@ -8,6 +8,7 @@ import 'package:smartrent_mobile/tenant/features/billing/presentation/pages/orde
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/repair_page.dart';
 import 'package:smartrent_mobile/tenant/features/profile/presentation/pages/profile_page.dart';
 import 'package:smartrent_mobile/tenant/core/navigation/tenant_nav_scope.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class TenantNav extends StatefulWidget {
   final int initialIndex;
@@ -113,7 +114,12 @@ class _TenantNavState extends State<TenantNav> {
     final bool isActive = _currentIndex == index;
 
     return InkWell(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        if (index == 3) {
+          AppEventBus.instance.fire(AppEvent.dataChanged);
+        }
+        setState(() => _currentIndex = index);
+      },
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

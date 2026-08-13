@@ -35,22 +35,29 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
     _loadDetail();
   }
 
-  Future<void> _loadDetail() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _loadDetail({bool bustCache = false, bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      final response = await _tenantService.getTenantDetail(widget.tenantId);
+      final response = await _tenantService.getTenantDetail(
+        widget.tenantId,
+        bustCache: bustCache,
+      );
       if (response.statusCode == 200 && response.data['success'] == true) {
         final detail = TenantDetail.fromJson(
           response.data['data'] as Map<String, dynamic>,
         );
         ContractModel? contract;
         try {
-          contract =
-              await _contractRepository.fetchContractByTenantId(widget.tenantId);
+          contract = await _contractRepository.fetchContractByTenantId(
+            widget.tenantId,
+            bustCache: bustCache,
+          );
         } catch (_) {
           contract = null;
         }
@@ -76,8 +83,10 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
 
   Future<void> _reloadContract() async {
     try {
-      final contract =
-          await _contractRepository.fetchContractByTenantId(widget.tenantId);
+      final contract = await _contractRepository.fetchContractByTenantId(
+        widget.tenantId,
+        bustCache: true,
+      );
       if (!mounted) return;
       setState(() => _contract = contract);
       await _loadDetail();
@@ -90,6 +99,25 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
   String _formatPhone(String phone) {
     final formatted = ManagerAppHeader.formatPhoneDisplay(phone);
     return formatted.isNotEmpty ? formatted : phone;
+  }
+
+  void _applyRoomChangeResult(Map<String, dynamic> result) {
+    if (_detail == null) return;
+
+    final imagesRaw = result['contractImages'];
+    final images = imagesRaw is List
+        ? imagesRaw.map((e) => e.toString()).where((u) => u.isNotEmpty).toList()
+        : _detail!.contractImages;
+
+    setState(() {
+      _detail = _detail!.copyWith(
+        roomId: (result['newRoomId'] as num?)?.toInt() ?? _detail!.roomId,
+        roomLabel: result['roomLabel']?.toString() ?? _detail!.roomLabel,
+        checkInDate: result['checkInDate']?.toString() ?? _detail!.checkInDate,
+        contractSignDate: result['checkInDate']?.toString() ?? _detail!.checkInDate,
+        contractImages: images,
+      );
+    });
   }
 
   @override
@@ -182,14 +210,17 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final changed = await ChangeRoomSheet.show(
+                        final result = await ChangeRoomSheet.show(
                           context,
                           tenantId: widget.tenantId,
+                          tenantName: detail.name,
                           currentRoomId: detail.roomId,
                           currentRoomLabel: detail.roomLabel,
                         );
-                        if (changed == true && mounted) {
-                          _loadDetail();
+                        if (result != null && mounted) {
+                          _applyRoomChangeResult(result);
+                          await _loadDetail(bustCache: true, silent: true);
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Đã đổi phòng thành công!'),
@@ -614,7 +645,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                   icon: Icons.text_snippet_outlined,
                   label: 'KÝ HỢP ĐỒNG GIẤY',
                   valueWidget: Text(
-                    detail.contractSignDate ?? detail.checkInDate,
+                    detail.checkInDate,
                     style: const TextStyle(
                       color: ManagerColors.textCharcoal,
                       fontSize: 15,
@@ -771,6 +802,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                               child: _buildContractImage(
                                 images[index],
                                 'Trang ${index + 1}',
+                                key: ValueKey('contract-${images[index]}'),
                               ),
                             ),
                           );
@@ -869,6 +901,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
                           images[index],
+                          key: ValueKey('gallery-${images[index]}'),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                             height: 160,
@@ -889,8 +922,9 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
     );
   }
 
-  Widget _buildContractImage(String imageUrl, String label) {
+  Widget _buildContractImage(String imageUrl, String label, {Key? key}) {
     return AspectRatio(
+      key: key,
       aspectRatio: 1.0,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -899,6 +933,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
           children: [
             Image.network(
               imageUrl,
+              key: ValueKey('contract-thumb-$imageUrl'),
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(

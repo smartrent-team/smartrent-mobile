@@ -1,4 +1,5 @@
 import 'package:smartrent_mobile/core/contract/domain/contract_cancellation_request.dart';
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
 
 class ContractModel {
   final String contractId;
@@ -47,12 +48,7 @@ class ContractModel {
     );
   }
 
-  static DateTime? _parseDate(dynamic value) {
-    if (value == null) return null;
-    final raw = value.toString();
-    if (raw.isEmpty) return null;
-    return DateTime.tryParse(raw);
-  }
+  static DateTime? _parseDate(dynamic value) => VnDate.parse(value);
 
   bool get isActive => status == 'active';
 

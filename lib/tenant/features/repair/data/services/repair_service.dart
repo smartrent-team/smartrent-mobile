@@ -8,8 +8,8 @@ class RepairService {
     return _apiClient.dio.get('/api/tickets');
   }
 
-  Future<Response> getTenants() {
-    return _apiClient.dio.get('/api/tenants');
+  Future<Response> getMyTenant() {
+    return _apiClient.dio.get('/api/tenants/me');
   }
 
   Future<Response> getRoomDetail(int roomId) {

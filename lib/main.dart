@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:smartrent_mobile/core/pages/splash_page.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
@@ -66,6 +67,16 @@ class MyApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: 'SmartRent',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('vi'),
+        Locale('en'),
+      ],
+      locale: const Locale('vi'),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: TenantColors.primaryGreen),
         useMaterial3: true,
@@ -77,7 +88,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const SplashPage(), // ← check session tự động
+      home: const SplashPage(),
     );
   }
 }
