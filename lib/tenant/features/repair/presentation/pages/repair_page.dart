@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
@@ -8,7 +7,6 @@ import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/sta
 import 'package:smartrent_mobile/tenant/features/repair/presentation/widgets/repair_card.dart';
 import 'package:smartrent_mobile/tenant/features/repair/data/services/repair_service.dart';
 import 'package:smartrent_mobile/tenant/features/repair/presentation/pages/create_repair_page.dart';
-import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/tenant/features/profile/data/services/tenant_profile_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
 import 'package:smartrent_mobile/core/services/app_event_bus.dart';
@@ -115,77 +113,20 @@ class _RepairPageState extends State<RepairPage> {
 
   Future<void> _fetchTenantIdFromProfile() async {
     try {
-      final token = await TokenService().getToken();
-      String loggedInPhone = '';
-      String loggedInName = '';
+      final res = await _repairService.getMyTenant();
+      if (res.data == null || res.data['success'] != true) return;
 
-      if (token != null) {
-        try {
-          final parts = token.split('.');
-          if (parts.length == 3) {
-            String payload = parts[1];
-            int padLength = 4 - (payload.length % 4);
-            if (padLength < 4) {
-              payload += '=' * padLength;
-            }
-            final decodedBytes = base64Url.decode(payload);
-            final decodedStr = utf8.decode(decodedBytes);
-            final decodedMap = json.decode(decodedStr);
-            
-            loggedInPhone = decodedMap['phone']?.toString() ?? '';
-            if (decodedMap['user_metadata'] != null) {
-              loggedInName = decodedMap['user_metadata']['full_name']?.toString() ?? '';
-            }
-            debugPrint('Decoded JWT - Phone: $loggedInPhone, Name: $loggedInName');
-          }
-        } catch (e) {
-          debugPrint('Error decoding JWT: $e');
-        }
-      }
+      final data = res.data['data'];
+      if (data == null) return;
 
-      final res = await _repairService.getTenants();
-      int foundTenantId = -1;
+      final tenantId = data['tenant_id'];
+      final roomId = data['room']?['id'];
+      if (tenantId == null && roomId == null) return;
 
-      if (res.data != null && res.data['success'] == true) {
-        final List docs = res.data['docs'] ?? [];
-        for (final doc in docs) {
-          final tenantPhone = doc['phone']?.toString().replaceAll('+', '').replaceAll(' ', '') ?? '';
-          final normalizedPhone = loggedInPhone.replaceAll('+', '').replaceAll(' ', '');
-          
-          if ((normalizedPhone.isNotEmpty && tenantPhone.contains(normalizedPhone)) || 
-              (loggedInName.isNotEmpty && doc['name'] == loggedInName)) {
-            foundTenantId = doc['id'];
-            setState(() {
-              _tenantId = foundTenantId;
-            });
-            debugPrint('Found Tenant ID from database: $foundTenantId');
-            break;
-          }
-        }
-      }
-
-      // If we found a valid tenantId, discover the matching roomId from room details in parallel!
-      if (foundTenantId != -1) {
-        final List<int> roomIdsToTest = List.generate(30, (i) => i + 1);
-        final List<Future> futures = roomIdsToTest.map((roomId) async {
-          try {
-            final response = await _repairService.getRoomDetail(roomId);
-            if (response.data != null && response.data['success'] == true) {
-              final data = response.data['data'];
-              if (data != null && data['tenant'] != null && data['tenant']['id'] == foundTenantId) {
-                setState(() {
-                  _roomId = roomId;
-                });
-                debugPrint('Dynamic discovery found Room ID: $roomId for Tenant ID: $foundTenantId');
-              }
-            }
-          } catch (e) {
-            // Room does not exist or fetch failed
-          }
-        }).toList();
-
-        await Future.wait(futures);
-      }
+      setState(() {
+        if (tenantId != null) _tenantId = tenantId;
+        if (roomId != null) _roomId = roomId;
+      });
     } catch (e) {
       debugPrint('Error in _fetchTenantIdFromProfile: $e');
     }

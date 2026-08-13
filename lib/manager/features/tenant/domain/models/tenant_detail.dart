@@ -71,4 +71,36 @@ class TenantDetail {
           : const [],
     );
   }
+
+  TenantDetail copyWith({
+    int? roomId,
+    String? roomCode,
+    int? floor,
+    String? roomLabel,
+    String? checkInDate,
+    String? contractSignDate,
+    List<String>? contractImages,
+  }) {
+    return TenantDetail(
+      id: id,
+      userId: userId,
+      activeContractId: activeContractId,
+      name: name,
+      phone: phone,
+      email: email,
+      checkInDate: checkInDate ?? this.checkInDate,
+      moveOutDate: moveOutDate,
+      contractSignDate: contractSignDate ?? this.contractSignDate,
+      isRoomHead: isRoomHead,
+      initial: initial,
+      roomId: roomId ?? this.roomId,
+      roomCode: roomCode ?? this.roomCode,
+      floor: floor ?? this.floor,
+      roomLabel: roomLabel ?? this.roomLabel,
+      isActive: isActive,
+      statusLabel: statusLabel,
+      identityNumber: identityNumber,
+      contractImages: contractImages ?? this.contractImages,
+    );
+  }
 }

@@ -1,3 +1,5 @@
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
+
 class TenantProfile {
   final int tenantId;
   final int userId;
@@ -34,12 +36,8 @@ class TenantProfile {
       fullName: json['full_name'] as String? ?? 'Chưa cập nhật',
       phone: json['phone'] as String? ?? 'Chưa cập nhật',
       email: json['email'] as String? ?? '',
-      moveInDate: json['move_in_date'] != null
-          ? DateTime.tryParse(json['move_in_date']) ?? DateTime.now()
-          : DateTime.now(),
-      moveOutDate: json['move_out_date'] != null
-          ? DateTime.tryParse(json['move_out_date'])
-          : null,
+      moveInDate: VnDate.parse(json['move_in_date']) ?? DateTime.now(),
+      moveOutDate: VnDate.parse(json['move_out_date']),
       status: json['status'] as String? ?? 'active',
       room: json['room'] != null ? Room.fromJson(json['room']) : null,
       activeContract: json['active_contract'],

@@ -22,6 +22,9 @@ class ContractPhotoUpload extends StatefulWidget {
   /// Khi false, chỉ hiện nút thêm ảnh (dùng nếu màn hình đã có preview lớn riêng).
   final bool showPreview;
 
+  /// Nhãn hiển thị phía trên khối upload. Mặc định: "Ảnh hợp đồng".
+  final String label;
+
   const ContractPhotoUpload({
     super.key,
     required this.imageUrls,
@@ -32,6 +35,7 @@ class ContractPhotoUpload extends StatefulWidget {
     this.enabled = true,
     this.required = true,
     this.showPreview = true,
+    this.label = 'Ảnh hợp đồng',
   });
 
   @override
@@ -87,32 +91,42 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
     if (!widget.enabled || _isUploading) return;
     setState(() => _isUploading = true);
 
-    final mode = await showModalBottomSheet<_ContractPickMode>(
+    final mode = await showDialog<_ContractPickMode>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Chụp ảnh hợp đồng'),
-              onTap: () => Navigator.pop(ctx, _ContractPickMode.camera),
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn ảnh hợp đồng'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, _ContractPickMode.camera),
+            child: const Row(
+              children: [
+                Icon(Icons.photo_camera_outlined),
+                SizedBox(width: 12),
+                Text('Chụp ảnh hợp đồng'),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Chọn 1 ảnh từ thư viện'),
-              onTap: () => Navigator.pop(ctx, _ContractPickMode.singleGallery),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, _ContractPickMode.singleGallery),
+            child: const Row(
+              children: [
+                Icon(Icons.photo_library_outlined),
+                SizedBox(width: 12),
+                Text('Chọn 1 ảnh từ thư viện'),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.collections_outlined),
-              title: const Text('Chọn nhiều ảnh từ thư viện'),
-              onTap: () => Navigator.pop(ctx, _ContractPickMode.multiGallery),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, _ContractPickMode.multiGallery),
+            child: const Row(
+              children: [
+                Icon(Icons.collections_outlined),
+                SizedBox(width: 12),
+                Text('Chọn nhiều ảnh từ thư viện'),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
@@ -205,9 +219,9 @@ class _ContractPhotoUploadState extends State<ContractPhotoUpload> {
       children: [
         Row(
           children: [
-            const Text(
-              'Ảnh hợp đồng',
-              style: TextStyle(
+            Text(
+              widget.label,
+              style: const TextStyle(
                 color: ManagerColors.textGrey,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,

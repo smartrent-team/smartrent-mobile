@@ -8,6 +8,7 @@ import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/contract/data/contract_repository.dart';
 import 'package:smartrent_mobile/tenant/features/contract/domain/models/contract_model.dart';
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
 
 class TenantContractPage extends StatefulWidget {
   const TenantContractPage({super.key});
@@ -17,7 +18,7 @@ class TenantContractPage extends StatefulWidget {
 }
 
 class _TenantContractPageState extends State<TenantContractPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   int _activeImageIndex = 0;
@@ -48,7 +49,15 @@ class _TenantContractPageState extends State<TenantContractPage>
       curve: Curves.easeIn,
     );
     _fadeController.forward();
+    WidgetsBinding.instance.addObserver(this);
     _loadContract();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadContract(bustCache: true, silent: true);
+    }
   }
 
   Future<void> _handleSessionExpired() async {
@@ -60,14 +69,18 @@ class _TenantContractPageState extends State<TenantContractPage>
     );
   }
 
-  Future<void> _loadContract() async {
+  Future<void> _loadContract({bool bustCache = false, bool silent = false}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
-      final contract = await _contractRepository.fetchContractForCurrentTenant();
+      final contract = await _contractRepository.fetchContractForCurrentTenant(
+        bustCache: bustCache,
+      );
       if (!mounted) return;
       setState(() {
         _contract = contract;
@@ -101,15 +114,13 @@ class _TenantContractPageState extends State<TenantContractPage>
     }
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return '—';
-    return _dateFormat.format(date);
-  }
+  String _formatDate(DateTime? date) => VnDate.format(date);
 
   String _formatDeposit(int amount) => _currency.format(amount);
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fadeController.dispose();
     super.dispose();
   }
@@ -184,9 +195,13 @@ class _TenantContractPageState extends State<TenantContractPage>
           children: [
             _buildHeader(context),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Column(
+              child: RefreshIndicator(
+                color: TenantColors.primaryGreenAlt,
+                onRefresh: () => _loadContract(bustCache: true),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildContractInfoBadge(),
@@ -210,6 +225,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                   ],
                 ),
               ),
+            ),
             ),
           ],
         ),
@@ -556,6 +572,7 @@ class _TenantContractPageState extends State<TenantContractPage>
               children: [
                 Image.network(
                   images[safeIndex],
+                  key: ValueKey(images[safeIndex]),
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
@@ -631,6 +648,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                 clipBehavior: Clip.antiAlias,
                 child: Image.network(
                   images[index],
+                  key: ValueKey('thumb-${images[index]}'),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: Colors.grey.shade200,

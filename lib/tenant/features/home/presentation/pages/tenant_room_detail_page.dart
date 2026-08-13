@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
+import 'package:smartrent_mobile/tenant/features/home/data/services/home_service.dart';
+import 'package:smartrent_mobile/core/utils/vn_date.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
@@ -16,8 +18,11 @@ class TenantRoomDetailPage extends StatefulWidget {
 
 class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
   final RoomService _roomService = RoomService();
+  final HomeService _homeService = HomeService();
   final TokenService _tokenService = TokenService();
   Map<String, dynamic>? _room;
+  String? _myMoveInDate;
+  String? _myMoveOutDate;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -34,12 +39,29 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
     });
 
     try {
-      final response = await _roomService.getRoomDetail(widget.roomId);
+      final results = await Future.wait([
+        _roomService.getRoomDetail(widget.roomId),
+        _homeService.getTenantProfile(),
+      ]);
+      final response = results[0];
+      final profileResponse = results[1];
+
+      String? moveInDate;
+      String? moveOutDate;
+      if (profileResponse.statusCode == 200 &&
+          profileResponse.data['success'] == true) {
+        final profile = profileResponse.data['data'];
+        moveInDate = profile?['move_in_date']?.toString();
+        moveOutDate = profile?['move_out_date']?.toString();
+      }
+
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['success'] == true) {
           setState(() {
             _room = data['data'];
+            _myMoveInDate = moveInDate;
+            _myMoveOutDate = moveOutDate;
             _isLoading = false;
           });
         } else {
@@ -80,15 +102,7 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
     );
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return 'Chưa xác định';
-    try {
-      final dateTime = DateTime.parse(dateStr);
-      return DateFormat('dd/MM/yyyy').format(dateTime.toLocal());
-    } catch (_) {
-      return dateStr;
-    }
-  }
+  String _formatDate(String? dateStr) => VnDate.format(VnDate.parse(dateStr));
 
   String _formatCurrency(num? amount) {
     if (amount == null) return '0 đ';
@@ -318,8 +332,10 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
   }
 
   Widget _buildRentInfoCard(Map<String, dynamic>? tenant) {
-    final String checkInDate = _formatDate(tenant?['checkInDate']);
-    final String checkOutDate = _formatDate(tenant?['checkOutDate']);
+    final String checkInDate = _formatDate(_myMoveInDate ?? tenant?['checkInDate']?.toString());
+    final String checkOutDate = _myMoveOutDate == null && tenant?['checkOutDate'] == null
+        ? 'Chưa xác định'
+        : _formatDate(_myMoveOutDate ?? tenant?['checkOutDate']?.toString());
 
     return Container(
       decoration: BoxDecoration(
