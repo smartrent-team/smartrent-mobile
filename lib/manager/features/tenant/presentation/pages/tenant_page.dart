@@ -58,11 +58,14 @@ class _TenantPageState extends State<TenantPage> {
         setState(() {
           _allTenants = docs.map((doc) => Tenant(
             id: (doc['id'] as num?)?.toInt() ?? 0,
+            userId: (doc['userId'] as num?)?.toInt(),
             name: doc['name']?.toString() ?? '',
             phone: doc['phone']?.toString() ?? '',
             checkInDate: doc['checkInDate']?.toString() ?? '',
             isRoomHead: doc['isRoomHead'] == true,
             initial: doc['initial']?.toString() ?? 'C',
+            isActive: doc['isActive'] != false,
+            userStatus: doc['userStatus']?.toString() ?? 'active',
           )).toList();
         });
       }
@@ -869,40 +872,8 @@ class _TenantPageState extends State<TenantPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Status Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: ManagerColors.primaryGreen.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: ManagerColors.primaryGreen.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.check,
-                                  size: 12,
-                                  color: ManagerColors.primaryGreen,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Đang thuê',
-                                  style: TextStyle(
-                                    color: ManagerColors.primaryGreen,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          // Status Dropdown Button
+                          _buildStatusDropdown(tenant),
                         ],
                       ),
                     ),
@@ -912,6 +883,155 @@ class _TenantPageState extends State<TenantPage> {
         ],
       ),
     );
+  }
+
+  /// Dropdown button để manager chỉnh trạng thái cư dân ngay trên card danh sách
+  Widget _buildStatusDropdown(Tenant tenant) {
+    final bool isBlocked = tenant.userStatus == 'locked' || tenant.userStatus == 'blocked';
+
+    // Màu sắc theo trạng thái
+    final Color statusColor = isBlocked
+        ? const Color(0xFFEF4444)   // đỏ – đã khóa
+        : ManagerColors.primaryGreen; // xanh – đang thuê
+
+    final String statusLabel = isBlocked ? 'Đã khóa' : 'Đang thuê';
+    final IconData statusIcon = isBlocked ? Icons.lock_outline : Icons.check;
+
+    return PopupMenuButton<String>(
+      onSelected: (action) => _onStatusActionSelected(tenant, action),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: statusColor.withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(statusIcon, size: 12, color: statusColor),
+            const SizedBox(width: 4),
+            Text(
+              statusLabel,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, size: 14, color: statusColor),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'block',
+          child: Row(
+            children: [
+              Icon(Icons.lock_outline, size: 18, color: Color(0xFFEF4444)),
+              SizedBox(width: 10),
+              Text(
+                'Khóa tài khoản',
+                style: TextStyle(
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'end_contract',
+          child: Row(
+            children: [
+              Icon(Icons.event_busy_outlined, size: 18, color: Color(0xFFF59E0B)),
+              SizedBox(width: 10),
+              Text(
+                'Hết hợp đồng',
+                style: TextStyle(
+                  color: Color(0xFFF59E0B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _onStatusActionSelected(Tenant tenant, String action) async {
+    final Map<String, Map<String, String>> labels = {
+      'block': {
+        'title': 'Khóa tài khoản',
+        'message': 'Bạn có chắc muốn khóa tài khoản của ${tenant.name}?\nCư dân sẽ không thể đăng nhập vào ứng dụng.',
+        'confirm': 'Khóa',
+      },
+      'end_contract': {
+        'title': 'Kết thúc hợp đồng',
+        'message': 'Bạn có chắc muốn kết thúc hợp đồng của ${tenant.name}?\nThao tác này sẽ đặt ngày trả phòng là hôm nay.',
+        'confirm': 'Kết thúc',
+      },
+    };
+
+    final info = labels[action]!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(info['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(info['message']!),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Huỷ', style: TextStyle(color: ManagerColors.textGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: action == 'block'
+                  ? const Color(0xFFEF4444)
+                  : const Color(0xFFF59E0B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+              info['confirm']!,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final response = await _tenantService.updateTenantStatus(tenant.id, action);
+      if (response.statusCode == 200 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(action == 'block'
+                ? 'Đã khóa tài khoản ${tenant.name}'
+                : 'Đã kết thúc hợp đồng ${tenant.name}'),
+            backgroundColor: ManagerColors.primaryGreen,
+          ),
+        );
+        _fetchTenants(); // reload list
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thao tác thất bại. Vui lòng thử lại.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildRoomsTab() {
