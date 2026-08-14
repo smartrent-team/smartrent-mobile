@@ -94,24 +94,52 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     }
 
     return Scaffold(
-      backgroundColor: TenantColors.bgScreenLight,
+      backgroundColor: const Color(0xFFF6F8FA),
       body: RefreshIndicator(
         onRefresh: _fetchProfile,
         color: TenantColors.primaryGreen,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(context),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+
+              // Mục 1: Thông tin liên hệ
+              _buildSectionHeader(
+                icon: Icons.person_outline_rounded,
+                title: "Thông tin liên hệ",
+                iconColor: Colors.blueAccent,
+              ),
+              const SizedBox(height: 8),
               _buildContactCard(),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
+
+              // Mục 2: Thông tin phòng thuê
+              _buildSectionHeader(
+                icon: Icons.apartment_rounded,
+                title: "Thông tin phòng thuê",
+                iconColor: TenantColors.primaryGreen,
+              ),
+              const SizedBox(height: 8),
               _buildRoomInfoCard(),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
+
+              // Mục 3: Cài đặt tài khoản & Bảo mật
+              _buildSectionHeader(
+                icon: Icons.shield_outlined,
+                title: "Tài khoản & Bảo mật",
+                iconColor: Colors.orange.shade700,
+              ),
+              const SizedBox(height: 8),
               _buildMenuActions(context),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
               _buildLogoutButton(context),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               _buildFooter(),
               const SizedBox(height: 40),
             ],
@@ -124,15 +152,15 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 40),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 36),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF388E3C),
+            Color(0xFF2E7D32),
             TenantColors.primaryGreen,
-            Color(0xFF66BB6A),
+            Color(0xFF4CAF50),
           ],
         ),
         borderRadius: BorderRadius.only(
@@ -174,22 +202,22 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                   shape: BoxShape.circle,
                 ),
                 child: const CircleAvatar(
-                  radius: 50,
+                  radius: 46,
                   backgroundColor: Color(0xFFC8E6C9),
-                  child: Icon(Icons.person, size: 60, color: TenantColors.primaryGreen),
+                  child: Icon(Icons.person, size: 54, color: TenantColors.primaryGreen),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle, color: TenantColors.primaryGreen, size: 24),
+                child: const Icon(Icons.check_circle, color: TenantColors.primaryGreen, size: 22),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
             _profile?.fullName ?? "N/A",
             style: GoogleFonts.outfit(
@@ -198,11 +226,44 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
               color: Colors.white,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             "Cư dân phòng ${_profile?.room?.roomCode ?? "N/A"}",
             style: GoogleFonts.outfit(
               fontSize: 14,
-              color: Colors.white70,
+              color: Colors.white.withOpacity(0.85),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required Color iconColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -213,14 +274,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   Widget _buildContactCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
@@ -229,13 +290,15 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         children: [
           ProfileInfoTile(
             icon: Icons.phone_outlined,
+            iconColor: Colors.blueAccent,
             label: "Số điện thoại",
-            value: _profile?.phone ?? "N/A",
+            value: _profile?.phone ?? "Chưa cập nhật",
           ),
           ProfileInfoTile(
             icon: Icons.mail_outline,
+            iconColor: Colors.deepPurpleAccent,
             label: "Email",
-            value: _profile?.email ?? "N/A",
+            value: _profile?.email ?? "Chưa cập nhật",
             showDivider: false,
           ),
         ],
@@ -248,62 +311,39 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: TenantColors.bgMint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.apartment, color: TenantColors.primaryGreen, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                "Thông tin phòng thuê",
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: TenantColors.textCharcoal,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           ProfileInfoTile(
             icon: Icons.tag,
-            label: "Phòng",
-            value: "${_profile?.room?.roomCode ?? "N/A"} - Tầng ${_profile?.room?.floor ?? "N/A"}",
+            iconColor: TenantColors.primaryGreen,
+            label: "Phòng đang ở",
+            value: "${_profile?.room?.roomCode ?? "N/A"} · Tầng ${_profile?.room?.floor ?? "N/A"}",
           ),
           ProfileInfoTile(
             icon: Icons.calendar_today_outlined,
+            iconColor: Colors.teal,
             label: "Ngày bắt đầu thuê",
             value: VnDate.format(_profile?.moveInDate),
           ),
           ProfileInfoTile(
-            icon: Icons.check_circle_outline,
-            iconColor: _profile?.status == 'active' ? TenantColors.primaryGreen : Colors.grey,
-            label: "Trạng thái",
-            value: _profile?.status == 'active' ? "Đang hoạt động" : "Ngừng hoạt động",
-          ),
-          ProfileInfoTile(
             icon: Icons.payments_outlined,
+            iconColor: Colors.amber.shade800,
             label: "Giá phòng cơ bản",
-            value: _profile?.room?.basePrice != null ? currencyFormat.format(_profile!.room!.basePrice) : "0 đ",
+            value: _profile?.room?.basePrice != null
+                ? "${currencyFormat.format(_profile!.room!.basePrice)} / tháng"
+                : "0 đ / tháng",
             showDivider: false,
           ),
         ],
@@ -317,10 +357,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
       child: Column(
         children: [
           MenuActionTile(
-            icon: Icons.lock_open_rounded,
-            color: TenantColors.primaryGreenDark,
+            icon: Icons.lock_outline_rounded,
+            color: Colors.orange.shade700,
             title: "Đổi mật khẩu",
-            subtitle: "Thay đổi mật khẩu đăng nhập",
+            subtitle: "Thay đổi mật khẩu đăng nhập tài khoản",
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const TenantChangePasswordPage()),
@@ -338,7 +378,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFFFFEBEE),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Material(
           color: Colors.transparent,
@@ -352,7 +392,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 (route) => false,
               );
             },
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
@@ -378,25 +418,27 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Widget _buildFooter() {
-    return Column(
-      children: [
-        Text(
-          "RMS Tenant App",
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            color: Colors.grey[400],
-            fontWeight: FontWeight.w600,
+    return Center(
+      child: Column(
+        children: [
+          Text(
+            "RMS Tenant App",
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: Colors.grey[400],
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        Text(
-          "Version 1.0.0 • Build 2025.05",
-          style: GoogleFonts.outfit(
-            fontSize: 11,
-            color: Colors.grey[350],
+          const SizedBox(height: 2),
+          Text(
+            "Phiên bản 2.4.1",
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              color: Colors.grey[400],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
-

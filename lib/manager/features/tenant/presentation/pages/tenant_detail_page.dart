@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/core/contract/presentation/contract_cancellation_section.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
@@ -220,6 +221,8 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                         if (result != null && mounted) {
                           _applyRoomChangeResult(result);
                           await _loadDetail(bustCache: true, silent: true);
+                          AppEventBus.instance.fire(AppEvent.tenantChanged);
+                          AppEventBus.instance.fire(AppEvent.roomChanged);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -253,6 +256,8 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                         );
                         if (left == true && mounted) {
                           _loadDetail();
+                          AppEventBus.instance.fire(AppEvent.tenantChanged);
+                          AppEventBus.instance.fire(AppEvent.roomChanged);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Đã xử lý trả phòng thành công!'),

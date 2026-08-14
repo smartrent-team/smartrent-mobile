@@ -22,6 +22,8 @@ class ProfileInfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = iconColor ?? TenantColors.primaryGreen;
+
     return Column(
       children: [
         Padding(
@@ -29,12 +31,12 @@ class ProfileInfoTile extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (iconColor ?? Colors.grey).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: effectiveColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: iconColor ?? Colors.grey[600], size: 20),
+                child: Icon(icon, color: effectiveColor, size: 20),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -44,17 +46,18 @@ class ProfileInfoTile extends StatelessWidget {
                     Text(
                       label,
                       style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       value,
                       style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: (label == "Trạng thái hợp đồng") ? TenantColors.primaryGreen : TenantColors.textCharcoal,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: TenantColors.textCharcoal,
                       ),
                     ),
                   ],
@@ -67,8 +70,8 @@ class ProfileInfoTile extends StatelessWidget {
         if (showDivider)
           Divider(
             height: 1,
-            thickness: 0.5,
-            color: Colors.grey.withOpacity(0.1),
+            thickness: 0.6,
+            color: Colors.grey.shade200,
             indent: 48,
           ),
       ],
@@ -95,31 +98,31 @@ class MenuActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 22),
@@ -137,17 +140,18 @@ class MenuActionTile extends StatelessWidget {
                           color: TenantColors.textCharcoal,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          color: Colors.grey[500],
+                          fontSize: 12.5,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.grey[400]),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 24),
               ],
             ),
           ),
