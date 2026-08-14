@@ -5,7 +5,6 @@ import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
-import 'package:smartrent_mobile/manager/features/issue/presentation/pages/manager_room_inspection_dialog.dart';
 
 class RoomDetailPage extends StatefulWidget {
   final int roomId;
@@ -727,36 +726,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                       const SizedBox(height: 8),
                       _buildTenantInfoRow('Ngày vào ở', checkInDate, Colors.black87),
                       if (isPendingCheckout) ...[
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final roomCode = _room?['roomCode'] ?? 'Chưa xác định';
-                              final result = await ManagerRoomInspectionDialog.show(
-                                context,
-                                roomId: widget.roomId,
-                                roomCode: roomCode,
-                                tenantId: t['id'],
-                              );
-                              if (result == true) {
-                                _fetchRoomDetail();
-                              }
-                            },
-                            icon: const Icon(Icons.assignment_turned_in_outlined, color: Colors.white),
-                            label: const Text(
-                              'Kiểm Tra & Bàn Giao Phòng',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade700,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 10),
+                        _buildTenantInfoRow('Trạng thái', 'Đang xử lý trả phòng', Colors.orange.shade700),
                       ],
                     ],
                   ),

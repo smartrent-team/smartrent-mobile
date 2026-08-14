@@ -18,6 +18,9 @@ class TenantDetail {
   final String statusLabel;
   final String? identityNumber;
   final List<String> contractImages;
+  final String? checkoutRequestStatus;
+  final int? remainingContractDays;
+  final String? contractEndDate;
 
   const TenantDetail({
     required this.id,
@@ -39,6 +42,9 @@ class TenantDetail {
     required this.statusLabel,
     this.identityNumber,
     required this.contractImages,
+    this.checkoutRequestStatus,
+    this.remainingContractDays,
+    this.contractEndDate,
   });
 
   factory TenantDetail.fromJson(Map<String, dynamic> json) {
@@ -69,6 +75,9 @@ class TenantDetail {
       contractImages: images is List
           ? images.map((e) => e.toString()).where((u) => u.isNotEmpty).toList()
           : const [],
+      checkoutRequestStatus: json['checkoutRequestStatus']?.toString(),
+      remainingContractDays: (json['remainingContractDays'] as num?)?.toInt(),
+      contractEndDate: json['contractEndDate']?.toString(),
     );
   }
 
@@ -101,6 +110,9 @@ class TenantDetail {
       statusLabel: statusLabel,
       identityNumber: identityNumber,
       contractImages: contractImages ?? this.contractImages,
+      checkoutRequestStatus: checkoutRequestStatus,
+      remainingContractDays: remainingContractDays,
+      contractEndDate: contractEndDate,
     );
   }
 }

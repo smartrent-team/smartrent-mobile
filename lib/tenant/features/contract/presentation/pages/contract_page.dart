@@ -8,7 +8,6 @@ import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_
 import 'package:smartrent_mobile/tenant/core/theme/tenant_colors.dart';
 import 'package:smartrent_mobile/tenant/features/contract/data/contract_repository.dart';
 import 'package:smartrent_mobile/tenant/features/contract/domain/models/contract_model.dart';
-import 'package:smartrent_mobile/tenant/features/contract/presentation/pages/checkout_status_page.dart';
 import 'package:smartrent_mobile/core/utils/vn_date.dart';
 
 class TenantContractPage extends StatefulWidget {
@@ -753,12 +752,12 @@ class _TenantContractPageState extends State<TenantContractPage>
 
     if (_contract!.isPendingCheckout) {
       title = 'Yêu cầu trả phòng đã ghi nhận';
-      desc = 'Quản lý sẽ sớm đến kiểm tra phòng.';
-      icon = Icons.assignment_late_outlined;
+      desc = 'Quản lý sẽ xác nhận yêu cầu. Khi hợp đồng hết hạn, hệ thống sẽ xử lý trả phòng.';
+      icon = Icons.assignment_turned_in_outlined;
     } else if (_contract!.isInspection) {
-      title = 'Đang kiểm tra phòng';
-      desc = 'Quản lý đang tiến hành kiểm tra hư hỏng.';
-      icon = Icons.search_rounded;
+      title = 'Đang xử lý trả phòng';
+      desc = 'Yêu cầu của bạn đang được xử lý theo quy trình trả phòng.';
+      icon = Icons.hourglass_top_rounded;
       color = Colors.blueAccent;
     } else if (_contract!.isPendingSettlement) {
       title = 'Đang chờ quyết toán';
@@ -800,21 +799,6 @@ class _TenantContractPageState extends State<TenantContractPage>
             desc,
             style: const TextStyle(fontSize: 13, color: Colors.black87),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutStatusPage()));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Xem chi tiết', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ),
         ],
       ),
     );
@@ -849,17 +833,10 @@ class _TenantContractPageState extends State<TenantContractPage>
               ),
               const SizedBox(width: 8),
               Text(
-                isEarly ? 'Yêu cầu trả phòng (Trước hạn)' : 'Trả phòng & Thanh lý hợp đồng',
+                isEarly ? 'Yêu cầu trả phòng' : 'Trả phòng & Thanh lý hợp đồng',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            isEarly
-                ? 'Lưu ý: Hợp đồng của bạn còn hạn đến ${_formatDate(endDate)}. Trả phòng sớm sẽ bị MẤT TOÀN BỘ TIỀN CỌC.'
-                : 'Thực hiện thủ tục trả phòng và bàn giao lại phòng.',
-            style: TextStyle(fontSize: 12, color: isEarly ? Colors.red.shade700 : Colors.black54),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -947,11 +924,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
             ],
-            const SizedBox(height: 12),
-            const Text(
-              'Lưu ý: Sau khi xác nhận trả phòng, tài khoản của bạn sẽ ở trạng thái khóa.',
-              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
-            ),
+
           ],
         ),
         actions: [
@@ -1003,7 +976,7 @@ class _TenantContractPageState extends State<TenantContractPage>
               ],
             ),
             content: Text(
-              res.data['message']?.toString() ?? 'Trả phòng thành công. Tài khoản của bạn đã được khóa.',
+              res.data['message']?.toString() ?? 'Yêu cầu trả phòng đã được ghi nhận.',
               style: const TextStyle(fontSize: 14),
             ),
             actions: [
@@ -1020,8 +993,6 @@ class _TenantContractPageState extends State<TenantContractPage>
         );
 
         await _loadContract(bustCache: true);
-        if (!mounted) return;
-        // Có thể navigate sang trang chi tiết trạng thái checkout ở đây trong tương lai.
       } else {
         final err = res.data['error']?.toString() ?? 'Trả phòng không thành công';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: Colors.redAccent));

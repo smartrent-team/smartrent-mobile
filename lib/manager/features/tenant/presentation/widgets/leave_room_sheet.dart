@@ -47,6 +47,7 @@ class _LeaveRoomSheetState extends State<LeaveRoomSheet> {
   static const _reasons = [
     ('contract_expired', 'Hợp đồng hết hạn, không gia hạn'),
     ('tenant_request', 'Người thuê không muốn tiếp tục'),
+    ('abandon_room', 'Bỏ phòng (xác định mất cọc)'),
     ('other', 'Lý do khác'),
   ];
 
@@ -87,7 +88,7 @@ class _LeaveRoomSheetState extends State<LeaveRoomSheet> {
         title: const Text('Xác nhận trả phòng'),
         content: Text(
           'Bạn có chắc muốn xử lý trả phòng cho ${widget.tenantName}?\n\n'
-          'Phòng ${widget.roomLabel} sẽ được giải phóng và hợp đồng sẽ kết thúc.',
+          'Hợp đồng sẽ kết thúc và phòng sẽ được giải phóng nếu không còn cư dân nào khác ở lại.',
         ),
         actions: [
           TextButton(
