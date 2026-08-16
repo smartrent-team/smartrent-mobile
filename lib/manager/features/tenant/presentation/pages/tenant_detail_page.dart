@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/core/contract/presentation/contract_cancellation_section.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
@@ -281,6 +282,8 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                           if (result != null && mounted) {
                             _applyRoomChangeResult(result);
                             await _loadDetail(bustCache: true, silent: true);
+                            AppEventBus.instance.fire(AppEvent.tenantChanged);
+                            AppEventBus.instance.fire(AppEvent.roomChanged);
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -350,34 +353,37 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                               )
                             // [3] Bình thường → nút TRẢ PHÒNG thông thường
                             : OutlinedButton.icon(
-                                        onPressed: () async {
-                                          final left = await LeaveRoomSheet.show(
-                                            context,
-                                            tenantId: widget.tenantId,
-                                            tenantName: detail.name,
-                                            roomLabel: detail.roomLabel,
-                                          );
-                                          if (left == true && mounted) {
-                                            _loadDetail();
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Đã xử lý trả phòng thành công!'),
-                                                backgroundColor: ManagerColors.primaryGreen,
-                                              ),
-                                            );
-                                          }
-                                        },
-                                        icon: const Icon(Icons.logout, size: 20),
-                                        label: const Text('Trả phòng'),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.red.shade700,
-                                          side: BorderSide(color: Colors.red.shade400),
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(25),
-                                          ),
-                                        ),
+                                onPressed: () async {
+                                  final left = await LeaveRoomSheet.show(
+                                    context,
+                                    tenantId: widget.tenantId,
+                                    tenantName: detail.name,
+                                    roomLabel: detail.roomLabel,
+                                  );
+                                  if (left == true && mounted) {
+                                    _loadDetail();
+                                    AppEventBus.instance.fire(AppEvent.tenantChanged);
+                                    AppEventBus.instance.fire(AppEvent.roomChanged);
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Đã xử lý trả phòng thành công!'),
+                                        backgroundColor: ManagerColors.primaryGreen,
                                       ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.logout, size: 20),
+                                label: const Text('Trả phòng'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red.shade700,
+                                  side: BorderSide(color: Colors.red.shade400),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                              ),
                   ),
                 ],
               ),
@@ -427,6 +433,8 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
       final response = await _tenantService.confirmCheckout(widget.tenantId);
       if (!mounted) return;
       if (response.statusCode == 200 && response.data['success'] == true) {
+        AppEventBus.instance.fire(AppEvent.tenantChanged);
+        AppEventBus.instance.fire(AppEvent.roomChanged);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã xác nhận yêu cầu trả phòng thành công!'),

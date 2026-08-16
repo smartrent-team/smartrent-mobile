@@ -5,35 +5,17 @@ class TicketService {
   final ApiClient _apiClient = ApiClient();
 
   Future<Response> getTickets() async {
-    try {
-      return await _apiClient.dio.get('/api/tickets');
-    } on DioException catch (e) {
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
+    return await _apiClient.dio.get('/api/tickets');
   }
 
   Future<Response> getTicketById(int id) async {
-    try {
-      return await _apiClient.dio.get('/api/tickets/$id');
-    } on DioException catch (e) {
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
+    return await _apiClient.dio.get('/api/tickets/$id');
   }
 
   Future<Response> updateTicketStatus(int id, String status, {int? repairCost}) async {
-    try {
-      return await _apiClient.dio.patch('/api/tickets/$id', data: {
-        'status': status,
-        if (repairCost != null) 'repairCost': repairCost,
-      });
-    } on DioException catch (e) {
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
+    return await _apiClient.dio.patch('/api/tickets/$id', data: {
+      'status': status,
+      if (repairCost != null) 'repairCost': repairCost,
+    });
   }
 }
