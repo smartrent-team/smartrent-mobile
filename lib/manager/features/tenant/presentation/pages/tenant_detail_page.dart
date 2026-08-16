@@ -188,6 +188,15 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
   }
 
   Widget _buildBottomActions(TenantDetail detail) {
+    // Lấy trạng thái yêu cầu trả phòng và số ngày còn lại
+    final checkoutStatus = detail.checkoutRequestStatus;
+    final remaining = detail.remainingContractDays;
+
+    // Tình huống: Cư dân đã gửi yêu cầu, Manager chưa xác nhận
+    final hasPendingRequest = checkoutStatus == 'requested';
+    // Tình huống: Đã xác nhận, chờ hệ thống xử lý khi hợp đồng hết hạn
+    final isConfirmed = checkoutStatus == 'confirmed';
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       decoration: BoxDecoration(
@@ -205,78 +214,176 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ------ Banner thông báo khi có yêu cầu trả phòng ------
+            if (hasPendingRequest || isConfirmed) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: hasPendingRequest
+                      ? Colors.orange.shade50
+                      : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasPendingRequest
+                        ? Colors.orange.shade200
+                        : Colors.blue.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      hasPendingRequest
+                          ? Icons.notifications_active_outlined
+                          : Icons.check_circle_outline,
+                      size: 18,
+                      color: hasPendingRequest
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        hasPendingRequest
+                            ? 'Cư dân đã gửi yêu cầu trả phòng. Vui lòng xác nhận.'
+                            : remaining != null && remaining > 0
+                                ? 'Yêu cầu đã xác nhận. Còn $remaining ngày đến hết HĐ.'
+                                : 'Yêu cầu đã xác nhận. Hệ thống sẽ xử lý trả phòng trong cron.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: hasPendingRequest
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             if (detail.isActive) ...[
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final result = await ChangeRoomSheet.show(
-                          context,
-                          tenantId: widget.tenantId,
-                          tenantName: detail.name,
-                          currentRoomId: detail.roomId,
-                          currentRoomLabel: detail.roomLabel,
-                        );
-                        if (result != null && mounted) {
-                          _applyRoomChangeResult(result);
-                          await _loadDetail(bustCache: true, silent: true);
-                          AppEventBus.instance.fire(AppEvent.tenantChanged);
-                          AppEventBus.instance.fire(AppEvent.roomChanged);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Đã đổi phòng thành công!'),
-                              backgroundColor: ManagerColors.primaryGreen,
-                            ),
+                  // Nút Đổi Phòng — ẩn nếu đang có yêu cầu trả phòng
+                  if (!hasPendingRequest && !isConfirmed) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final result = await ChangeRoomSheet.show(
+                            context,
+                            tenantId: widget.tenantId,
+                            tenantName: detail.name,
+                            currentRoomId: detail.roomId,
+                            currentRoomLabel: detail.roomLabel,
                           );
-                        }
-                      },
-                      icon: const Icon(Icons.swap_horiz, size: 20),
-                      label: const Text('Đổi phòng'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ManagerColors.primaryGreen,
-                        side: const BorderSide(color: ManagerColors.primaryGreen),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
+                          if (result != null && mounted) {
+                            _applyRoomChangeResult(result);
+                            await _loadDetail(bustCache: true, silent: true);
+                            AppEventBus.instance.fire(AppEvent.tenantChanged);
+                            AppEventBus.instance.fire(AppEvent.roomChanged);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Đã đổi phòng thành công!'),
+                                backgroundColor: ManagerColors.primaryGreen,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.swap_horiz, size: 20),
+                        label: const Text('Đổi phòng'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ManagerColors.primaryGreen,
+                          side: const BorderSide(color: ManagerColors.primaryGreen),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
+
+                  // --- Nút hành động chính phía phải ---
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final left = await LeaveRoomSheet.show(
-                          context,
-                          tenantId: widget.tenantId,
-                          tenantName: detail.name,
-                          roomLabel: detail.roomLabel,
-                        );
-                        if (left == true && mounted) {
-                          _loadDetail();
-                          AppEventBus.instance.fire(AppEvent.tenantChanged);
-                          AppEventBus.instance.fire(AppEvent.roomChanged);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Đã xử lý trả phòng thành công!'),
-                              backgroundColor: ManagerColors.primaryGreen,
+                    child: hasPendingRequest
+                        // [1] Cư dân gửi yêu cầu → hiện nút XÁC NHẬN
+                        ? ElevatedButton.icon(
+                            onPressed: _confirmingCheckout ? null : () => _confirmCheckout(detail),
+                            icon: _confirmingCheckout
+                                ? const SizedBox(
+                                    width: 18, height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                            label: Text(
+                              _confirmingCheckout ? 'Xử lý...' : 'Xác nhận yêu cầu trả phòng',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.logout, size: 20),
-                      label: const Text('Trả phòng'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        side: BorderSide(color: Colors.red.shade400),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                      ),
-                    ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                          )
+                        : isConfirmed
+                            ? OutlinedButton.icon(
+                                onPressed: null,
+                                icon: const Icon(Icons.hourglass_top, size: 20),
+                                label: Text(
+                                  remaining != null && remaining > 0
+                                      ? 'Chờ hết hạn ($remaining ngày)'
+                                      : 'Chờ cron xử lý trả phòng',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey,
+                                  side: const BorderSide(color: Colors.grey),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                              )
+                            // [3] Bình thường → nút TRẢ PHÒNG thông thường
+                            : OutlinedButton.icon(
+                                onPressed: () async {
+                                  final left = await LeaveRoomSheet.show(
+                                    context,
+                                    tenantId: widget.tenantId,
+                                    tenantName: detail.name,
+                                    roomLabel: detail.roomLabel,
+                                  );
+                                  if (left == true && mounted) {
+                                    _loadDetail();
+                                    AppEventBus.instance.fire(AppEvent.tenantChanged);
+                                    AppEventBus.instance.fire(AppEvent.roomChanged);
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Đã xử lý trả phòng thành công!'),
+                                        backgroundColor: ManagerColors.primaryGreen,
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.logout, size: 20),
+                                label: const Text('Trả phòng'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red.shade700,
+                                  side: BorderSide(color: Colors.red.shade400),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                              ),
                   ),
                 ],
               ),
@@ -316,6 +423,39 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
         ),
       ),
     );
+  }
+
+  bool _confirmingCheckout = false;
+
+  Future<void> _confirmCheckout(TenantDetail detail) async {
+    setState(() => _confirmingCheckout = true);
+    try {
+      final response = await _tenantService.confirmCheckout(widget.tenantId);
+      if (!mounted) return;
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        AppEventBus.instance.fire(AppEvent.tenantChanged);
+        AppEventBus.instance.fire(AppEvent.roomChanged);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã xác nhận yêu cầu trả phòng thành công!'),
+            backgroundColor: ManagerColors.primaryGreen,
+          ),
+        );
+        await _loadDetail(bustCache: true, silent: true);
+      } else {
+        final errMsg = response.data['error']?.toString() ?? 'Không thể xác nhận.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errMsg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi kết nối. Vui lòng thử lại.'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _confirmingCheckout = false);
+    }
   }
 
   Widget _buildError() {
@@ -648,11 +788,11 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                 ),
                 _buildDetailRow(
                   icon: Icons.text_snippet_outlined,
-                  label: 'KÝ HỢP ĐỒNG GIẤY',
+                  label: 'HỢP ĐỒNG HIỆN HÀNH',
                   valueWidget: Text(
-                    detail.checkInDate,
+                    'Hợp đồng mới nhất đang hiệu lực',
                     style: const TextStyle(
-                      color: ManagerColors.textCharcoal,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),

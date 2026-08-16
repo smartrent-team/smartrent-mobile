@@ -185,4 +185,27 @@ class TenantService {
       rethrow;
     }
   }
+
+  /// Cập nhật trạng thái cư dân nhanh từ card danh sách.
+  /// [action]: 'block' (khóa tài khoản) | 'end_contract' (hết hợp đồng)
+  Future<Response> updateTenantStatus(int tenantId, String action) async {
+    try {
+      return await _apiClient.dio.patch(
+        '/api/tenants/$tenantId/status',
+        data: {'action': action},
+      );
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Xác nhận yêu cầu trả phòng từ cư dân (Manager thực hiện)
+  Future<Response> confirmCheckout(int tenantId) async {
+    try {
+      return await _apiClient.dio.post('/api/tenants/$tenantId/confirm-checkout');
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
 }
