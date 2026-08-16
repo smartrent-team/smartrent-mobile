@@ -34,6 +34,12 @@ enum AppEvent {
   /// A contract was created or updated.
   contractChanged,
 
+  /// A tenant was created, updated, moved room, or checked out.
+  tenantChanged,
+
+  /// A room status or tenant assignment was updated.
+  roomChanged,
+
   /// Generic "something changed" — pages can choose to reload everything.
   dataChanged,
 }
