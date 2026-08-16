@@ -780,11 +780,11 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                 ),
                 _buildDetailRow(
                   icon: Icons.text_snippet_outlined,
-                  label: 'KÝ HỢP ĐỒNG GIẤY',
+                  label: 'HỢP ĐỒNG HIỆN HÀNH',
                   valueWidget: Text(
-                    detail.checkInDate,
+                    'Hợp đồng mới nhất đang hiệu lực',
                     style: const TextStyle(
-                      color: ManagerColors.textCharcoal,
+                      color: ManagerColors.primaryGreen,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
