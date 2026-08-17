@@ -118,6 +118,10 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
         return 'Trống';
       case 'maintenance':
         return 'Bảo trì';
+      case 'pending_checkout':
+        return 'Chờ trả phòng';
+      case 'cleaning':
+        return 'Đang dọn dẹp';
       default:
         return status;
     }
@@ -131,6 +135,10 @@ class _TenantRoomDetailPageState extends State<TenantRoomDetailPage> {
         return Colors.blue;
       case 'maintenance':
         return Colors.grey;
+      case 'pending_checkout':
+        return TenantColors.warningOrange;
+      case 'cleaning':
+        return Colors.teal;
       default:
         return Colors.grey;
     }

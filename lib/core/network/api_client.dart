@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:smartrent_mobile/core/constants/app_constants.dart';
+import 'package:smartrent_mobile/core/services/deep_link_service.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
+import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -43,6 +46,23 @@ class ApiClient {
             await _tokenService.clearToken();
           }
         }
+
+        // Tự động đẩy về màn hình đăng nhập nếu tài khoản bị khóa (403)
+        if (e.response?.statusCode == 403) {
+          final data = e.response?.data;
+          final errorMsg = data is Map ? (data['error']?.toString() ?? '') : '';
+          if (errorMsg.contains('khóa') || errorMsg.contains('chặn') || errorMsg.contains('locked') || errorMsg.contains('blocked')) {
+            await _tokenService.clearToken();
+            final context = navigatorKey.currentContext;
+            if (context != null) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            }
+          }
+        }
+
         return handler.next(e);
       },
     ));

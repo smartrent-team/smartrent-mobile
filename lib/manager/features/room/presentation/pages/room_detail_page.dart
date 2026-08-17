@@ -279,6 +279,10 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
         return 'Trống';
       case 'maintenance':
         return 'Bảo trì';
+      case 'pending_checkout':
+        return 'Chờ trả phòng';
+      case 'cleaning':
+        return 'Đang dọn dẹp';
       default:
         return status;
     }
@@ -292,6 +296,10 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
         return Colors.blue;
       case 'maintenance':
         return Colors.grey;
+      case 'pending_checkout':
+        return Colors.orange;
+      case 'cleaning':
+        return Colors.teal;
       default:
         return Colors.grey;
     }
@@ -691,6 +699,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
 
             final String contractStatus = t['contractStatus'] ?? 'none';
             final bool isPendingCheckout = contractStatus == 'pending_checkout' || contractStatus == 'pending_liquidation';
+            final String userStatus = t['userStatus'] ?? 'active';
+            final bool isLocked = userStatus == 'locked' || userStatus == 'blocked';
 
             return Column(
               children: [
@@ -725,7 +735,10 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                       _buildTenantInfoRow('Số điện thoại', phone, ManagerColors.primaryGreen),
                       const SizedBox(height: 8),
                       _buildTenantInfoRow('Ngày vào ở', checkInDate, Colors.black87),
-                      if (isPendingCheckout) ...[
+                      if (isLocked) ...[
+                        const SizedBox(height: 10),
+                        _buildTenantInfoRow('Trạng thái', 'Tài khoản bị khóa', Colors.red.shade700),
+                      ] else if (isPendingCheckout) ...[
                         const SizedBox(height: 10),
                         _buildTenantInfoRow('Trạng thái', 'Đang xử lý trả phòng', Colors.orange.shade700),
                       ],

@@ -19,6 +19,10 @@ class TenantDetail {
   final String? identityNumber;
   final List<String> contractImages;
   final String? checkoutRequestStatus;
+  final bool checkoutPaymentBlocked;
+  final int checkoutUnpaidInvoiceCount;
+  final int checkoutUnpaidInvoiceTotal;
+  final String? checkoutLatestUnpaidInvoiceCode;
   final int? remainingContractDays;
   final String? contractEndDate;
 
@@ -43,6 +47,10 @@ class TenantDetail {
     this.identityNumber,
     required this.contractImages,
     this.checkoutRequestStatus,
+    this.checkoutPaymentBlocked = false,
+    this.checkoutUnpaidInvoiceCount = 0,
+    this.checkoutUnpaidInvoiceTotal = 0,
+    this.checkoutLatestUnpaidInvoiceCode,
     this.remainingContractDays,
     this.contractEndDate,
   });
@@ -76,6 +84,10 @@ class TenantDetail {
           ? images.map((e) => e.toString()).where((u) => u.isNotEmpty).toList()
           : const [],
       checkoutRequestStatus: json['checkoutRequestStatus']?.toString(),
+      checkoutPaymentBlocked: json['checkoutPaymentBlocked'] == true,
+      checkoutUnpaidInvoiceCount: (json['checkoutUnpaidInvoiceCount'] as num?)?.toInt() ?? 0,
+      checkoutUnpaidInvoiceTotal: (json['checkoutUnpaidInvoiceTotal'] as num?)?.toInt() ?? 0,
+      checkoutLatestUnpaidInvoiceCode: json['checkoutLatestUnpaidInvoiceCode']?.toString(),
       remainingContractDays: (json['remainingContractDays'] as num?)?.toInt(),
       contractEndDate: json['contractEndDate']?.toString(),
     );
@@ -111,6 +123,10 @@ class TenantDetail {
       identityNumber: identityNumber,
       contractImages: contractImages ?? this.contractImages,
       checkoutRequestStatus: checkoutRequestStatus,
+      checkoutPaymentBlocked: checkoutPaymentBlocked,
+      checkoutUnpaidInvoiceCount: checkoutUnpaidInvoiceCount,
+      checkoutUnpaidInvoiceTotal: checkoutUnpaidInvoiceTotal,
+      checkoutLatestUnpaidInvoiceCode: checkoutLatestUnpaidInvoiceCode,
       remainingContractDays: remainingContractDays,
       contractEndDate: contractEndDate,
     );

@@ -102,6 +102,19 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
     return formatted.isNotEmpty ? formatted : phone;
   }
 
+  String _formatMoney(int amount) {
+    final raw = amount.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < raw.length; i++) {
+      final remaining = raw.length - i;
+      buffer.write(raw[i]);
+      if (remaining > 1 && remaining % 3 == 1) {
+        buffer.write('.');
+      }
+    }
+    return '${buffer}đ';
+  }
+
   void _applyRoomChangeResult(Map<String, dynamic> result) {
     if (_detail == null) return;
 
@@ -194,6 +207,8 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
 
     // Tình huống: Cư dân đã gửi yêu cầu, Manager chưa xác nhận
     final hasPendingRequest = checkoutStatus == 'requested';
+    final isCheckoutPaymentBlocked =
+        hasPendingRequest && detail.checkoutPaymentBlocked;
     // Tình huống: Đã xác nhận, chờ hệ thống xử lý khi hợp đồng hết hạn
     final isConfirmed = checkoutStatus == 'confirmed';
 
@@ -221,12 +236,16 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: hasPendingRequest
+                  color: isCheckoutPaymentBlocked
+                      ? Colors.red.shade50
+                      : hasPendingRequest
                       ? Colors.orange.shade50
                       : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: hasPendingRequest
+                    color: isCheckoutPaymentBlocked
+                        ? Colors.red.shade200
+                        : hasPendingRequest
                         ? Colors.orange.shade200
                         : Colors.blue.shade200,
                   ),
@@ -235,10 +254,14 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                   children: [
                     Icon(
                       hasPendingRequest
-                          ? Icons.notifications_active_outlined
+                          ? isCheckoutPaymentBlocked
+                              ? Icons.receipt_long_outlined
+                              : Icons.notifications_active_outlined
                           : Icons.check_circle_outline,
                       size: 18,
-                      color: hasPendingRequest
+                      color: isCheckoutPaymentBlocked
+                          ? Colors.red.shade700
+                          : hasPendingRequest
                           ? Colors.orange.shade700
                           : Colors.blue.shade700,
                     ),
@@ -246,14 +269,18 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                     Expanded(
                       child: Text(
                         hasPendingRequest
-                            ? 'Cư dân đã gửi yêu cầu trả phòng. Vui lòng xác nhận.'
+                            ? isCheckoutPaymentBlocked
+                                ? 'Phòng chỉ còn cư dân này và còn ${detail.checkoutUnpaidInvoiceCount} hóa đơn chưa thanh toán (${_formatMoney(detail.checkoutUnpaidInvoiceTotal)}). Cần thanh toán trước khi xác nhận.'
+                                : 'Cư dân đã gửi yêu cầu trả phòng. Vui lòng xác nhận.'
                             : remaining != null && remaining > 0
                                 ? 'Yêu cầu đã xác nhận. Còn $remaining ngày đến hết HĐ.'
-                                : 'Yêu cầu đã xác nhận. Hệ thống sẽ xử lý trả phòng trong cron.',
+                                : 'Yêu cầu đã xác nhận. Hệ thống sẽ tự động xử lý thủ tục trả phòng.',
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: hasPendingRequest
+                          color: isCheckoutPaymentBlocked
+                              ? Colors.red.shade800
+                              : hasPendingRequest
                               ? Colors.orange.shade800
                               : Colors.blue.shade800,
                         ),
@@ -312,26 +339,49 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                   Expanded(
                     child: hasPendingRequest
                         // [1] Cư dân gửi yêu cầu → hiện nút XÁC NHẬN
-                        ? ElevatedButton.icon(
-                            onPressed: _confirmingCheckout ? null : () => _confirmCheckout(detail),
-                            icon: _confirmingCheckout
-                                ? const SizedBox(
-                                    width: 18, height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-                            label: Text(
-                              _confirmingCheckout ? 'Xử lý...' : 'Xác nhận yêu cầu trả phòng',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade700,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                          )
+                        ? isCheckoutPaymentBlocked
+                            ? ElevatedButton.icon(
+                                onPressed: _sendingPaymentReminder
+                                    ? null
+                                    : _sendCheckoutPaymentReminder,
+                                icon: _sendingPaymentReminder
+                                    ? const SizedBox(
+                                        width: 18, height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Icon(Icons.notifications_active_outlined, color: Colors.white, size: 20),
+                                label: Text(
+                                  _sendingPaymentReminder ? 'Đang gửi...' : 'Yêu cầu thanh toán hóa đơn',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: _confirmingCheckout ? null : () => _confirmCheckout(detail),
+                                icon: _confirmingCheckout
+                                    ? const SizedBox(
+                                        width: 18, height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                                label: Text(
+                                  _confirmingCheckout ? 'Xử lý...' : 'Xác nhận yêu cầu trả phòng',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange.shade700,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                              )
                         : isConfirmed
                             ? OutlinedButton.icon(
                                 onPressed: null,
@@ -426,6 +476,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
   }
 
   bool _confirmingCheckout = false;
+  bool _sendingPaymentReminder = false;
 
   Future<void> _confirmCheckout(TenantDetail detail) async {
     setState(() => _confirmingCheckout = true);
@@ -455,6 +506,95 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
       );
     } finally {
       if (mounted) setState(() => _confirmingCheckout = false);
+    }
+  }
+
+  Future<void> _sendCheckoutPaymentReminder() async {
+    setState(() => _sendingPaymentReminder = true);
+    try {
+      final response = await _tenantService.sendCheckoutPaymentReminder(widget.tenantId);
+      if (!mounted) return;
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final stillBlocked = response.data['paymentBlocked'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response.data['message']?.toString() ??
+                  (stillBlocked
+                      ? 'Đã gửi thông báo yêu cầu thanh toán hóa đơn.'
+                      : 'Hóa đơn đã được thanh toán. Có thể xác nhận trả phòng.'),
+            ),
+            backgroundColor: stillBlocked ? ManagerColors.primaryGreen : Colors.blue.shade700,
+          ),
+        );
+        await _loadDetail(bustCache: true, silent: true);
+      } else {
+        final errMsg = response.data['error']?.toString() ?? 'Không thể gửi thông báo.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errMsg), backgroundColor: Colors.red),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi kết nối. Vui lòng thử lại.'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _sendingPaymentReminder = false);
+    }
+  }
+
+  Future<void> _onBlockTenant(TenantDetail detail) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Khóa tài khoản', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc muốn khóa tài khoản của ${detail.name}?\nCư dân sẽ không thể đăng nhập vào ứng dụng.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Huỷ', style: TextStyle(color: ManagerColors.textGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Khóa',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final response = await _tenantService.updateTenantStatus(widget.tenantId, 'block');
+      if (response.statusCode == 200 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã khóa tài khoản ${detail.name}'),
+            backgroundColor: ManagerColors.primaryGreen,
+          ),
+        );
+        _loadDetail(bustCache: true);
+        AppEventBus.instance.fire(AppEvent.tenantChanged);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thao tác thất bại. Vui lòng thử lại.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
@@ -522,7 +662,42 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 44),
+                    detail.statusLabel == 'Khóa'
+                        ? const SizedBox(width: 44)
+                        : Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert, color: Colors.white, size: 22),
+                              onSelected: (val) {
+                                if (val == 'block') {
+                                  _onBlockTenant(detail);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'block',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.lock_outline, color: Colors.red, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Khóa tài khoản',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   ],
                 ),
                 const SizedBox(height: 28),

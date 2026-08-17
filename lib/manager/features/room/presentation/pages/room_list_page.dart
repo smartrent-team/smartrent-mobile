@@ -93,6 +93,10 @@ class _RoomListPageState extends State<RoomListPage> {
         return 'Trống';
       case 'maintenance':
         return 'Bảo trì';
+      case 'pending_checkout':
+        return 'Chờ trả phòng';
+      case 'cleaning':
+        return 'Đang dọn dẹp';
       default:
         return status;
     }
@@ -106,6 +110,10 @@ class _RoomListPageState extends State<RoomListPage> {
         return Colors.blue;
       case 'maintenance':
         return Colors.grey;
+      case 'pending_checkout':
+        return Colors.orange;
+      case 'cleaning':
+        return Colors.teal;
       default:
         return Colors.grey;
     }

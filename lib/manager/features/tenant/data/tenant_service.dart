@@ -208,4 +208,12 @@ class TenantService {
     }
   }
 
+  Future<Response> sendCheckoutPaymentReminder(int tenantId) async {
+    try {
+      return await _apiClient.dio.post('/api/tenants/$tenantId/checkout-payment-reminder');
+    } on DioException catch (e) {
+      rethrow;
+    }
+  }
+
 }
