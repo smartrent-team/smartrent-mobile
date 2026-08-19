@@ -233,7 +233,9 @@ class _TenantContractPageState extends State<TenantContractPage>
                       const SizedBox(height: 16),
                     ],
                     _buildCheckoutStatusBanner(),
-                    if (_contract!.isActive) ...[
+                    if (_contract!.isActive ||
+                        _contract!.status == 'pending_checkout' ||
+                        _contract!.status == 'inspection') ...[
                       const SizedBox(height: 16),
                       _buildCheckoutActionButton(),
                     ],
@@ -755,7 +757,11 @@ class _TenantContractPageState extends State<TenantContractPage>
 
   // ── CHECKOUT STATUS BANNER ─────────────────────────────────────────────
   Widget _buildCheckoutStatusBanner() {
-    if (_contract == null || _contract!.isActive || _contract!.isCancelled) {
+    if (_contract == null ||
+        _contract!.isActive ||
+        _contract!.isCancelled ||
+        _contract!.isPendingCheckout ||
+        _contract!.isInspection) {
       return const SizedBox.shrink();
     }
 
@@ -823,6 +829,8 @@ class _TenantContractPageState extends State<TenantContractPage>
     final endDate = _contract?.endDate;
     final isCheckoutRequest = _isContractWithinValidity(endDate);
     final endDateLabel = _contractEndDateLabel;
+    final bool alreadyRequested = _contract?.status == 'pending_checkout' ||
+        _contract?.status == 'inspection';
 
     return Container(
       width: double.infinity,
@@ -831,7 +839,7 @@ class _TenantContractPageState extends State<TenantContractPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isCheckoutRequest ? Colors.orange.shade200 : Colors.orange.shade200,
+          color: alreadyRequested ? Colors.green.shade200 : Colors.orange.shade200,
         ),
         boxShadow: const [
           BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4))
@@ -843,22 +851,34 @@ class _TenantContractPageState extends State<TenantContractPage>
           Row(
             children: [
               Icon(
-                isCheckoutRequest ? Icons.assignment_turned_in_outlined : Icons.logout_rounded,
-                color: isCheckoutRequest ? Colors.orangeAccent : Colors.orangeAccent,
+                alreadyRequested
+                    ? Icons.check_circle_outline_rounded
+                    : (isCheckoutRequest
+                        ? Icons.assignment_turned_in_outlined
+                        : Icons.logout_rounded),
+                color: alreadyRequested ? Colors.green : Colors.orangeAccent,
                 size: 22,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isCheckoutRequest
-                      ? 'Yêu cầu trả phòng'
-                      : 'Trả phòng & Thanh lý hợp đồng',
+                  alreadyRequested
+                      ? 'Đã gửi yêu cầu trả phòng'
+                      : (isCheckoutRequest
+                          ? 'Yêu cầu trả phòng'
+                          : 'Trả phòng & Thanh lý hợp đồng'),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
             ],
           ),
-          if (isCheckoutRequest) ...[
+          if (alreadyRequested) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Yêu cầu trả phòng của bạn đã được ghi nhận. Chủ nhà/Quản lý sẽ tiến hành xác nhận và quyết toán hợp đồng.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4),
+            ),
+          ] else if (isCheckoutRequest) ...[
             const SizedBox(height: 8),
             Text(
               'Bạn vẫn tiếp tục ở đến ngày $endDateLabel. Hệ thống sẽ xử lý trả phòng khi hợp đồng hết hạn.',
@@ -869,16 +889,20 @@ class _TenantContractPageState extends State<TenantContractPage>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _showCheckoutConfirmDialog(context),
-              icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white, size: 18),
+              onPressed: alreadyRequested ? null : () => _showCheckoutConfirmDialog(context),
+              icon: Icon(alreadyRequested ? Icons.check_rounded : Icons.exit_to_app_rounded, color: Colors.white, size: 18),
               label: Text(
-                isCheckoutRequest ? 'Gửi yêu cầu trả phòng' : 'Trả phòng',
+                alreadyRequested
+                    ? 'Đã gửi yêu cầu'
+                    : (isCheckoutRequest ? 'Gửi yêu cầu trả phòng' : 'Trả phòng'),
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCheckoutRequest
-                    ? TenantColors.primaryGreenAlt
-                    : Colors.orangeAccent,
+                backgroundColor: alreadyRequested
+                    ? Colors.grey.shade400
+                    : (isCheckoutRequest
+                        ? TenantColors.primaryGreenAlt
+                        : Colors.orangeAccent),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),

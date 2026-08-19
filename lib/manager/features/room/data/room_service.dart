@@ -60,34 +60,6 @@ class RoomService {
     }
   }
 
-  Future<bool> sendExpiringContractNotification({
-    required String targetUserId,
-    required String roomCode,
-    required int remainingDays,
-    String? contractId,
-  }) async {
-    try {
-      final type = remainingDays <= 7 ? 'contract_expiring_7d' : 'contract_expiring_30d';
-      final data = <String, dynamic>{
-        'userId': targetUserId,
-        'title': remainingDays <= 7
-            ? 'Hợp đồng sắp hết hạn — còn $remainingDays ngày'
-            : 'Hợp đồng sắp hết hạn',
-        'content':
-            'Hợp đồng tại phòng $roomCode của bạn sẽ hết hạn sau $remainingDays ngày. Vui lòng liên hệ quản lý để tiến hành gia hạn hợp đồng.',
-        'type': type,
-      };
-      // Chỉ thêm relatedId nếu có giá trị — tránh gửi null làm Zod reject
-      if (contractId != null) {
-        data['relatedId'] = 'contract:$contractId';
-      }
-      final response = await _apiClient.dio.post('/api/notifications', data: data);
-      return response.statusCode == 200 && response.data['success'] == true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   Future<Response> markInvoicePaid(int invoiceId, {String note = 'Tiền mặt'}) async {
     return await _apiClient.dio.patch(
       '/api/invoices/$invoiceId/mark-paid',

@@ -17,15 +17,18 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
   final ManagerNotificationService _service = ManagerNotificationService.instance;
   final RoomService _roomService = RoomService();
   List<TenantNotification> _notifications = const [];
+  // Danh sách hợp đồng sắp hết hạn lấy trực tiếp từ API (≤ 7 ngày, ≥ 0 ngày)
+  List<Map<String, dynamic>> _expiringContracts = const [];
   bool _isLoading = true;
+  bool _isLoadingExpiring = true;
   late TabController _tabController;
-  final Set<String> _sendingNotificationIds = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadNotifications();
+    _loadExpiringContracts();
   }
 
   @override
@@ -46,73 +49,23 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
     });
   }
 
-  Future<void> _sendNotificationToTenant(TenantNotification item) async {
-    final daysLeft = _parseDaysLeft(item.body) ?? 30;
-    final roomMatch = RegExp(r'Phòng\s+([^\s:]+)').firstMatch(item.body);
-    final roomCode = roomMatch != null ? roomMatch.group(1)! : 'Phòng';
-
-    setState(() => _sendingNotificationIds.add(item.id));
-
-    // Lấy userId: ưu tiên từ item, fallback tìm qua /api/contracts/expiring
-    String? targetUserId = item.userId;
-
-    if (targetUserId == null || targetUserId.isEmpty) {
-      try {
-        final directExpiring = await _roomService.getExpiringContracts(maxDays: 30);
-        final match = directExpiring.firstWhere(
-          (e) =>
-              (e['roomCode']?.toString() == roomCode) ||
-              (e['roomName']?.toString() == roomCode),
-          orElse: () => {},
-        );
-        targetUserId = match['userId']?.toString();
-      } catch (_) {}
-    }
-
-    if (targetUserId == null || targetUserId.isEmpty) {
-      if (!mounted) return;
-      setState(() => _sendingNotificationIds.remove(item.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không tìm thấy tài khoản cư dân để gửi thông báo!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Lấy contractId từ relatedId (format "contract:ID") hoặc từ item.id (format "direct_ID")
-    String? contractId;
-    if (item.relatedId != null && item.relatedId!.startsWith('contract:')) {
-      contractId = item.relatedId!.replaceFirst('contract:', '');
-    } else if (item.id.startsWith('direct_')) {
-      contractId = item.id.replaceFirst('direct_', '');
-    }
-
-    final success = await _roomService.sendExpiringContractNotification(
-      targetUserId: targetUserId,
-      roomCode: roomCode,
-      remainingDays: daysLeft,
-      contractId: contractId,
-    );
-
-    if (!mounted) return;
-    setState(() => _sendingNotificationIds.remove(item.id));
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✓ Đã gửi thông báo gia hạn tới cư dân phòng $roomCode thành công!'),
-          backgroundColor: ManagerColors.primaryGreen,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gửi thông báo thất bại. Vui lòng thử lại sau.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+  /// Lấy trực tiếp từ API hợp đồng sắp hết hạn ≤ 7 ngày, ẩn card âm ngày
+  Future<void> _loadExpiringContracts() async {
+    if (mounted) setState(() => _isLoadingExpiring = true);
+    try {
+      final raw = await _roomService.getExpiringContracts(maxDays: 7);
+      // Chỉ hiển thị card có remainingDays >= 0
+      final filtered = raw
+          .where((e) => (e['remainingDays'] as num? ?? 0) >= 0)
+          .toList();
+      if (mounted) {
+        setState(() {
+          _expiringContracts = filtered;
+          _isLoadingExpiring = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingExpiring = false);
     }
   }
 
@@ -134,70 +87,24 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
     });
   }
 
-  /// Lọc thông báo hợp đồng sắp hết hạn (30d + 7d)
-  List<TenantNotification> get _expiringNotifications => _notifications
-      .where((n) =>
-          n.type == 'contract_expiring_30d' || n.type == 'contract_expiring_7d')
-      .toList();
-
-  /// Lọc thông báo thông thường (không phải sắp hết hạn)
-  List<TenantNotification> get _generalNotifications => _notifications
-      .where((n) =>
-          n.type != 'contract_expiring_30d' && n.type != 'contract_expiring_7d')
-      .toList();
-
-  /// Tính số ngày còn lại từ relatedId hoặc parse từ body
-  /// Ưu tiên tính real-time để đồng bộ với màn hình hợp đồng
-  int? _parseDaysLeft(String body) {
-    // Thử parse số ngày từ body — chỉ dùng làm fallback
-    final regExp = RegExp(r'còn\s+(\d+)\s*ngày', caseSensitive: false);
-    final match = regExp.firstMatch(body);
-    if (match != null) {
-      return int.tryParse(match.group(1) ?? '');
-    }
-    // Fallback: pattern khác
-    final regExp2 = RegExp(r'(\d+)\s*ngày');
-    final match2 = regExp2.firstMatch(body);
-    if (match2 != null) {
-      return int.tryParse(match2.group(1) ?? '');
-    }
-    return null;
-  }
-
-  /// Tính số ngày còn lại real-time từ endDate string (format yyyy-MM-dd)
-  int? _computeDaysLeft(String? endDateStr) {
-    if (endDateStr == null || endDateStr.isEmpty) return null;
-    try {
-      final end = DateTime.parse(endDateStr);
-      final today = DateTime.now();
-      final endMidnight = DateTime(end.year, end.month, end.day);
-      final todayMidnight = DateTime(today.year, today.month, today.day);
-      return endMidnight.difference(todayMidnight).inDays;
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Lọc thông báo thông thường (bỏ qua loại expiring cũ nếu còn sót)
+  List<TenantNotification> get _generalNotifications =>
+      _notifications
+          .where((n) =>
+              n.type != 'contract_expiring_30d' && n.type != 'contract_expiring_7d')
+          .toList();
 
   /// Màu theo số ngày còn lại
-  Color _daysColor(int? days) {
-    if (days == null) return Colors.orange;
-    if (days <= 7) return const Color(0xFFD32F2F);
-    if (days <= 14) return const Color(0xFFE64A19);
+  Color _daysColor(int days) {
+    if (days <= 1) return const Color(0xFFD32F2F);
+    if (days <= 3) return const Color(0xFFE64A19);
     return const Color(0xFFF57C00);
-  }
-
-  /// Label urgency
-  String _urgencyLabel(String type, int? days) {
-    if (type == 'contract_expiring_7d' || (days != null && days <= 7)) {
-      return 'Rất gấp';
-    }
-    if (days != null && days <= 14) return 'Gấp';
-    return 'Sắp hết';
   }
 
   @override
   Widget build(BuildContext context) {
-    final expiringCount = _expiringNotifications.where((n) => !n.isRead).length;
+    // Badge count = số phòng lấy thẳng từ API (≤ 7 ngày, ≥ 0 ngày)
+    final expiringCount = _expiringContracts.length;
 
     return Scaffold(
       backgroundColor: ManagerColors.bgLightGreen,
@@ -439,13 +346,12 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
   }
 
   // ── Tab 1: Phòng sắp hết hạn hợp đồng ──────────────────────────────────
+  // Lấy trực tiếp từ API, KHÔNG dùng notification table
   Widget _buildExpiringContractsList() {
-    final items = _expiringNotifications;
-
     return RefreshIndicator(
       color: ManagerColors.primaryGreen,
-      onRefresh: _loadNotifications,
-      child: _isLoading
+      onRefresh: _loadExpiringContracts,
+      child: _isLoadingExpiring
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: const [
@@ -457,12 +363,11 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                 ),
               ],
             )
-          : items.isEmpty
+          : _expiringContracts.isEmpty
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
                     const SizedBox(height: 80),
-                    // ── Minh hoạ trạng thái rỗng ──
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 24),
                       padding: const EdgeInsets.all(28),
@@ -501,25 +406,21 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   children: [
                     // ── Summary banner ───────────────────────────────
-                    _buildExpiringSummaryBanner(items),
+                    _buildDirectExpiringSummaryBanner(),
                     const SizedBox(height: 16),
 
                     // ── Cards ────────────────────────────────────────
-                    ...items.map((item) => Padding(
+                    ..._expiringContracts.map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildExpiringContractCard(item),
+                          child: _buildDirectExpiringCard(item),
                         )),
                   ],
                 ),
     );
   }
 
-  Widget _buildExpiringSummaryBanner(List<TenantNotification> items) {
-    final urgentCount =
-        items.where((n) => n.type == 'contract_expiring_7d').length;
-    final warningCount =
-        items.where((n) => n.type == 'contract_expiring_30d').length;
-
+  Widget _buildDirectExpiringSummaryBanner() {
+    final count = _expiringContracts.length;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -549,22 +450,10 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (urgentCount > 0)
-                      _buildSummaryChip(
-                        '$urgentCount phòng ≤ 7 ngày',
-                        const Color(0xFFD32F2F),
-                        const Color(0xFFFFEBEE),
-                      ),
-                    if (warningCount > 0)
-                      _buildSummaryChip(
-                        '$warningCount phòng ≤ 30 ngày',
-                        const Color(0xFFE64A19),
-                        const Color(0xFFFFF3E0),
-                      ),
-                  ],
+                _buildSummaryChip(
+                  '$count phòng ≤ 7 ngày',
+                  const Color(0xFFD32F2F),
+                  const Color(0xFFFFEBEE),
                 ),
               ],
             ),
@@ -593,25 +482,21 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
     );
   }
 
-  Widget _buildExpiringContractCard(TenantNotification item) {
-    // Ưu tiên tính real-time từ endDate, fallback parse từ body
-    final daysLeft = _computeDaysLeft(item.endDate) ?? _parseDaysLeft(item.body);
-    final daysColor = _daysColor(daysLeft);
-    final urgencyLabel = _urgencyLabel(item.type, daysLeft);
-    final isUrgent = item.type == 'contract_expiring_7d';
-
-    // Trích tên phòng từ body (format: "Phòng PXXX:")
-    String? roomName;
-    final roomMatch = RegExp(r'Phòng\s+([^\s:]+)').firstMatch(item.body);
-    if (roomMatch != null) roomName = 'Phòng ${roomMatch.group(1)}';
+  /// Card dùng dữ liệu trực tiếp từ API /api/contracts/expiring
+  Widget _buildDirectExpiringCard(Map<String, dynamic> item) {
+    final days = (item['remainingDays'] as num? ?? 0).toInt();
+    final daysColor = _daysColor(days);
+    final roomCode = item['roomCode']?.toString() ?? 'Phòng';
+    final contractId = item['contractId']?.toString() ?? '';
+    final endDate = item['endDate']?.toString() ?? '';
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: daysColor.withOpacity(isUrgent ? 0.5 : 0.2),
-          width: isUrgent ? 1.5 : 1,
+          color: daysColor.withOpacity(0.4),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -628,8 +513,8 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: daysColor.withOpacity(0.07),
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Row(
               children: [
@@ -640,9 +525,7 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isUrgent
-                        ? Icons.local_fire_department_rounded
-                        : Icons.access_time_rounded,
+                    Icons.access_time_rounded,
                     color: daysColor,
                     size: 18,
                   ),
@@ -650,28 +533,11 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    roomName ?? item.title,
+                    'Phòng $roomCode',
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                       color: Colors.black87,
-                    ),
-                  ),
-                ),
-                // ── Badge urgency ──────────────────────────────────
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: daysColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    urgencyLabel,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -686,79 +552,65 @@ class _ManagerNotificationPageState extends State<ManagerNotificationPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.title,
+                  'Hợp đồng cư dân sắp hết hạn',
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Colors.black54,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
-                  item.body,
+                  'Phòng $roomCode: hợp đồng $contractId${endDate.isNotEmpty ? ' — hạn $endDate' : ''}.',
                   style: GoogleFonts.outfit(
                       fontSize: 13, color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
 
                 // ── Countdown badge ────────────────────────────────
-                if (daysLeft != null)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                daysColor.withOpacity(0.12),
-                                daysColor.withOpacity(0.06),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: daysColor.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.timer_outlined,
-                                  color: daysColor, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Còn ',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: daysColor.withOpacity(0.8),
-                                ),
-                              ),
-                              Text(
-                                '$daysLeft ngày',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: daysColor,
-                                ),
-                              ),
-                              Text(
-                                ' để gia hạn',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: daysColor.withOpacity(0.8),
-                                ),
-                              ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              daysColor.withOpacity(0.12),
+                              daysColor.withOpacity(0.06),
                             ],
                           ),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: daysColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.timer_outlined,
+                                color: daysColor, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Hạn còn ',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: daysColor.withOpacity(0.8),
+                              ),
+                            ),
+                            Text(
+                              '$days ngày',
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: daysColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                const SizedBox(height: 12),
-                Text(
-                  item.timeLabel,
-                  style: GoogleFonts.outfit(
-                      color: Colors.black38, fontSize: 11),
+                    ),
+                  ],
                 ),
               ],
             ),

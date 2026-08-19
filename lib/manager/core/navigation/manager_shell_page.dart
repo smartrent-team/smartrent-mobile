@@ -45,18 +45,13 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
 
   Future<void> _checkExpiringContracts() async {
     try {
-      final list = await _roomService.getExpiringContracts(maxDays: 30);
+      // Chỉ lấy phòng còn ≤ 7 ngày và ẩn phòng đã âm ngày
+      final list = await _roomService.getExpiringContracts(maxDays: 7);
+      final validList = list
+          .where((e) => (e['remainingDays'] as num? ?? 0) >= 0)
+          .toList();
       if (mounted) {
-        setState(() => _expiringCount = list.length);
-
-        if (list.isNotEmpty) {
-          // Bắn thông báo hệ thống lên System Notification Bar (vuốt từ trên xuống của điện thoại)
-          ManagerNotificationService.instance.showSystemNotification(
-            id: 1001,
-            title: '⚠️ SmartRent — Hợp đồng sắp hết hạn',
-            body: 'Có ${list.length} phòng có hợp đồng sắp hết hạn (<30 ngày). Vui lòng bấm vào để kiểm tra và gửi gia hạn.',
-          );
-        }
+        setState(() => _expiringCount = validList.length);
       }
     } catch (_) {}
   }
@@ -118,7 +113,7 @@ class _ManagerShellPageState extends State<ManagerShellPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'CẢNH BÁO: Có $_expiringCount phòng sắp hết hạn HĐ (<30 ngày)! Bấm xem & gửi TB >',
+                          'CẢNH BÁO: Có $_expiringCount phòng sắp hết hạn HĐ (≤7 ngày)! Bấm để xem chi tiết >',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,

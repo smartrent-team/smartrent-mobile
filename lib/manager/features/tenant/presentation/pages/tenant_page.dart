@@ -894,7 +894,7 @@ class _TenantPageState extends State<TenantPage> {
         ? const Color(0xFFEF4444)   // đỏ – đã khóa
         : ManagerColors.primaryGreen; // xanh – đang thuê
 
-    final String statusLabel = isBlocked ? 'Đã khóa' : 'Đang thuê';
+    final String statusLabel = isBlocked ? 'Khóa' : 'Đang ở';
     final IconData statusIcon = isBlocked ? Icons.lock_outline : Icons.check;
 
     return PopupMenuButton<String>(

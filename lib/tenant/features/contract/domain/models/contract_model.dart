@@ -65,9 +65,8 @@ class ContractModel {
       case 'terminated':
         return 'Đã chấm dứt';
       case 'pending_checkout':
-        return 'Đang xử lý trả phòng';
       case 'inspection':
-        return 'Đang xử lý trả phòng';
+        return 'Đang hiệu lực';
       case 'pending_settlement':
         return 'Chờ thanh toán cuối';
       case 'moved_out':

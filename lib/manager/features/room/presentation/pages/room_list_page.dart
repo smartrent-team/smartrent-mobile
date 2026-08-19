@@ -92,11 +92,11 @@ class _RoomListPageState extends State<RoomListPage> {
       case 'available':
         return 'Trống';
       case 'maintenance':
-        return 'Bảo trì';
+        return 'Khóa';
       case 'pending_checkout':
-        return 'Chờ trả phòng';
+        return 'Đã thuê';
       case 'cleaning':
-        return 'Đang dọn dẹp';
+        return 'Trống';
       default:
         return status;
     }
@@ -105,15 +105,13 @@ class _RoomListPageState extends State<RoomListPage> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'occupied':
+      case 'pending_checkout':
         return Colors.green;
       case 'available':
+      case 'cleaning':
         return Colors.blue;
       case 'maintenance':
-        return Colors.grey;
-      case 'pending_checkout':
-        return Colors.orange;
-      case 'cleaning':
-        return Colors.teal;
+        return Colors.red;
       default:
         return Colors.grey;
     }
