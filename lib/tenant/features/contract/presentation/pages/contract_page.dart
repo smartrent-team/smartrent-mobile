@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:smartrent_mobile/core/contract/presentation/contract_cancellation_section.dart';
 import 'package:smartrent_mobile/core/network/api_client.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
@@ -222,16 +221,7 @@ class _TenantContractPageState extends State<TenantContractPage>
                     const SizedBox(height: 20),
                     _buildDepositCard(),
                     const SizedBox(height: 16),
-                    if (_contract!.isActive) ...[
-                      ContractCancellationSection(
-                        contract: _contract!,
-                        viewerRole: 'tenant',
-                        primaryColor: TenantColors.primaryGreenAlt,
-                        backgroundTint: TenantColors.bgMint,
-                        onChanged: _loadContract,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+
                     _buildCheckoutStatusBanner(),
                     if (_contract!.isActive ||
                         _contract!.status == 'pending_checkout' ||

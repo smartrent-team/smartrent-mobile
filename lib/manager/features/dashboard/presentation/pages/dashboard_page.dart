@@ -420,9 +420,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final monthLabel = 'Tháng ${now.month}/${now.year}';
-
     final scrollBody = RefreshIndicator(
               onRefresh: _loadDashboard,
               color: ManagerColors.primaryGreen,
@@ -564,9 +561,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             _buildEmptyCard('Chưa có ticket sự cố nào')
                           else
                             _buildTicketList(context),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader('Công suất sử dụng'),
-                          _buildUtilizationCard(monthLabel),
+
                           const SizedBox(height: 24),
                           const Center(
                             child: Text(
@@ -1223,81 +1218,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildUtilizationCard(String monthLabel) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: ManagerColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(monthLabel, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 16),
-          _buildProgressItem(
-            Icons.meeting_room_outlined,
-            'Tỉ lệ lấp đầy phòng',
-            _occupancyRate,
-            _formatPercent(_occupancyRate),
-            Colors.green,
-          ),
-          _buildProgressItem(
-            Icons.bolt_outlined,
-            'Điện tiêu thụ',
-            _electricRate,
-            _formatPercent(_electricRate),
-            Colors.orange,
-          ),
-          _buildProgressItem(
-            Icons.water_drop_outlined,
-            'Nước tiêu thụ',
-            _waterRate,
-            _formatPercent(_waterRate),
-            Colors.blue,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProgressItem(
-    IconData icon,
-    String label,
-    double value,
-    String percent,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-              const Spacer(),
-              Text(percent, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value,
-              backgroundColor: color.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 }
 
