@@ -38,18 +38,24 @@ class ManagerAppHeader extends StatefulWidget {
 
 class _ManagerAppHeaderState extends State<ManagerAppHeader> {
   final TokenService _tokenService = TokenService();
-  String _displayPhone = '';
+  String _displayName = '';
 
   @override
   void initState() {
     super.initState();
-    _loadPhone();
+    _loadDisplayName();
   }
 
-  Future<void> _loadPhone() async {
-    final phone = await _tokenService.getPhone();
-    if (!mounted) return;
-    setState(() => _displayPhone = ManagerAppHeader.formatPhoneDisplay(phone));
+  Future<void> _loadDisplayName() async {
+    final fullName = await _tokenService.getFullName();
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      if (!mounted) return;
+      setState(() => _displayName = fullName.trim());
+    } else {
+      final phone = await _tokenService.getPhone();
+      if (!mounted) return;
+      setState(() => _displayName = ManagerAppHeader.formatPhoneDisplay(phone));
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -64,8 +70,8 @@ class _ManagerAppHeaderState extends State<ManagerAppHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final greeting = _displayPhone.isNotEmpty
-        ? 'Chào, $_displayPhone'
+    final greeting = _displayName.isNotEmpty
+        ? 'Chào, $_displayName'
         : 'Chào, Quản lý';
     final hasNotificationCount = widget.showNotificationDot && widget.unreadNotificationCount > 0;
     final showSimpleDot = widget.showNotificationDot && widget.unreadNotificationCount == 0;
@@ -89,45 +95,53 @@ class _ManagerAppHeaderState extends State<ManagerAppHeader> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: const BoxDecoration(
-                          color: Colors.transparent,
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        alignment: Alignment.center,
-                        child: Image.asset(
-                          'logo/logo1.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title ?? 'Quản lý cơ sở',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                            ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            greeting,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          padding: const EdgeInsets.all(6),
+                          alignment: Alignment.center,
+                          child: Image.asset(
+                            'logo/logo1.png',
+                            fit: BoxFit.contain,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.title ?? 'Quản lý cơ sở',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                greeting,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Row(
                     children: [

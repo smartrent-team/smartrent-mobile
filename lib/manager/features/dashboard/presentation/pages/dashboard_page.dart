@@ -139,38 +139,46 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _loadExpiringContracts() async {
     try {
-      final notifications = await ManagerNotificationService.instance
-          .fetchNotifications(forceRemote: true);
-      var expiring = notifications
-          .where((n) =>
-              n.type == 'contract_expiring_30d' ||
-              n.type == 'contract_expiring_7d')
-          .toList();
-
-      // Cũng query trực tiếp từ hợp đồng active của các phòng để đề phòng Cron Job chưa chạy
+      // Chỉ lấy trực tiếp từ API hợp đồng sắp hết hạn (không lấy từ notifications nữa)
       final directExpiring = await _roomService.getExpiringContracts(maxDays: 30);
+      
+      final List<TenantNotification> expiring = [];
       for (final item in directExpiring) {
         final roomCode = item['roomCode'] ?? item['roomName'] ?? '';
-        final days = item['remainingDays'] as int? ?? 0;
+        final days = (item['remainingDays'] as num? ?? 0).toInt();
         final contractId = item['contractId'] ?? '';
+        
+        // Chỉ hiển thị các hợp đồng chưa quá hạn (ngày >= 0)
+        if (days < 0) continue;
+        
         final type = days <= 7 ? 'contract_expiring_7d' : 'contract_expiring_30d';
 
-        // Check xem đã có trong list notification chưa
-        final exists = expiring.any((n) => n.body.contains(roomCode) || n.body.contains(contractId.toString()));
-        if (!exists) {
-          expiring.add(TenantNotification(
-            id: 'direct_$contractId',
-            title: days <= 7 ? 'Hợp đồng sắp hết hạn — còn $days ngày' : 'Hợp đồng sắp hết hạn',
-            body: 'Phòng $roomCode: hợp đồng $contractId sẽ hết hạn sau $days ngày. Vui lòng liên hệ cư dân để gia hạn.',
-            type: type,
-            isRead: false,
-            createdAt: DateTime.now(),
-          ));
+        expiring.add(TenantNotification(
+          id: 'direct_$contractId',
+          title: days <= 7 ? 'Hợp đồng sắp hết hạn — còn $days ngày' : 'Hợp đồng sắp hết hạn',
+          body: 'Phòng $roomCode: hợp đồng $contractId sẽ hết hạn sau $days ngày. Vui lòng liên hệ cư dân để gia hạn.',
+          type: type,
+          isRead: false,
+          createdAt: DateTime.now(),
+        ));
+      }
+
+      // Loại bỏ trùng lặp theo mã phòng để tránh hiển thị nhiều dòng cho cùng một phòng
+      final seenRooms = <String>{};
+      final uniqueExpiring = <TenantNotification>{};
+      
+      for (final n in expiring) {
+        final roomMatch = RegExp(r'(?:Phòng|phòng)\s+([^\s:]+)').firstMatch(n.body);
+        final rCode = roomMatch != null ? roomMatch.group(1) : null;
+        if (rCode != null) {
+          if (seenRooms.contains(rCode)) continue;
+          seenRooms.add(rCode);
         }
+        uniqueExpiring.add(n);
       }
 
       if (mounted) {
-        setState(() => _expiringContracts = expiring);
+        setState(() => _expiringContracts = uniqueExpiring.toList());
       }
     } catch (_) {
       // silent fail — dashboard vẫn hoạt động
@@ -649,7 +657,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         _buildStatCard(
           '$_openTickets',
-          'Sự cố mở',
+          'Sự cố',
           _urgentTickets > 0 ? '$_urgentTickets khẩn cấp' : 'Không có khẩn cấp',
           Icons.report_gmailerrorred_rounded,
           Colors.red,
