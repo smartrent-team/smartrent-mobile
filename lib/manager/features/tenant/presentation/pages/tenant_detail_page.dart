@@ -543,6 +543,7 @@ class _TenantDetailPageState extends State<TenantDetailPage> {
         );
         _loadDetail(bustCache: true);
         AppEventBus.instance.fire(AppEvent.tenantChanged);
+        AppEventBus.instance.fire(AppEvent.roomChanged);
       }
     } catch (e) {
       if (mounted) {

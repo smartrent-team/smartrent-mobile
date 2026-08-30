@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 import 'package:smartrent_mobile/manager/core/navigation/manager_nav.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/core/navigation/app_page_routes.dart';
@@ -47,6 +49,9 @@ class _TenantPageState extends State<TenantPage> {
 
   List<Invoice> _allInvoices = [];
   bool _isLoadingInvoices = false;
+
+  late final StreamSubscription<AppEvent> _tenantEventSub;
+  late final StreamSubscription<AppEvent> _invoiceEventSub;
 
   Future<void> _fetchTenants() async {
     if (!mounted) return;
@@ -238,10 +243,20 @@ class _TenantPageState extends State<TenantPage> {
     });
     _fetchTenants();
     _fetchInvoices();
+
+    // Auto-refresh khi dữ liệu thay đổi (ví dụ: khóa tài khoản, cập nhật cư dân, v.v.)
+    _tenantEventSub = AppEventBus.instance.on(AppEvent.tenantChanged, () {
+      if (mounted) _fetchTenants();
+    });
+    _invoiceEventSub = AppEventBus.instance.on(AppEvent.invoiceChanged, () {
+      if (mounted) _fetchInvoices();
+    });
   }
 
   @override
   void dispose() {
+    _tenantEventSub.cancel();
+    _invoiceEventSub.cancel();
     _searchController.dispose();
     super.dispose();
   }

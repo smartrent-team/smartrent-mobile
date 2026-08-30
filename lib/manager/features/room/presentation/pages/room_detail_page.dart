@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:smartrent_mobile/manager/core/theme/manager_colors.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
 import 'package:smartrent_mobile/core/services/token_service.dart';
+import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/login_page.dart';
 
 class RoomDetailPage extends StatefulWidget {
@@ -21,10 +23,28 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  late final StreamSubscription<AppEvent> _roomEventSub;
+  late final StreamSubscription<AppEvent> _tenantEventSub;
+
   @override
   void initState() {
     super.initState();
     _fetchRoomDetail();
+
+    // Auto-refresh khi dữ liệu phòng/cư dân thay đổi
+    _roomEventSub = AppEventBus.instance.on(AppEvent.roomChanged, () {
+      if (mounted) _fetchRoomDetail();
+    });
+    _tenantEventSub = AppEventBus.instance.on(AppEvent.tenantChanged, () {
+      if (mounted) _fetchRoomDetail();
+    });
+  }
+
+  @override
+  void dispose() {
+    _roomEventSub.cancel();
+    _tenantEventSub.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchRoomDetail() async {
