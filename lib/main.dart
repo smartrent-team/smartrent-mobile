@@ -8,7 +8,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:smartrent_mobile/core/pages/splash_page.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/services/tenant_notification_service.dart';
 import 'package:smartrent_mobile/tenant/tenant.dart';
-import 'package:smartrent_mobile/manager/manager.dart';
 
 import 'package:smartrent_mobile/core/services/deep_link_service.dart';
 import 'package:intl/date_symbol_data_local.dart';

@@ -38,6 +38,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
   String? _selectedRoom;
   bool _isLoading = false;
   bool _isScanningCccd = false;
+  // ignore: unused_field
   bool _isFormValid = false;
   List<String> _contractImageUrls = [];
   DateTime? _contractEndDate;
@@ -51,7 +52,7 @@ class _AddTenantPageState extends State<AddTenantPage> {
 
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _rooms = [];
-  // Lưu thông tin capacity phòng: roomId -> {remaining, max}
+  // ignore: unused_field
   Map<String, Map<String, int>> _roomCapacityMap = {};
 
   @override

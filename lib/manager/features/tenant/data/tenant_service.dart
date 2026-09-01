@@ -11,7 +11,7 @@ class TenantService {
         '/api/users/check-phone',
         data: {'phone': phone},
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -83,7 +83,7 @@ class TenantService {
         '/api/users/create',
         data: requestData,
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -91,7 +91,7 @@ class TenantService {
   Future<Response> getBranches() async {
     try {
       return await _apiClient.dio.get('/api/branches');
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -99,7 +99,7 @@ class TenantService {
   Future<Response> getTenants() async {
     try {
       return await _apiClient.dio.get('/api/tenants');
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -115,7 +115,7 @@ class TenantService {
             ? Options(headers: {'Cache-Control': 'no-cache'})
             : null,
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -123,7 +123,7 @@ class TenantService {
   Future<Response> updateTenant(int tenantId, Map<String, dynamic> data) async {
     try {
       return await _apiClient.dio.patch('/api/tenants/$tenantId', data: data);
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -141,7 +141,7 @@ class TenantService {
           if (roomId != null) 'roomId': roomId,
         },
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -163,7 +163,7 @@ class TenantService {
           if (endDate != null) 'endDate': VnDate.toCalendarKey(endDate),
         },
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -181,7 +181,7 @@ class TenantService {
           if (moveOutDate != null) 'moveOutDate': moveOutDate,
         },
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -194,7 +194,7 @@ class TenantService {
         '/api/tenants/$tenantId/status',
         data: {'action': action},
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -203,7 +203,7 @@ class TenantService {
   Future<Response> confirmCheckout(int tenantId) async {
     try {
       return await _apiClient.dio.post('/api/tenants/$tenantId/confirm-checkout');
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -211,7 +211,7 @@ class TenantService {
   Future<Response> sendCheckoutPaymentReminder(int tenantId) async {
     try {
       return await _apiClient.dio.post('/api/tenants/$tenantId/checkout-payment-reminder');
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }

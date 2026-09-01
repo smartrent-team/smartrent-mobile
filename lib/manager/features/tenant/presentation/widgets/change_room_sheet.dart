@@ -220,7 +220,7 @@ class _ChangeRoomSheetState extends State<ChangeRoomSheet> {
         if (mounted) {
           Navigator.pop(
             context,
-            payload is Map ? Map<String, dynamic>.from(payload as Map) : null,
+            payload is Map ? Map<String, dynamic>.from(payload) : null,
           );
         }
         return;

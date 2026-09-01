@@ -50,7 +50,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     if (!mounted) return;
     setState(() { _isLoading = true; _loadError = null; });
     try {
-      final status = _tabs[_selectedTab]['status'] as String?;
+      final status = _tabs[_selectedTab]['status'];
       final res = await _service.getInvoices(status: status, limit: 50);
       if (res.statusCode == 200 && res.data['success'] == true) {
         final docs = List<Map<String, dynamic>>.from(

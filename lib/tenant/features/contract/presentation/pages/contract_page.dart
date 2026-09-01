@@ -26,7 +26,6 @@ class _TenantContractPageState extends State<TenantContractPage>
   final TokenService _tokenService = TokenService();
   final _currency =
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
-  final _dateFormat = DateFormat('dd/MM/yyyy');
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -674,6 +673,7 @@ class _TenantContractPageState extends State<TenantContractPage>
   }
 
   // ── EXPIRY WARNING ───────────────────────────────────────────────────────
+  // ignore: unused_element
   Widget _buildExpiryWarningCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),

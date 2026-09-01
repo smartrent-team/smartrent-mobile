@@ -7,7 +7,6 @@ import 'package:smartrent_mobile/tenant/features/billing/domain/models/tenant_in
 import 'package:smartrent_mobile/tenant/features/payment/presentation/tenant_payment_nav.dart';
 import 'package:smartrent_mobile/tenant/features/profile/data/services/profile_service.dart';
 import 'package:smartrent_mobile/tenant/core/widgets/tenant_notif_panel.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
 class TenantOrderPage extends StatefulWidget {
@@ -927,6 +926,7 @@ class _TenantOrderPageState extends State<TenantOrderPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildBottomNav() => const SizedBox.shrink();
 }
 

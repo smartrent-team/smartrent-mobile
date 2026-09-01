@@ -715,8 +715,6 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
             final String phone = t['phone'] ?? 'Chưa cập nhật';
             final String checkInDate = _formatDate(t['checkInDate']);
 
-            final String contractStatus = t['contractStatus'] ?? 'none';
-            final bool isPendingCheckout = contractStatus == 'pending_checkout' || contractStatus == 'pending_liquidation';
             final String userStatus = t['userStatus'] ?? 'active';
             final bool isLocked = userStatus == 'locked' || userStatus == 'blocked';
 

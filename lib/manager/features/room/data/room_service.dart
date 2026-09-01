@@ -27,7 +27,7 @@ class RoomService {
         '/api/rooms/list',
         queryParameters: queryParams,
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }
@@ -38,7 +38,7 @@ class RoomService {
         '/api/rooms/detail',
         queryParameters: {'id': roomId},
       );
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       rethrow;
     }
   }

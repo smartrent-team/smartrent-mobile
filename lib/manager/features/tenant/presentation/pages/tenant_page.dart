@@ -10,9 +10,7 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_detail_page.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
-import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_page.dart';
 import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_detail_page.dart';
-import 'package:smartrent_mobile/manager/features/room/presentation/pages/room_list_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/domain/models/tenant.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/add_tenant_page.dart';
 import 'package:smartrent_mobile/manager/features/tenant/presentation/pages/tenant_detail_page.dart';
@@ -137,7 +135,7 @@ class _TenantPageState extends State<TenantPage> {
         final date = DateTime.parse(dateStr);
         return "Tháng ${date.month}/${date.year}";
       }
-    } catch (e) {}
+    } catch (_) {}
     if (invoice.invoiceCode.contains('-')) {
       final parts = invoice.invoiceCode.split('-');
       if (parts.length >= 2 && parts[1].length == 6) {
@@ -158,7 +156,7 @@ class _TenantPageState extends State<TenantPage> {
         final month = date.month.toString().padLeft(2, '0');
         return "Hạn: $day/$month/${date.year}";
       }
-    } catch (e) {}
+    } catch (_) {}
     return "Hạn: N/A";
   }
 
@@ -271,6 +269,7 @@ class _TenantPageState extends State<TenantPage> {
         .toList();
   }
 
+  // ignore: unused_element
   void _showAddTenantBottomSheet() {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();

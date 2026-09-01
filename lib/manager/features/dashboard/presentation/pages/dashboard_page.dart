@@ -8,17 +8,12 @@ import 'package:smartrent_mobile/manager/core/widgets/manager_app_header.dart';
 import 'package:smartrent_mobile/manager/core/widgets/manager_bottom_nav.dart';
 import 'package:smartrent_mobile/manager/features/auth/presentation/pages/change_password_page.dart';
 import 'package:smartrent_mobile/manager/features/billing/data/invoice_model.dart';
-import 'package:smartrent_mobile/manager/features/billing/data/invoice_service.dart';
-import 'package:smartrent_mobile/manager/features/billing/data/utility_service.dart';
 import 'package:smartrent_mobile/manager/features/billing/presentation/pages/invoice_confirm_page.dart';
 import 'package:smartrent_mobile/manager/features/dashboard/data/dashboard_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/data/models/ticket_model.dart';
-import 'package:smartrent_mobile/manager/features/issue/data/services/ticket_service.dart';
 import 'package:smartrent_mobile/manager/features/issue/presentation/pages/issue_detail_page.dart';
-import 'package:smartrent_mobile/manager/features/notification/data/services/manager_notification_service.dart';
 import 'package:smartrent_mobile/manager/features/notification/presentation/pages/manager_notification_page.dart';
 import 'package:smartrent_mobile/manager/features/room/data/room_service.dart';
-import 'package:smartrent_mobile/manager/features/tenant/data/tenant_service.dart';
 import 'package:smartrent_mobile/tenant/features/notification/data/models/tenant_notification.dart';
 import 'package:smartrent_mobile/core/services/app_event_bus.dart';
 
@@ -54,10 +49,6 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final RoomService _roomService = RoomService();
-  final TenantService _tenantService = TenantService();
-  final InvoiceService _invoiceService = InvoiceService();
-  final TicketService _ticketService = TicketService();
-  final UtilityService _utilityService = UtilityService();
   final DashboardService _dashboardService = DashboardService();
   bool _isLoading = true;
   String? _errorMessage;
@@ -77,6 +68,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<_UtilityAlertData> _utilityAlerts = [];
   List<TenantNotification> _expiringContracts = [];
 
+  // ignore: unused_field
   double _occupancyRate = 0;
   double _electricRate = 0;
   double _waterRate = 0;
@@ -368,7 +360,6 @@ class _DashboardPageState extends State<DashboardPage> {
     return '$format đ';
   }
 
-  String _formatPercent(double value) => '${(value * 100).toStringAsFixed(1)}%';
 
   String _timeAgo(String? dateStr) {
     if (dateStr == null) return '';
