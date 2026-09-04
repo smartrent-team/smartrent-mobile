@@ -137,12 +137,10 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
         );
         if (roomUtil != null) {
           _latestUtility = roomUtil;
-          _electricOld   = (roomUtil['electricOld'] as num?)?.toDouble() ?? 0.0;
-          _electricNew   = (roomUtil['prevElectric'] as num?)?.toDouble() ?? 0.0;
-          _waterOld      = (roomUtil['waterOld']    as num?)?.toDouble() ?? 0.0;
-          _waterNew      = (roomUtil['prevWater']   as num?)?.toDouble() ?? 0.0;
-          _selectedMonth = roomUtil['lastMonth'] ?? DateTime.now().month;
-          _selectedYear  = roomUtil['lastYear']  ?? DateTime.now().year;
+          _electricOld   = (roomUtil['prevElectric'] as num?)?.toDouble() ?? (roomUtil['electricOld'] as num?)?.toDouble() ?? 0.0;
+          _waterOld      = (roomUtil['prevWater']    as num?)?.toDouble() ?? (roomUtil['waterOld']    as num?)?.toDouble() ?? 0.0;
+          _selectedMonth = DateTime.now().month;
+          _selectedYear  = DateTime.now().year;
 
           // ★ Giá từ branch_services qua utility/latest
           if (roomUtil['electricPrice']    != null) _electricPrice    = roomUtil['electricPrice'];
@@ -207,6 +205,68 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     } finally {
       if (mounted) setState(() => _isLoadingDetail = false);
     }
+  }
+
+  Future<void> _showMonthYearPicker() async {
+    int tempMonth = _selectedMonth;
+    int tempYear = _selectedYear;
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setPickerState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Chọn kỳ thanh toán'),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              DropdownButton<int>(
+                value: tempMonth,
+                items: List.generate(12, (i) => i + 1)
+                    .map((m) => DropdownMenuItem(value: m, child: Text('Tháng $m')))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setPickerState(() => tempMonth = v);
+                },
+              ),
+              DropdownButton<int>(
+                value: tempYear,
+                items: [tempYear - 1, tempYear, tempYear + 1]
+                    .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setPickerState(() => tempYear = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                setState(() {
+                  _selectedMonth = tempMonth;
+                  _selectedYear = tempYear;
+                });
+                if (_selectedRoom != null) {
+                  final exists = await _invoiceService.hasInvoiceForMonth(
+                    _selectedRoom['id'],
+                    _selectedMonth,
+                    _selectedYear,
+                  );
+                  if (mounted) setState(() => _invoiceExists = exists);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: ManagerColors.primaryGreen),
+              child: const Text('Chọn', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Gọi mỗi khi người dùng gõ chỉ số điện/nước mới → tính lại chi phí realtime
@@ -600,7 +660,11 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
             ),
             const SizedBox(height: 8),
             Row(children: [
-              _pill('Tháng $_selectedMonth/$_selectedYear'),
+              InkWell(
+                onTap: _showMonthYearPicker,
+                borderRadius: BorderRadius.circular(20),
+                child: _pill('Tháng $_selectedMonth/$_selectedYear ▾'),
+              ),
               if (_selectedRoom != null) ...[
                 const SizedBox(width: 10),
                 _pill('Phòng ${_selectedRoom['roomCode']}'),
