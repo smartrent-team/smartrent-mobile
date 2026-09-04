@@ -296,6 +296,7 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
     );
     if (confirmed != true || !mounted) return;
 
+    bool isSpinnerShowing = true;
     showDialog(
       context: context, barrierDismissible: false,
       builder: (_) => const Center(
@@ -344,7 +345,10 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // đóng spinner
+      if (isSpinnerShowing) {
+        Navigator.pop(context); // đóng spinner
+        isSpinnerShowing = false;
+      }
 
       if (res.statusCode == 200 && res.data['success'] == true) {
         final payment = res.data['payment'];
@@ -366,10 +370,29 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
+        if (isSpinnerShowing) {
+          Navigator.pop(context); // đóng spinner
+          isSpinnerShowing = false;
+        }
+
         String msg = 'Lỗi kết nối. Vui lòng thử lại.';
-        if (e is DioException && e.response?.data is Map) {
-          msg = (e.response!.data as Map)['error']?.toString() ?? msg;
+        if (e is DioException) {
+          if (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.sendTimeout ||
+              e.type == DioExceptionType.connectionError) {
+            msg = 'Không thể kết nối đến máy chủ hoặc xử lý quá thời gian. Vui lòng kiểm tra lại kết nối internet và danh sách hóa đơn.';
+          } else if (e.response?.data is Map) {
+            final data = e.response!.data as Map;
+            msg = data['error']?.toString() ??
+                  data['message']?.toString() ??
+                  data['details']?.toString() ??
+                  msg;
+          } else if (e.message != null && e.message!.isNotEmpty) {
+            msg = e.message!;
+          }
+        } else {
+          msg = e.toString();
         }
         _showErrorDialog(msg);
       }
@@ -630,21 +653,29 @@ class _InvoiceConfirmPageState extends State<InvoiceConfirmPage> {
   ]);
 
   // ── Card tiền phòng ──────────────────────────────────────────────────────
-  Widget _buildRoomRentCard() => _whiteCard(
-    child: Row(children: [
-      _iconBox(Icons.meeting_room_outlined, ManagerColors.primaryGreen),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Phòng ${_selectedRoom?['roomCode'] ?? '—'} - Tầng ${_selectedRoom?['floor'] ?? 0}',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
-        const SizedBox(height: 2),
-        const Text('Giá thuê cố định',
-            style: TextStyle(fontSize: 12, color: ManagerColors.textGrey)),
-      ])),
-      Text(_fmt(_roomPrice),
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
-    ]),
-  );
+  Widget _buildRoomRentCard() {
+    final tenantName = _selectedRoom?['tenant']?['name'] ?? 'Chưa có tên';
+    final String residentText = _tenantCount > 1
+        ? '$tenantName (+${_tenantCount - 1} cư dân)'
+        : tenantName;
+
+    return _whiteCard(
+      child: Row(children: [
+        _iconBox(Icons.meeting_room_outlined, ManagerColors.primaryGreen),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Phòng ${_selectedRoom?['roomCode'] ?? '—'} - Tầng ${_selectedRoom?['floor'] ?? 0}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
+          const SizedBox(height: 2),
+          Text('Cư dân: $residentText',
+              style: const TextStyle(fontSize: 12, color: ManagerColors.textGrey),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+        ])),
+        Text(_fmt(_roomPrice),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: ManagerColors.textCharcoal)),
+      ]),
+    );
+  }
 
   // ── Card tiền điện ───────────────────────────────────────────────────────
   Widget _buildElectricCard() {
